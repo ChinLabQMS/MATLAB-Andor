@@ -1,0 +1,6 @@
+# List of untracked files to ignore
+resources/
+*.asv
+*.MATLABDriveTag
+*.prj
+.DS_Store
