@@ -1,4 +1,7 @@
-function setCurrentCCD(CurrentCCD)
+function setCurrentCCD(current)
+arguments
+    current string = 'Upper';
+end
 % CurrentCCD = 'Upper'
 %            = 'Lower'
 
@@ -15,10 +18,10 @@ function setCurrentCCD(CurrentCCD)
         [ret, Number] = GetCameraSerialNumber();
         CheckWarning(ret)
 
-        if strcmp(CurrentCCD,'Upper') && Number == 19330
+        if strcmp(current,'Upper') && Number == 19330
             disp('Current CCD is set to Upper CCD: 19330')
             return
-        elseif strcmp(CurrentCCD,'Lower') && Number == 19331
+        elseif strcmp(current,'Lower') && Number == 19331
             disp('Current CCD is set to Lower CCD: 19331')
             return
         end
