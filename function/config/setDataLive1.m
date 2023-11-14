@@ -1,7 +1,7 @@
-function setDataLive1(Exposure)
-arguments
-    Exposure (1,1) double = 0.2
-end
+function setDataLive1(exposure)
+    arguments
+        exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
+    end
 
     % Set acquisition mode; 1 for Single Scan
     [ret] = SetAcquisitionMode(1);
@@ -24,27 +24,27 @@ end
     CheckWarning(ret);
     
     % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
-    [ret] = SetIsolatedCropMode(0,1024,1024,1,1);
+    [ret] = SetIsolatedCropMode(0, 1024, 1024, 1, 1);
     CheckWarning(ret)
     
     % Get detector size (with croped mode ON this may change)
-    [ret,YPixels,XPixels] = GetDetector();
+    [ret, YPixels, XPixels] = GetDetector();
     CheckWarning(ret);
     
     % Set the image size
-    [ret] = SetImage(1,1,1,YPixels,1,XPixels);
+    [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
     CheckWarning(ret);
     
     % Set exposure time
-    [ret] = SetExposureTime(Exposure);
+    [ret] = SetExposureTime(exposure);
     CheckWarning(ret);
     
     % Get readout time
-    [ret,ReadoutTime] = GetReadOutTime();
+    [ret, readoutTime] = GetReadOutTime();
     CheckWarning(ret);
 
     fprintf('\n***Full frame mode***\n')
-    fprintf('Exposure time is %4.2fs\n',Exposure)
-    fprintf('Readout time for 1 image is %5.3fs\n\n',ReadoutTime)
+    fprintf('Exposure time is %4.2fs\n', exposure)
+    fprintf('Readout time for 1 image is %5.3fs\n\n', readoutTime)
 
 end

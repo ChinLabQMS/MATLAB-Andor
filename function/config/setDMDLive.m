@@ -1,19 +1,13 @@
-function setDataLive2(exposure)
+function setDMDLive(exposure)
     arguments
-        exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
+        exposure (1,1) double {mustBePositive,mustBeFinite} = 0.1
     end
 
-    % Set acquisition mode; 4 for fast kinetics
-    [ret] = SetAcquisitionMode(4);
+    % Set acquisition mode; 1 for Single Scan
+    [ret] = SetAcquisitionMode(1);
     CheckWarning(ret);
     
-    % Configure fast kinetics mode acquisition
-    % 512 for exposed rows; 2 for series length; 4 for Image;
-    % 1 for horizontal binning; 1 for vertical binning; 512 for offset
-    [ret] = SetFastKineticsEx(512, 2, exposure, 4, 1, 1, 512);
-    CheckWarning(ret);
-    
-    % Set trigger mode; 0 for internal, 1 for external
+    %   Set trigger mode; 0 for internal, 1 for external
     [ret] = SetTriggerMode(1);
     CheckWarning(ret);
     
@@ -40,8 +34,17 @@ function setDataLive2(exposure)
     % Set the image size
     [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
     CheckWarning(ret);
+    
+    % Set exposure time
+    [ret] = SetExposureTime(exposure);
+    CheckWarning(ret);
+    
+    % Get readout time
+    [ret, readoutTime] = GetReadOutTime();
+    CheckWarning(ret);
 
-    fprintf('\n***FK2 mode***\n')
-    fprintf('Exposure time is %4.2fs\n', exposure)
+    fprintf('\n***Full frame DMD Live mode***\n')
+    fprintf('Exposure time is %4.3fs\n', exposure)
+    fprintf('Readout time for 1 image is %5.3fs\n\n', readoutTime)
 
 end
