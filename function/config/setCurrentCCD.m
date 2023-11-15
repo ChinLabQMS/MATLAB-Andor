@@ -2,8 +2,8 @@ function setCurrentCCD(current)
 arguments
     current string = 'Upper';
 end
-% CurrentCCD = 'Upper'
-%            = 'Lower'
+% CurrentCCD = 'Upper': 19330
+%            = 'Lower': 19331
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)

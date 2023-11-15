@@ -3,6 +3,10 @@ function setDataLive1(exposure)
         exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
     end
 
+    % Get the current CCD serial number
+    [ret, Number] = GetCameraSerialNumber();
+    CheckWarning(ret);
+
     % Set acquisition mode; 1 for Single Scan
     [ret] = SetAcquisitionMode(1);
     CheckWarning(ret);
@@ -44,6 +48,7 @@ function setDataLive1(exposure)
     CheckWarning(ret);
 
     fprintf('\n***Full frame mode***\n')
+    fprintf('Current camera serial number: %d\n', Number)
     fprintf('Exposure time is %4.2fs\n', exposure)
     fprintf('Readout time for 1 image is %5.3fs\n\n', readoutTime)
 

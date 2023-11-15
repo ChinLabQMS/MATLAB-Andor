@@ -52,7 +52,7 @@ function initializeCCD
         CheckWarning(ret);
         
         % Get detector size
-        [ret,XPixels,YPixels] = GetDetector();
+        [ret, XPixels, YPixels] = GetDetector();
         CheckWarning(ret);
         
         % Set the image size

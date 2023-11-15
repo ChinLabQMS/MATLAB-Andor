@@ -12,7 +12,6 @@ function shutDownCCD
         [ret] = SetCurrentCamera(CameraHandle);
         CheckWarning(ret)
     
-    
         % Abort data acquisition
         [ret,Status] = GetStatus();
         CheckWarning(ret)
