@@ -1,6 +1,6 @@
 function setCurrentCCD(current)
 arguments
-    current string = 'Upper';
+    current double = 19330
 end
 % CurrentCCD = 'Upper': 19330
 %            = 'Lower': 19331
@@ -18,14 +18,11 @@ end
         [ret, Number] = GetCameraSerialNumber();
         CheckWarning(ret)
 
-        if strcmp(current,'Upper') && Number == 19330
-            disp('Current CCD is set to Upper CCD: 19330')
-            return
-        elseif strcmp(current,'Lower') && Number == 19331
-            disp('Current CCD is set to Lower CCD: 19331')
+        if Number == current
+            fprintf('\nCurrent CCD is set to serial number: %d\n', current)
             return
         end
     end
-    error('Current CCD is not found')
+    error('Serial number is not found, check CCD connections')
     
 end

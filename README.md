@@ -17,3 +17,6 @@ MATLAB image analysis code for cold atoms research.
 **Acquisition**
 - acquireCCDImage(num_images=1, timeout=30)
 - 
+
+**User Interface**
+- acquire_images

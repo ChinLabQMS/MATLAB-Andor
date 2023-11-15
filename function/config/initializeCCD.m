@@ -2,6 +2,7 @@ function initializeCCD
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
+    fprintf('\n******Start initialization******\n')
     fprintf('\n\tNumber of Cameras found: %d\n\n',NumCameras)
 
     for i = 1:NumCameras

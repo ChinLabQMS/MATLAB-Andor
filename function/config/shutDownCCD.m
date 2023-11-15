@@ -3,6 +3,9 @@ function shutDownCCD
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
 
+    fprintf('\n******Shutting down CCD******\n')
+    fprintf('\n\tNumber of Cameras found: %d\n\n',NumCameras)
+
     for i = 1:NumCameras
     
         % Set current camera

@@ -1,9 +1,9 @@
-function Image = acquireCCDImage(options)
+function image = acquireCCDImage(options)
     arguments
         options.num_images = 1;
         options.timeout = 30; % seconds
     end
-
+    
     % Taking data from Andor camera
     [ret] = StartAcquisition();
     CheckWarning(ret);
@@ -31,7 +31,7 @@ function Image = acquireCCDImage(options)
     CheckWarning(ret);
     
     if ret == 20002
-        Image = flip(transpose(reshape(ImgData,YPixels,XPixels)),1);
+        image = flip(transpose(reshape(ImgData,YPixels,XPixels)),1);
     else
         error('Acquisition error!');
     end
