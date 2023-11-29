@@ -19,4 +19,4 @@ MATLAB image analysis code for cold atoms research.
 - 
 
 **User Interface**
-- acquire_images
+- ImageAcquisition
