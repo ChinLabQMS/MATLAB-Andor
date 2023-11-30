@@ -1,4 +1,7 @@
-function shutDownCCD
+function shutDownCCD(serial)
+    arguments
+        serial = [19330, 19331];
+    end
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
@@ -6,6 +9,7 @@ function shutDownCCD
     fprintf('\n******Shutting down CCD******\n')
     fprintf('\n\tNumber of Cameras found: %d\n\n',NumCameras)
 
+    num_shutdown = 0;
     for i = 1:NumCameras
     
         % Set current camera
@@ -37,13 +41,17 @@ function shutDownCCD
         [ret, Number] = GetCameraSerialNumber();
         CheckWarning(ret)
         fprintf('\nSerial Number: %d\n',Number)
-    
-        % Shut down current camera
-        [ret] = AndorShutDown;
-        CheckWarning(ret);
-    
-        fprintf(['Camera %d is shut down\n' ...
-            'Temperature is maintained on shutting down.\n'],i)
-    
+        
+        if ismember(Number, serial)
+            num_shutdown = num_shutdown + 1;
+            fprintf('\nShutting down camera %d\n',Number)
+            
+            % Shut down current camera
+            [ret] = AndorShutDown;
+            CheckWarning(ret);
+
+            fprintf(['Camera %d is shut down\n' ...
+                'Temperature is maintained on shutting down.\n'],i) 
+        end
     end
 end
