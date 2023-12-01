@@ -6,7 +6,8 @@ MATLAB image analysis code for cold atoms research.
 ### CCD control
 
 **Configuration**
-The parameter `serial` is the current CCD serial number, serial = 'Upper': 19330 or 'Lower': 19331.
+
+The parameter `serial` is the current CCD serial number, serial = 19330 (Upper CCD) or 19331 (Lower CCD).
 - [initializeCCD(serial)](/function/config/initializeCCD.m)
 - [shutDownCCD(serial)](/function/config/shutDownCCD.m)
 - [setCurrentCCD(serial)](/function/config/setCurrentCCD.m)

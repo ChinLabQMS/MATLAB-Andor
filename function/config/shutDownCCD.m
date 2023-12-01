@@ -9,20 +9,23 @@ function shutDownCCD(serial)
     fprintf('\n******Shutting down CCD******\n')
     fprintf('\n\tNumber of Cameras found: %d\n\n',NumCameras)
 
-    num_shutdown = 0;
     for i = 1:NumCameras
-    
-        % Set current camera
+
         [ret,CameraHandle] = GetCameraHandle(i-1);
         CheckWarning(ret)
     
         [ret] = SetCurrentCamera(CameraHandle);
         CheckWarning(ret)
     
-        % Abort data acquisition
-        [ret,Status] = GetStatus();
+        [ret, Status] = GetStatus();
         CheckWarning(ret)
         
+        if ret == 20075
+            fprintf('\nCamera %d is NOT initialized. \n', i)
+            continue
+        end
+
+        % Abort data acquisition
         if Status == 20072
             [ret] = AbortAcquisition;
             CheckWarning(ret)
@@ -30,7 +33,7 @@ function shutDownCCD(serial)
     
         % Close shutter
         [ret] = SetShutter(1, 2, 1, 1);
-        CheckWarning(ret);
+        CheckWarning(ret)
     
         % Temperature is maintained on shutting down.
         % 0 - Returns to ambient temperature on ShutDown
@@ -40,18 +43,15 @@ function shutDownCCD(serial)
     
         [ret, Number] = GetCameraSerialNumber();
         CheckWarning(ret)
-        fprintf('\nSerial Number: %d\n',Number)
         
         if ismember(Number, serial)
-            num_shutdown = num_shutdown + 1;
-            fprintf('\nShutting down camera %d\n',Number)
-            
-            % Shut down current camera
+            fprintf('\nShutting down camera %d. Serial number: %d\nTemperature is maintained on shutting down\n', ...
+                    i, Number)
             [ret] = AndorShutDown;
-            CheckWarning(ret);
-
-            fprintf(['Camera %d is shut down\n' ...
-                'Temperature is maintained on shutting down.\n'],i) 
+            CheckWarning(ret)
+        else
+            fprintf('\nCamera %d is initialized but NOT shutting down. Serial number: %d\n',i, Number)
         end
     end
+
 end

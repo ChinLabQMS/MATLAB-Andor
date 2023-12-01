@@ -2,8 +2,6 @@ function setCurrentCCD(current)
 arguments
     current double = 19330
 end
-% CurrentCCD = 'Upper': 19330
-%            = 'Lower': 19331
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
@@ -17,7 +15,7 @@ end
 
         [ret, Number] = GetCameraSerialNumber();
         CheckWarning(ret)
-
+        
         if Number == current
             fprintf('\nCurrent CCD is set to serial number: %d\n', current)
             return
