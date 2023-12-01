@@ -1,12 +1,12 @@
 function initializeCCD(serial)
     arguments
-        serial = [19330, 19331];
+        serial = [19330, 19331]
     end
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
-    fprintf('\n******Start initialization******\n')
-    fprintf('\n\tNumber of Cameras found: %d\n\n',NumCameras)
+    fprintf('\n******Start initialization******\n\n')
+    fprintf('Number of Cameras found: %d\n\n',NumCameras)
 
     for i = 1:NumCameras
         
@@ -27,7 +27,7 @@ function initializeCCD(serial)
             CheckWarning(ret)
         
             % Turn on temperature cooler
-            [ret] = CoolerON();                         
+            [ret] = CoolerON();
             CheckWarning(ret)
             
             % Free internal memory
