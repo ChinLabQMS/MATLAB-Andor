@@ -18,11 +18,12 @@ function setCurrentCCD(serial)
         
         if ret == 20002
             if Number == serial
-                fprintf('\nCamera %d (Serial: %d) is set to current CCD\n',i, Number)
+                fprintf('Camera %d (Serial: %d, handle: %d) is set to current CCD\n',...
+                    i, Number, CameraHandle)
                 return
             end
         else
-            fprintf('\nCamera %d is NOT initialized: %d\n', i, Number)
+            fprintf('\nCamera %d is NOT initialized: %d\n, can not obtain serial number', i, Number)
         end
     end
 

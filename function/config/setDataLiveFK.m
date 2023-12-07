@@ -62,7 +62,7 @@ function setDataLiveFK(exposure, num_frames)
     
     fprintf('\n***Fast Kinetic mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
-    fprintf('Number of frames is %d\n', num_frames)
-    fprintf('Exposure time is %4.2fs\n', exposure)
+    fprintf('Number of frames: %d\n', num_frames)
+    fprintf('Exposure time: %4.2fs\n', exposure)
 
 end

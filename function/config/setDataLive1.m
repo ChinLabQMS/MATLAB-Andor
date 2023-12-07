@@ -4,6 +4,7 @@ function setDataLive1(exposure, options)
         options.crop (1,1) logical = false
         options.crop_height (1,1) double {mustBePositive,mustBeFinite} = 100
         options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100
+        options.external_trigger (1,1) logical = true
     end
 
     % Get the current CCD serial number
@@ -17,9 +18,13 @@ function setDataLive1(exposure, options)
     % Set acquisition mode; 1 for Single Scan
     [ret] = SetAcquisitionMode(1);
     CheckWarning(ret)
-    
+
     %   Set trigger mode; 0 for internal, 1 for external
-    [ret] = SetTriggerMode(1);
+    if options.external_trigger
+        [ret] = SetTriggerMode(1);
+    else
+        [ret] = SetTriggerMode(0);
+    end
     CheckWarning(ret)
     
     % Set Pre-Amp Gain, 0 (1x), 1 (2x), 2 (4x).
@@ -61,7 +66,7 @@ function setDataLive1(exposure, options)
 
     fprintf('\n***Full frame mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
-    fprintf('Exposure time is %4.2fs\n', exposure)
-    fprintf('Readout time for 1 image is %5.3fs\n\n', ReadoutTime)
+    fprintf('Exposure time: %4.2fs\n', exposure)
+    fprintf('Readout time for 1 image: %5.3fs\n\n', ReadoutTime)
 
 end

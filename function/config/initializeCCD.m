@@ -32,7 +32,11 @@ function initializeCCD(serial)
             
             % Free internal memory
             [ret] = FreeInternalMemory();
-            CheckWarning(ret)
+            if ret == 20072
+                ret = AbortAcquisition();
+                CheckWarning(ret)
+                fprintf('Acquisition aborted.')
+            end
         
             % Configuring Acquisition
         
