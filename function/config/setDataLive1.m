@@ -1,6 +1,6 @@
-function setDataLive1(exposure, options)
+function setDataLive1(options)
     arguments
-        exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
+        options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
         options.crop (1,1) logical = false
         options.crop_height (1,1) double {mustBePositive,mustBeFinite} = 100
         options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100
@@ -57,7 +57,7 @@ function setDataLive1(exposure, options)
     CheckWarning(ret)
     
     % Set exposure time
-    [ret] = SetExposureTime(exposure);
+    [ret] = SetExposureTime(options.exposure);
     CheckWarning(ret)
     
     % Get readout time
@@ -66,7 +66,7 @@ function setDataLive1(exposure, options)
 
     fprintf('\n***Full frame mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
-    fprintf('Exposure time: %4.2fs\n', exposure)
+    fprintf('Exposure time: %4.2fs\n', options.exposure)
     fprintf('Readout time for 1 image: %5.3fs\n\n', ReadoutTime)
 
 end

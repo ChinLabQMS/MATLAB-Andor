@@ -1,24 +1,29 @@
-function setDataLiveFK(exposure, num_frames)
+function setDataLiveFK(options)
     arguments
-        exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
-        num_frames (1, 1) int = 2
+        options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
+        options.num_frames (1, 1) int = 2
     end
     
-    % Format: [exposed rows, offset]
-    switch num_frames
+    switch options.num_frames
+        case 1
+            setDataLive1('exposure', options.exposure)
+            return
         case 2
-            settings = [512, 512];
+            settings.exposed_rows = 512;
+            settings.offset = 512;
         case 4
-            settings = [256, 768];
+            settings.exposed_rows = 256;
+            settings.offset = 768;
         case 8
-            settings = [128, 896];
+            settings.exposed_rows = 128;
+            settings.offset = 896;
     end
 
     % Get the current CCD serial number
     [ret, Number] = GetCameraSerialNumber();
     CheckWarning(ret)
 
-    if ret ~= 20002
+    if ret == atmcd.DRV_NOT_INITIALIZED
         error('Camera NOT initialized.\n')
     end
 
@@ -27,9 +32,8 @@ function setDataLiveFK(exposure, num_frames)
     CheckWarning(ret)
 
     % Configure fast kinetics mode acquisition
-    % 512 for exposed rows; 2 for series length; 4 for Image;
-    % 1 for horizontal binning; 1 for vertical binning; 512 for offset
-    [ret] = SetFastKineticsEx(settings(1), num_frames, exposure, 4, 1, 1, settings(2));
+    % (exposed rows, series length, exposure, 4 for Image, horizontal binning, vertical binning, offset)
+    [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, options.exposure, 4, 1, 1, settings.offset);
     CheckWarning(ret)
     
     % Set trigger mode; 0 for internal, 1 for external
@@ -62,7 +66,7 @@ function setDataLiveFK(exposure, num_frames)
     
     fprintf('\n***Fast Kinetic mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
-    fprintf('Number of frames: %d\n', num_frames)
-    fprintf('Exposure time: %4.2fs\n', exposure)
+    fprintf('Number of frames: %d\n', options.num_frames)
+    fprintf('Exposure time: %4.2fs\n', options.exposure)
 
 end
