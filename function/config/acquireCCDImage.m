@@ -28,10 +28,14 @@ function image = acquireCCDImage(options)
     %      validfirst: index of the first valid image.
     %      validlast: index of the last valid image.
     [ret, ImgData, ~, ~] = GetImages(1, options.num_images, YPixels*XPixels);
-    CheckWarning(ret);
+    CheckWarning(ret)
     
-    if ret == 20002
+    if ret == 20002 % DRV_SUCCESS
         image = flip(transpose(reshape(ImgData,YPixels,XPixels)),1);
+    elseif ret == 20024 % DRV_NO_NEW_DATA
+        fprintf('No new data, aborting acquisition.\n')
+        ret = AbortAcquisition();
+        CheckWarning(ret)
     else
         error('Acquisition error!');
     end
