@@ -5,13 +5,15 @@ function setDataLive1(options)
         options.crop_height (1,1) double {mustBePositive,mustBeFinite} = 100
         options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100
         options.external_trigger (1,1) logical = true
+        options.horizontal_speed (1,1) double {mustBeMember(options.horizontal_speed,[0,1,2,3])} = 2
+        options.vertical_speed (1,1) double {mustBeMember(options.vertical_speed,[0,1,2,3,4,5])} = 1
     end
 
     % Get the current CCD serial number
     [ret, Number] = GetCameraSerialNumber();
     CheckWarning(ret)
 
-    if ret ~= 20002
+    if ret == atmcd.DRV_NOT_INITIALIZED
         error('Camera NOT initialized.\n')
     end
 
@@ -30,13 +32,13 @@ function setDataLive1(options)
     % Set Pre-Amp Gain, 0 (1x), 1 (2x), 2 (4x).
     [ret] = SetPreAmpGain(2);
     CheckWarning(ret)
-    
+
     % Set Horizontal speed. (0,0) = 5 MHz, (0,1) = 3 MHz, (0,2) = 1 MHz, (0,3) = 50 kHz
-    [ret] = SetHSSpeed(0, 2);
+    [ret] = SetHSSpeed(0, options.horizontal_speed);
     CheckWarning(ret)
     
     % Set Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
-    [ret] = SetVSSpeed(1);
+    [ret] = SetVSSpeed(options.vertical_speed);
     CheckWarning(ret)
     
     % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin

@@ -21,7 +21,8 @@ function image = acquireCCDImage(options)
         fprintf('No new data, aborting acquisition.\n')
         ret = AbortAcquisition();
         CheckWarning(ret)
-    
+        image = [];
+            
     else
         error('Acquisition error!')
     end

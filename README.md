@@ -15,7 +15,7 @@ Functions:
 - [initializeCCD(serial)](/function/config/initializeCCD.m) Initialize CCD
 - [shutDownCCD(serial)](/function/config/shutDownCCD.m) Shut down CCD and release connection
 - [setCurrentCCD(serial)](/function/config/setCurrentCCD.m) Set current CCD
-- [setDataLive1(exposure=0.2, crop=false, crop_height=100, crop_width=100, external_trigger=true)](/function/config/setDataLive1.m) Full frame acquisition mode, with options to crop the detector and use external/internal trigger
+- [setDataLive1(exposure=0.2, crop=false, crop_height=100, crop_width=100, external_trigger=true, horizontal_speed=2, vertical_speed=1)](/function/config/setDataLive1.m) Full frame acquisition mode, with options to crop the detector and use external/internal trigger and set readout speed
 - [setDataLiveFK(exposure=0.2, num_frames=2)](/function/config/setDataLiveFK.m) Fast kinetics mode
 
 **Acquisition**
