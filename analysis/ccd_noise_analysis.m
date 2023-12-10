@@ -8,7 +8,7 @@ vertical_speed_range = [0, 1, 2, 3, 4, 5];
 
 % Set up the CCD
 initializeCCD()
-SetCurrentCCD(serial)
+setCurrentCCD(serial)
 
 % Acquire background image
 
