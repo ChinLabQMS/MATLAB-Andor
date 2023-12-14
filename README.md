@@ -12,8 +12,8 @@ MATLAB image analysis code for site-resolved atom imaging and manipulation.
 - The parameter `num_frames` is the number of sub-frames to split the full frame into for fast kinetics mode, could be set to 1, 2, 4, 8.
 
 Functions:
-- [initializeCCD(serial)](/function/config/initializeCCD.m) Initialize CCD
-- [shutDownCCD(serial)](/function/config/shutDownCCD.m) Shut down CCD and release connection
+- [initializeCCD(serial)](/function/andor/initializeCCD.m) Initialize CCD
+- [closeCCD(serial)](/function/config/closeCCD.m) Shut down CCD and release connection
 - [setCurrentCCD(serial)](/function/config/setCurrentCCD.m) Set current CCD
 - [setDataLive1(exposure=0.2, crop=false, crop_height=100, crop_width=100, external_trigger=true, horizontal_speed=2, vertical_speed=1)](/function/config/setDataLive1.m) Full frame acquisition mode, with options to crop the detector and use external/internal trigger and set readout speed
 - [setDataLiveFK(exposure=0.2, num_frames=2)](/function/config/setDataLiveFK.m) Fast kinetics mode
