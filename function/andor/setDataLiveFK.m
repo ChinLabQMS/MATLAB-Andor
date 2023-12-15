@@ -1,7 +1,8 @@
 function setDataLiveFK(options)
     arguments
         options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
-        options.num_frames (1, 1) int = 2
+        options.num_frames (1, 1) double = 2
+        options.external_trigger (1, 1) logical = true
     end
     
     switch options.num_frames
@@ -36,8 +37,12 @@ function setDataLiveFK(options)
     [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, options.exposure, 4, 1, 1, settings.offset);
     CheckWarning(ret)
     
-    % Set trigger mode; 0 for internal, 1 for external
-    [ret] = SetTriggerMode(1);
+    %   Set trigger mode; 0 for internal, 1 for external
+    if options.external_trigger
+        [ret] = SetTriggerMode(1);
+    else
+        [ret] = SetTriggerMode(0);
+    end
     CheckWarning(ret)
     
     % Set Pre-Amp Gain, 0 (1x), 1 (2x), 2 (4x).

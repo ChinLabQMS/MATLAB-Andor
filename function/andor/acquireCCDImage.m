@@ -1,24 +1,31 @@
 function image = acquireCCDImage(options)
     arguments
-        options.num_images = 1;
-        options.timeout = 30; % seconds
+        options.timeout (1, 1) double = 20; % seconds
     end
     
+    [ret, XPixels, YPixels] = GetDetector();
+    CheckWarning(ret)
+
     % Taking data from Andor camera
     [ret] = StartAcquisition();
     CheckWarning(ret)
     [ret] = WaitForAcquisitionTimeOut(1000*options.timeout);
     CheckWarning(ret)
-    [ret, XPixels, YPixels] = GetDetector();
-    CheckWarning(ret)
-    [ret, ImgData, ~, ~] = GetImages(1, options.num_images, YPixels*XPixels);
-    CheckWarning(ret)
     
     if ret == atmcd.DRV_SUCCESS
-        image = flip(transpose(reshape(ImgData,YPixels,XPixels)),1);
+        [ret, first, last] = GetNumberAvailableImages();
+        CheckWarning(ret)
+        [ret, ImgData, ~, ~] = GetImages(first, last, YPixels*XPixels);
+        CheckWarning(ret)
 
-    elseif ret == atmcd.DRV_NO_NEW_DATA
-        fprintf('No new data, aborting acquisition.\n')
+        if ret == atmcd.DRV_SUCCESS
+            fprintf('Successfully acquired %d images\n', last - first + 1)
+            image = flip(transpose(reshape(ImgData, YPixels, XPixels)), 1);
+        end
+                
+    else
+        fprintf('Acquisition time out after %d seconds, aborting acquisition.\n', ...
+            options.timeout)
 
         ret = AbortAcquisition();
         CheckWarning(ret)
@@ -26,8 +33,6 @@ function image = acquireCCDImage(options)
         if ret == atmcd.DRV_SUCCESS
             fprintf('Acquisition aborted.\n')
         end
-    else
-        error('Acquisition error!')
     end
 
 end
