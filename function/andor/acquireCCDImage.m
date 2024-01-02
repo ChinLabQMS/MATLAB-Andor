@@ -24,7 +24,7 @@ function image = acquireCCDImage(options)
         end
                 
     else
-        fprintf('Acquisition time out after %d seconds, aborting acquisition.\n', ...
+        fprintf('Acquisition time out after %d seconds, aborting acquisition...\n', ...
             options.timeout)
 
         ret = AbortAcquisition();
