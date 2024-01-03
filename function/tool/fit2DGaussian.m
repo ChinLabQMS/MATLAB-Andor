@@ -1,9 +1,9 @@
-function [fitObj, GOF, x, y, z] = fit2dGaussian(signal, options)
+function [fit_result, GOF, x, y, z, output] = fit2dGaussian(signal, options)
 %FIT2DGAUSSIAN Fit a 2D gaussian on the 2D signal data. It uses the built-in
 %function from MATLAB but with properly-set parameters for the fit to
 %converge.
 % 
-% [FitObj, GOF, X, Y, Z] = fit2DGaussian(signal, 'x_range', x_range, 'y_range', y_range, 'offset', 'c')
+% [fit_result, GOF, x, y, z, output] = fit2dGaussian(signal, 'x_range', x_range, 'y_range', y_range, 'offset', 'c')
 
     arguments
         signal double
@@ -67,5 +67,5 @@ function [fitObj, GOF, x, y, z] = fit2dGaussian(signal, options)
 
     foptions.Display = "off";
 
-    [fitObj, GOF] = fit([x, y], z, ftype, foptions);
+    [fit_result, GOF, output] = fit([x, y], z, ftype, foptions);
 end

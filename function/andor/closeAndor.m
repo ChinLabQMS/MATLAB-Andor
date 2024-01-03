@@ -1,4 +1,4 @@
-function closeCCD(serial)
+function closeAndor(serial)
     arguments
         serial = [19330, 19331]
     end

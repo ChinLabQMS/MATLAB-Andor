@@ -1,7 +1,7 @@
-function setDataLiveFK(options)
+function setModeFK(options)
     arguments
         options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
-        options.num_frames (1, 1) double = 2
+        options.num_frames (1, 1) double {mustBeMember(options.num_frames,[1, 2, 4, 8])} = 2
         options.external_trigger (1, 1) logical = true
     end
     

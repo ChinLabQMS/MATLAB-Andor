@@ -1,14 +1,14 @@
 %% Initialize Andor CCDs
-initializeCCD()
-setCurrentCCD(19330)
+initializeAndor()
+setCurrentAndor(19330)
 
 %% Acquire image from Andor
-setDataLive1(exposure=0.01)
+setModeLive1(exposure=0.01)
 num_image = 0;
 
 fig = figure;
 while true
-    image = acquireCCDImage();
+    image = acquireAndorImage();
     
     num_image = num_image + 1;
     figure(fig)
@@ -19,4 +19,4 @@ while true
 end
 
 %% Close Andor
-closeCCD()
+closeAndor()

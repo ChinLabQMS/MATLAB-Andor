@@ -1,4 +1,4 @@
-function setDataLive1(options)
+function setModeFull(options)
     arguments
         options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
         options.crop (1,1) logical = false

@@ -1,4 +1,4 @@
-function initializeCCD(serial)
+function initializeAndor(serial)
     arguments
         serial = [19330, 19331]
     end
@@ -21,7 +21,20 @@ function initializeCCD(serial)
         [ret] = AndorInitialize(pwd);                      
         CheckWarning(ret)
 
-        if ret == 20002
+        if ret == atmcd.DRV_SUCCESS
+            
+            % Get camera serial number (need initialize first)
+            [ret, Number] = GetCameraSerialNumber();
+            CheckWarning(ret)
+            if ~ismember(Number, serial)
+                % Shutdown unselected cameras
+                [ret] = AndorShutDown();
+                CheckWarning(ret)
+                fprintf('Camera %d (Serial Number: %d) NOT initialized. \n', i, Number)
+            else
+                fprintf('Camera %d (Serial Number: %d) is initializing...', i, Number)
+            end
+
             % Set temperature
             [ret] = SetTemperature(-70);
             CheckWarning(ret)
@@ -32,10 +45,11 @@ function initializeCCD(serial)
             
             % Free internal memory
             [ret] = FreeInternalMemory();
-            if ret == 20072
+            if ret == atmcd.DRV_ACQUIRING
+                fprintf('Acquisition in process, aborting...')
                 ret = AbortAcquisition();
                 CheckWarning(ret)
-                fprintf('Acquisition aborted.')
+                fprintf('Acquisition aborted.\n')
             end
         
             % Configuring Acquisition
@@ -84,19 +98,10 @@ function initializeCCD(serial)
             [ret] = EnableKeepCleans(1);
             CheckWarning(ret)
             
-            % Get camera serial number
-            [ret, Number] = GetCameraSerialNumber();
-            CheckWarning(ret)
-            if ~ismember(Number, serial)
-                [ret] = AndorShutDown();
-                CheckWarning(ret)
-                fprintf('Camera %d NOT initialized. Serial Number: %d\n', i, Number)
-            else
-                fprintf('Camera %d initialzied. Serial Number: %d\n', i, Number)
-            end
+            fprintf('Initialization complete.\n')
 
         else
-            fprintf('Camera %d already initialized in other application.\n',i)
+            fprintf('Camera %d not available, please check connections in other applications.\n',i)
         end
 
     end
