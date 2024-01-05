@@ -1,10 +1,12 @@
-function image = acquireAndorImage(options)
+function [image, num_frames] = acquireAndorImage(options)
     arguments
         options.timeout (1, 1) double = 20; % seconds
     end
     
     [ret, XPixels, YPixels] = GetDetector();
     CheckWarning(ret)
+    
+    num_frames = 1;
 
     % Taking data from Andor camera
     [ret] = StartAcquisition();
@@ -19,12 +21,12 @@ function image = acquireAndorImage(options)
         CheckWarning(ret)
 
         if ret == atmcd.DRV_SUCCESS
-            fprintf('Successfully acquired %d images\n', last - first + 1)
+            num_frames = last - first + 1;
             image = flip(transpose(reshape(ImgData, YPixels, XPixels)), 1);
         end
                 
     else
-        fprintf('Acquisition time out after %d seconds, aborting acquisition...', ...
+        warning('Acquisition time out after %d seconds, aborting acquisition...\n', ...
             options.timeout)
 
         ret = AbortAcquisition();

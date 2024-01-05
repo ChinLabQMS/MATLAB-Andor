@@ -5,6 +5,7 @@ function setCurrentAndor(serial)
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
+    fprintf('Number of Cameras found: %d\n\n',NumCameras)
 
     for i = 1: NumCameras
         [ret,CameraHandle] = GetCameraHandle(i-1);
@@ -18,7 +19,7 @@ function setCurrentAndor(serial)
         
         if ret == atmcd.DRV_SUCCESS
             if Number == serial
-                fprintf('Camera %d (Serial: %d, handle: %d) is set to current CCD\n',...
+                fprintf('Camera %d (serial: %d, handle: %d) is set to current CCD\n',...
                     i, Number, CameraHandle)
                 return
             end
@@ -27,6 +28,6 @@ function setCurrentAndor(serial)
         end
     end
 
-    error('Serial number is not found, check CCD connections')
+    error('Serial number %d is not found, check CCD connections', serial)
     
 end

@@ -30,9 +30,12 @@ function initializeAndor(serial)
                 % Shutdown unselected cameras
                 [ret] = AndorShutDown();
                 CheckWarning(ret)
-                fprintf('Camera %d (Serial Number: %d) NOT initialized. \n', i, Number)
+                fprintf('Camera %d (serial: %d, handle: %d) is NOT initialized. \n', ...
+                    i, Number, CameraHandle)
+                continue
             else
-                fprintf('Camera %d (Serial Number: %d) is initializing...', i, Number)
+                fprintf('Camera %d (serial: %d, handle: %d) is initialized.\n', ...
+                    i, Number, CameraHandle)
             end
 
             % Set temperature
@@ -97,8 +100,6 @@ function initializeAndor(serial)
             % Set Keep Clean: 0 = disable, 1 = enable
             [ret] = EnableKeepCleans(1);
             CheckWarning(ret)
-            
-            fprintf('Initialization complete.\n')
 
         else
             fprintf('Camera %d not available, please check connections in other applications.\n',i)

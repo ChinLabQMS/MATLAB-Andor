@@ -34,7 +34,11 @@ function setModeFK(options)
 
     % Configure fast kinetics mode acquisition
     % (exposed rows, series length, exposure, 4 for Image, horizontal binning, vertical binning, offset)
-    [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, options.exposure, 4, 1, 1, settings.offset);
+    [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, ...
+                            options.exposure, 4, 1, 1, settings.offset);
+    CheckWarning(ret)
+
+    [ret] = SetFKVShiftSpeed(1);
     CheckWarning(ret)
     
     %   Set trigger mode; 0 for internal, 1 for external
@@ -68,10 +72,15 @@ function setModeFK(options)
     % Set the image size
     [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
     CheckWarning(ret)
+
+    % Get the kinetic cycle time
+    [ret, ~, ~, kinetic] = GetAcquisitionTimings();
+    CheckWarning(ret)
     
     fprintf('\n***Fast Kinetic mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Number of frames: %d\n', options.num_frames)
-    fprintf('Exposure time: %4.2fs\n', options.exposure)
+    fprintf('Exposure time: %5.3fs\n', options.exposure)
+    fprintf('Kinetic cycle time: %5.3fs\n', kinetic)
 
 end

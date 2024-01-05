@@ -19,6 +19,7 @@ Functions:
 - [setModeFull(exposure=0.2, crop=false, crop_height=100, crop_width=100, external_trigger=true, horizontal_speed=2, vertical_speed=1)](/function/andor/setModeFull.m) Full frame acquisition mode, with options to crop the detector and use external/internal trigger and set readout speed
 - [setModeFK(exposure=0.2, num_frames=2)](/function/andor/setModeFK.m) Fast kinetics mode, with options to set the number of sub-frames
 - [acquireAndorImage(num_images=1, timeout=30)](/function/andor/acquireAndorImage.m) Acquire a full frame image (could contain many sub-frames), could be used for both full frame and fast kinetics mode.
+- [getAcquisitionConfig(num_frames=1)](/function/andor/getAcquisitionConfig.m) Get current acquisition configuration
 
 **User Interface**
 - [ImageAcquisition](ImageAcquisition.mlapp)

@@ -3,19 +3,25 @@ initializeAndor()
 setCurrentAndor(19330)
 
 %% Acquire image from Andor
-setModeLive1(exposure=0.01)
+setModeFull(exposure=0.01)
 num_image = 0;
+max_image = 100;
 
 fig = figure;
-while true
-    image = acquireAndorImage();
-    
+while num_image < max_image
+
     num_image = num_image + 1;
+    image = acquireAndorImage();
+    background = acquireAndorImage();
+    signal = double(image - background);
+    
     figure(fig)
-    imagesc(image)
+    imagesc(signal)
     daspect([1 1 1])
+    clim([0 10])
     colorbar
-    title(sprintf('number: %d', num_image))
+    title(sprintf('number: %d, count: %d', num_image, sum(signal, 'all')))
+    drawnow
 end
 
 %% Close Andor
