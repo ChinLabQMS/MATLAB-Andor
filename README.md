@@ -8,11 +8,12 @@ We control Andor ([iKon-M 934 CCD](https://andor.oxinst.com/products/ikon-xl-and
 
 **Andor Configuration**
 
+Important parameters:
 - The parameter `serial` is the current CCD serial number, `serial` = 19330 (Upper CCD) or 19331 (Lower CCD).
 - The parameter `exposure` is the exposure time in seconds.
 - The parameter `num_frames` is the number of sub-frames to split the full frame into for fast kinetics mode, could be set to 1, 2, 4, 8.
 
-Functions:
+Functions (under folder [function/andor](/function/andor)):
 - [initializeAndor(serial=[19330,19331])](/function/andor/initializeAndor.m) Initialize Andor CCD
 - [closeAndor(serial=[19330,19331])](/function/andor/closeAndor.m) Shut down Andor CCD and release connection
 - [setCurrentAndor(serial)](/function/andor/setCurrentAndor.m) Set current CCD
@@ -20,6 +21,16 @@ Functions:
 - [setModeFK(exposure=0.2, num_frames=2)](/function/andor/setModeFK.m) Fast kinetics mode, with options to set the number of sub-frames
 - [acquireAndorImage(num_images=1, timeout=30)](/function/andor/acquireAndorImage.m) Acquire a full frame image (could contain many sub-frames), could be used for both full frame and fast kinetics mode.
 - [getAcquisitionConfig(num_frames=1)](/function/andor/getAcquisitionConfig.m) Get current acquisition configuration
+
+**Thorlabs Zelux Camera Configuration**
+
+Important parameters:
+- The parameter `exposure` is the exposure time in seconds.
+
+Functions (under folder [function/zelux](/function/zelux)):
+- [initializeZelux(exposure=0.2, external_trigger=true)](/function/zelux/initializeZelux.m) Initialize Thorlabs Zelux CMOS camera and return the handle to `tlCameraSDK` and `tlCamera`
+- [closeZelux(tlCameraSDK, tlCamera)](/function/zelux/closeZelux.m) Shut down Thorlabs Zelux CMOS camera and release connection
+- [acquireZeluxImage(tlCamera, refresh=0.1)](/function/zelux/acquireZeluxImage.m) Acquire a full frame image
 
 **User Interface**
 - [ImageAcquisition](ImageAcquisition.mlapp)

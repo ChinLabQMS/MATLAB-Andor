@@ -1,12 +1,12 @@
 function imageData2D = acquireZeluxImage(tlCamera, options)
     arguments
         tlCamera
-        options.wait (1, 1) double = 0.1
+        options.refresh (1, 1) double = 0.1
     end
 
-    % Check if image buffer has been filled
+    % Check if image buffer has been filled, every options.refresh seconds.
     while (tlCamera.NumberOfQueuedFrames == 0)
-        pause(options.wait)
+        pause(options.refresh)
     end
     
     % If data processing in Matlab falls behind camera image
