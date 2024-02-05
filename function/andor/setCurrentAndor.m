@@ -28,6 +28,6 @@ function setCurrentAndor(serial)
         end
     end
 
-    error('Serial number %d is not found, check CCD connections', serial)
+    error('Serial number %d is not found, please check CCD connections', serial)
     
 end
