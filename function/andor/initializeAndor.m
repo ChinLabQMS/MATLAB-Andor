@@ -1,4 +1,4 @@
-function initializeAndor(serial)
+function NumCameras = initializeAndor(serial)
     arguments
         serial = [19330, 19331]
     end

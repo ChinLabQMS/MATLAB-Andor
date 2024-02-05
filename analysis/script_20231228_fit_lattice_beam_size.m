@@ -1,5 +1,6 @@
-path = 'D:\QMS DATA\2023\12 December\2023-12-28 Beam size fitting';
-file = 'bottom.asc';
+% path = 'D:\QMS DATA\2023\12 December\2023-12-28 Beam size fitting';
+path = 'D:\QMS DATA\2024\02 February\2024-02-02';
+file = 'top_right_after.asc';
 
 image = readAscImage(path, file);
 fit2dGaussian(image, "offset",'linear');
