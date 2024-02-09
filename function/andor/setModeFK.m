@@ -7,7 +7,7 @@ function setModeFK(options)
     
     switch options.num_frames
         case 1
-            setDataLive1('exposure', options.exposure)
+            setModeFull('exposure', options.exposure)
             return
         case 2
             settings.exposed_rows = 512;

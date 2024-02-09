@@ -37,11 +37,14 @@ Functions (under folder [function/zelux](/function/zelux)):
 
 ### Basic analysis functions
 
+**Fit 2D Gaussian**
+-[fit2dGaussian](/function/tool/fit2dGaussian.m)
+
 **Background subtraction**
 
 **ROI selection**
 
-**Lattice calibration**
+**Lattice phase calibration**
 
 **DMD pixel calibration**
 

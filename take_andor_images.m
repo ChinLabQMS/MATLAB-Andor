@@ -1,12 +1,12 @@
 %% Initialize Andor CCDs
 initializeAndor()
-setCurrentAndor(19330)
+% setCurrentAndor(19330)
+setCurrentAndor(19331)
 
 %% Acquire image from Andor
-setModeFull(exposure=0.01)
+setModeFK(exposure=0.2, num_frames=2)
 num_image = 0;
-max_image = 100;
-count_data = zeros(max_image, 1);
+max_image = Inf;
 
 fig = figure;
 while num_image < max_image
@@ -17,18 +17,22 @@ while num_image < max_image
     signal = double(image - background);
 
     count = mean(signal, 'all');
-    count_data(num_image) = count;
 
     figure(fig)
-    subplot(2,1,1)
-    imagesc(signal)
+    subplot(1,2,1)
+    imagesc(image)
     daspect([1 1 1])
-    clim([0 10])
+    % clim([-10 50])
     colorbar
     title(sprintf('number: %d, count: %g', num_image, count))
 
-    subplot(2,1,2)
-    plot(count_data(1:num_image))
+    subplot(1,2,2)
+    % imagesc(background)
+    imagesc(signal(200:700, 300:800))
+    daspect([1 1 1])
+    clim([-10 100])
+    colorbar
+    
     drawnow
 end
 
