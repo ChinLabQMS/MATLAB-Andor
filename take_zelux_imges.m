@@ -1,5 +1,13 @@
 %% Initialize Zelux camera
-[tlCameraSDK, tlCamera] = initializeZelux();
+[tlCameraSDK, tlCamera] = initializeZelux(exposure=0.000001, external_trigger=false);
+
+%% Take one image from Zelux
+image = acquireZeluxImage(tlCamera);
+
+figure
+imagesc(image)
+daspect([1 1 1])
+colorbar
 
 %% Acquire images from Zelux
 num_image = 0;

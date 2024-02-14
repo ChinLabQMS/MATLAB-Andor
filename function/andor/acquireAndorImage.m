@@ -23,15 +23,11 @@ function [image, num_frames] = acquireAndorImage(options)
     [ret] = WaitForAcquisitionTimeOut(1000*options.timeout);
     CheckWarning(ret)
     
-    if ret == atmcd.DRV_NO_NEW_DATA
-        warning('Acquisition time out after %d seconds, aborting acquisition...\n', ...
-            options.timeout)
-        
+    if ret == atmcd.DRV_NO_NEW_DATA      
         ret = AbortAcquisition();
         CheckWarning(ret)
-
-        error('Acquisition time out.')
-        
+        error('Acquisition time out after %d seconds, aborting acquisition...\n', ...
+            options.timeout)    
     else
         [ret, first, last] = GetNumberAvailableImages();
         CheckWarning(ret)

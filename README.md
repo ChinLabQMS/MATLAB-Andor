@@ -30,15 +30,15 @@ Important parameters:
 Functions (under folder [function/zelux](/function/zelux)):
 - [initializeZelux(exposure=0.2, external_trigger=true)](/function/zelux/initializeZelux.m) Initialize Thorlabs Zelux CMOS camera and return the handle to `tlCameraSDK` and `tlCamera`
 - [closeZelux(tlCameraSDK, tlCamera)](/function/zelux/closeZelux.m) Shut down Thorlabs Zelux CMOS camera and release connection
-- [acquireZeluxImage(tlCamera, refresh=0.1)](/function/zelux/acquireZeluxImage.m) Acquire a full frame image
+- [acquireZeluxImage(tlCamera, refresh=0.1, timeout=20)](/function/zelux/acquireZeluxImage.m) Acquire a full frame image
 
-**User Interface**
+**User Interface for image acquisition**
 - [ImageAcquisition](ImageAcquisition.mlapp)
 
 ### Basic analysis functions
 
 **Fit 2D Gaussian**
--[fit2dGaussian](/function/tool/fit2dGaussian.m)
+- [fit2dGaussian](/function/tool/fit2dGaussian.m)
 
 **Background subtraction**
 

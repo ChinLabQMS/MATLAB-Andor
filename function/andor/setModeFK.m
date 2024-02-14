@@ -7,7 +7,8 @@ function setModeFK(options)
     
     switch options.num_frames
         case 1
-            setModeFull('exposure', options.exposure)
+            setModeFull('exposure', options.exposure, ...
+                'external_trigger',options.external_trigger)
             return
         case 2
             settings.exposed_rows = 512;

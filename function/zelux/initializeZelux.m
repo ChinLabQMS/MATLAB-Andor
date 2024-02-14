@@ -24,7 +24,7 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
 
     if (serialNumbers.Count > 0)
         % Open the first camera using the serial number.
-        disp('Opening the first camera')
+        disp('Opening the first camera.')
         tlCamera = tlCameraSDK.OpenCamera(serialNumbers.Item(0), false);
         
         % Set exposure time and gain of the camera.
@@ -39,10 +39,10 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         % Set the number of frames per hardware trigger and start trigger
         % acquisition
         if options.external_trigger
-            disp('Setting up hardware triggered image acquisition.');
+            disp('Setting up hardware/external triggered image acquisition.');
             tlCamera.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.HardwareTriggered;
         else
-            disp('Setting up software triggered image acquisition.')
+            disp('Setting up software/internal triggered image acquisition.')
             tlCamera.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.SoftwareTriggered;
         end
         tlCamera.FramesPerTrigger_zeroForUnlimited = 1;
