@@ -17,7 +17,7 @@ function imageData2D = acquireZeluxImage(tlCamera, options)
         pause(options.refresh)
         t = toc;
         if t > options.timeout
-            warning('Current time %g. Acquisition time out after %d seconds', t, options.timeout)
+            error('Current time %g. Acquisition time out after %d seconds', t, options.timeout)
         end
     end    
     

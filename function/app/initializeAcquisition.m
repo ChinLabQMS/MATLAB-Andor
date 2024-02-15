@@ -1,5 +1,17 @@
 function initializeAcquisition(app)
 
+    % Check if there is stored data
+    if isfield(app.Data, 'Image')
+        answer = questdlg('There is existing Data in storage. Would you like to save it?', ...
+            'Image Aquisition App', ...
+            'Yes', 'Yes', 'No');
+        switch answer
+            case 'Yes'
+                saveData(app.Data, app.Live)
+            case 'No'
+        end
+    end
+
     % Initialize camera and Data Config
     camera = app.SelectcameraButtonGroup.SelectedObject.Text;
     external_trigger = strcmp(app.TriggermodeDropDown.Value, 'External');
@@ -49,5 +61,8 @@ function initializeAcquisition(app)
     
     % Initialize statistics for live updates
     app.Live.Current = 0;
+    app.Live.MeanCount = nan(1, app.Data.Config.MaxImage);
+
+    app.StatusLamp.Color = [1, 1, 0];
 
 end
