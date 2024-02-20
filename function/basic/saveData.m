@@ -4,5 +4,5 @@ function saveData(Data, Live, path)
         Live = struct()
         path = pwd
     end
-    uisave({'Data', 'Live'}, fullfile(path, 'Live_Data'))
+    uisave({'Data', 'Live'}, fullfile(path, 'Data'))
 end

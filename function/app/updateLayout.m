@@ -1,3 +1,0 @@
-function updateLayout(app)
-    
-end
