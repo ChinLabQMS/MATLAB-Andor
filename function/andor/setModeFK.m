@@ -82,6 +82,11 @@ function setModeFK(options)
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Number of frames: %d\n', options.num_frames)
     fprintf('Exposure time: %5.3fs\n', options.exposure)
-    fprintf('Kinetic cycle time: %5.3fs\n', kinetic)
+    fprintf('Kinetic cycle time: %5.3fs\n', kinetic)    
+    if options.external_trigger
+        fprintf('Trigger: External\n')
+    else
+        fprintf('Trigger: Internal\n')
+    end
 
 end
