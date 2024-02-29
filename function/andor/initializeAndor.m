@@ -1,6 +1,7 @@
-function initializeAndor(serial)
+function initializeAndor(serial, options)
     arguments
         serial = [19330, 19331]
+        options.close_unselected = true;
     end
 
     [ret, NumCameras] = GetAvailableCameras();
@@ -27,18 +28,20 @@ function initializeAndor(serial)
             [ret, Number] = GetCameraSerialNumber();
             CheckWarning(ret)
             if ~ismember(Number, serial)
-                % Shutdown unselected cameras
-                
-                % Temperature is maintained on shutting down.
-                % 0 - Returns to ambient temperature on ShutDown
-                % 1 - Temperature is maintained on ShutDown
-                [ret] = SetCoolerMode(1);
-                CheckWarning(ret)
-
-                [ret] = AndorShutDown();
-                CheckWarning(ret)
-                fprintf('Camera %d (serial: %d, handle: %d) is NOT initialized. \n', ...
-                    i, Number, CameraHandle)
+                if options.close_unselected
+                    % Shutdown unselected cameras
+                    
+                    % Temperature is maintained on shutting down.
+                    % 0 - Returns to ambient temperature on ShutDown
+                    % 1 - Temperature is maintained on ShutDown
+                    [ret] = SetCoolerMode(1);
+                    CheckWarning(ret)
+    
+                    [ret] = AndorShutDown();
+                    CheckWarning(ret)
+                    fprintf('Camera %d (serial: %d, handle: %d) is NOT initialized. \n', ...
+                        i, Number, CameraHandle)
+                end
                 continue
             else
                 fprintf('Camera %d (serial: %d, handle: %d) is initialized.\n', ...
