@@ -28,6 +28,13 @@ function initializeAndor(serial)
             CheckWarning(ret)
             if ~ismember(Number, serial)
                 % Shutdown unselected cameras
+                
+                % Temperature is maintained on shutting down.
+                % 0 - Returns to ambient temperature on ShutDown
+                % 1 - Temperature is maintained on ShutDown
+                [ret] = SetCoolerMode(1);
+                CheckWarning(ret)
+
                 [ret] = AndorShutDown();
                 CheckWarning(ret)
                 fprintf('Camera %d (serial: %d, handle: %d) is NOT initialized. \n', ...
