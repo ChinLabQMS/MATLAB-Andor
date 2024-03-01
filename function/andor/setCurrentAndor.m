@@ -1,6 +1,9 @@
 function setCurrentAndor(serial)
     arguments
-        serial (1,1) double = 19330
+        serial = 19330
+    end
+    if isstring(serial) || ischar(serial)
+        serial = str2double(serial(6:end));
     end
 
     [ret, NumCameras] = GetAvailableCameras();
@@ -24,7 +27,7 @@ function setCurrentAndor(serial)
                 return
             end
         else
-            warning('Camera %d (Serial: %d, handle: %d) is NOT initialized, can not obtain serial number\n', i, Number, CameraHandle)
+            fprintf('Camera %d (Serial: %d, handle: %d) is NOT initialized, can not obtain serial number\n', i, Number, CameraHandle)
         end
     end
 

@@ -69,11 +69,11 @@ function setModeFull(options)
     fprintf('\n***Full frame mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Exposure time: %4.2fs\n', options.exposure)
-    fprintf('Readout time for 1 image: %5.3fs\n\n', ReadoutTime)
+    fprintf('Readout time for 1 image: %5.3fs\n', ReadoutTime)
     if options.external_trigger
-        fprintf('Trigger: External\n')
+        fprintf('Trigger: External\n\n')
     else
-        fprintf('Trigger: Internal\n')
+        fprintf('Trigger: Internal\n\n')
     end
 
 end

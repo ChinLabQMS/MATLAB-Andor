@@ -84,9 +84,9 @@ function setModeFK(options)
     fprintf('Exposure time: %5.3fs\n', options.exposure)
     fprintf('Kinetic cycle time: %5.3fs\n', kinetic)    
     if options.external_trigger
-        fprintf('Trigger: External\n')
+        fprintf('Trigger: External\n\n')
     else
-        fprintf('Trigger: Internal\n')
+        fprintf('Trigger: Internal\n\n')
     end
 
 end
