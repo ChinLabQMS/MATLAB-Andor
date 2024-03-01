@@ -17,9 +17,7 @@ function closeAndor(serial)
         [ret] = SetCurrentCamera(CameraHandle);
         CheckWarning(ret)
     
-        [ret, Status] = GetStatus();
-        CheckWarning(ret)
-        
+        [ret, Status] = GetStatus();        
         if ret == atmcd.DRV_NOT_INITIALIZED
             fprintf('Camera %d (handle: %d) is NOT initialized. \n', ...
                     i, CameraHandle)
