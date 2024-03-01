@@ -1,16 +1,15 @@
-function [AllData, AllLive] = initializeData(Setting)
+function AllData = initializeData(Setting)
     arguments
         Setting (1, 1) struct
     end
+    
+    num_cameras = length(Setting.ActiveCameras);
 
     AllData = cell(1, num_cameras);
-    AllLive = cell(1, num_cameras);
-
+    
     for i = 1:num_cameras
-        camera = Setting.ActiveCameras{i};
-        
+        camera = Setting.ActiveCameras{i};        
         Data = struct();
-        Live = struct();
 
         % Initialize Data Configuration
         Data.Config = Setting.(camera);
@@ -37,9 +36,7 @@ function [AllData, AllLive] = initializeData(Setting)
             field = Data.Config.Acquisition{j};
             Data.(field) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage);
         end
-
         AllData{i} = Data;
-        AllLive{i} = Live;
     end
     
     fprintf('Acquisition initialized for %d cameras\n', num_cameras)
@@ -47,6 +44,7 @@ function [AllData, AllLive] = initializeData(Setting)
         
     end
 
-    % dt = whos('VARIABLE_YOU_CARE_ABOUT'); 
-    % MB=dt.bytes*9.53674e-7; 
+    dt = whos('AllData'); 
+    MB = dt.bytes*9.53674e-7; 
+    disp(MB)
 end
