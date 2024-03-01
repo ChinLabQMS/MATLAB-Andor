@@ -1,10 +1,9 @@
-function AllData = initializeData(Setting)
+function [AllData, dsize] = initializeData(Setting)
     arguments
         Setting (1, 1) struct
     end
     
     num_cameras = length(Setting.ActiveCameras);
-
     AllData = cell(1, num_cameras);
     
     for i = 1:num_cameras
@@ -34,17 +33,15 @@ function AllData = initializeData(Setting)
         num_images = length(Data.Config.Acquisition);
         for j = 1:num_images
             field = Data.Config.Acquisition{j};
-            Data.(field) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage);
+            Data.(field) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage, 'uint16');
         end
         AllData{i} = Data;
     end
     
-    fprintf('Acquisition initialized for %d cameras\n', num_cameras)
+    dsize = whos('AllData').bytes*9.53674e-7;
+    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', num_cameras, dsize)
     for i = 1:num_cameras
-        
+       disp(Data{i}.Config) 
     end
-
-    dt = whos('AllData'); 
-    MB = dt.bytes*9.53674e-7; 
-    disp(MB)
+    
 end
