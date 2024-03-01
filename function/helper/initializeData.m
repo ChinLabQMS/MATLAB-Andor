@@ -3,13 +3,13 @@ function [AllData, AllLive] = initializeData(Setting)
         Setting (1, 1) struct
     end
 
-    num_cameras = length(app.Setting.ActiveCameras);
+    num_cameras = length(Setting.ActiveCameras);
 
     AllData = cell(1, num_cameras);
     AllLive = cell(1, num_cameras);
 
     for i = 1:num_cameras
-        camera = app.Setting.ActiveCameras{i};
+        camera = Setting.ActiveCameras{i};
         
         Data = struct();
         Live = struct();
@@ -42,6 +42,11 @@ function [AllData, AllLive] = initializeData(Setting)
 
         AllData{i} = Data;
         AllLive{i} = Live;
+    end
+    
+    fprintf('Acquisition initialized for %d cameras\n', num_cameras)
+    for i = 1:num_cameras
+        
     end
 
     % dt = whos('VARIABLE_YOU_CARE_ABOUT'); 
