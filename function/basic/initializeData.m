@@ -41,7 +41,7 @@ function [AllData, dsize] = initializeData(Setting)
     dsize = whos('AllData').bytes*9.53674e-7;
     fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', num_cameras, dsize)
     for i = 1:num_cameras
-       disp(Data{i}.Config) 
+       disp(AllData{i}.Config) 
     end
     
 end
