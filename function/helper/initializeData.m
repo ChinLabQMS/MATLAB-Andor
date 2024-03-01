@@ -3,8 +3,6 @@ function [AllData, AllLive] = initializeData(Setting)
         Setting (1, 1) struct
     end
 
-    num_cameras = length(Setting.ActiveCameras);
-
     AllData = cell(1, num_cameras);
     AllLive = cell(1, num_cameras);
 
