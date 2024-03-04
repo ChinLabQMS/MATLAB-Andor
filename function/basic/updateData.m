@@ -4,21 +4,17 @@ function Data = updateData(Data, Image, current)
         Image
         current (1, 1) double
     end
-    for i = 1:length(Data)
-        shift = false;
-        if current > Data{i}.Config.MaxImage
-            shift = true;
-        end
-
-        names = Data{i}.Config.Acquisition;
-        for j = 1:length(names)
-            name = names{j};
-            if shift
-                Data{i}.(name) = circshift(Data{i}.(name), -1, 3);
-                Data{i}.(name)(:, :, end) = Image{i}.(name);
-            else
-                Data{i}.(name)(:, :, current) = Image{i}.(name);
-            end
+    
+    num_images = height(Data.SequenceTable);
+    for i = 1:num_images
+        camera = char(Data.SequenceTable.Camera(i));
+        label = Data.SequenceTable.Label{i};
+        
+        if current > Data.(camera).Config.MaxImage
+            Data.(camera).(label) = circshift(Data.(camera).(label), -1, 3);
+            Data.(camera).(label)(:,:,end) = Image{i};
+        else
+            Data.(camera).(label)(:,:,current) = Image{i};
         end
     end
 end
