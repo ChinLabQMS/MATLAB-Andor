@@ -4,7 +4,7 @@ function Image = acquireImage(Acquisition, ZeluxHandle)
         ZeluxHandle = {}
     end
     
-    num_images = height(Acqusition.SequenceTable);
+    num_images = height(Acquisition.SequenceTable);
     Image = cell(1, num_images);
     for i = 1:num_images
         camera = char(Acquisition.SequenceTable.Camera(i));
