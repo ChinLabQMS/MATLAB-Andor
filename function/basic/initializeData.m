@@ -13,6 +13,7 @@ function [Data, dsize] = initializeData(Setting)
         Data.(camera).Config = Setting.(camera);
         Data.(camera).Config.Serial = camera;
         Data.(camera).Config.MaxImage = Setting.Acquisition.NumAcquisitions;
+        Data.(camera).Config.Acquisition = struct();
         switch camera
             case {'Andor19330', 'Andor19331'}
                 setCurrentAndor(camera)
@@ -23,29 +24,31 @@ function [Data, dsize] = initializeData(Setting)
                     CheckWarning(ret)
                 end
             case 'Zelux'
-                Data.Config.XPixels = 1440;
-                Data.Config.YPixels = 1080;            
+                Data.(camera).Config.XPixels = 1440;
+                Data.(camera).Config.YPixels = 1080;
         end
     end
     
     num_images = height(Setting.Acquisition.SequenceTable);
     for i = 1:num_images
         camera = char(Setting.Acquisition.SequenceTable.Camera(i));
-        label = Setting.Acquisition.SequenceTable.Label(i);
-        note = Setting.Acquisition.SequenceTable.Note(i);
+        label = Setting.Acquisition.SequenceTable.Label{i};
+        note = Setting.Acquisition.SequenceTable.Note{i};
         
         % Initialize Data storage
-        Data.(camera).(label) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage, 'uint16');
-        Data.(camera).Config.(label) = note;
+        Data.(camera).(label) = zeros(Data.(camera).Config.XPixels, ...
+            Data.(camera).Config.YPixels, Data.(camera).Config.MaxImage, 'uint16');
+        Data.(camera).Config.Acquisition.(label) = note;
     end
     
-    for i = 1:num_cameras
+    for i = 1:length(cameras)
         fprintf('Config for camera %d: \n', i)
         camera = char(cameras(i));
         disp(Data.(camera).Config) 
     end
 
     dsize = whos('Data').bytes*9.53674e-7;
-    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', num_cameras, dsize)
+    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', ...
+        length(cameras), dsize)
     
 end
