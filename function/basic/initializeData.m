@@ -1,47 +1,51 @@
-function [AllData, dsize] = initializeData(Setting)
+function [Data, dsize] = initializeData(Setting)
     arguments
         Setting (1, 1) struct
     end
     
-    num_cameras = length(Setting.ActiveCameras);
-    AllData = cell(1, num_cameras);
-    
-    for i = 1:num_cameras
-        camera = Setting.ActiveCameras{i};        
-        Data = struct();
+    Data = struct();
+    Data.SequenceTable = Setting.Acquisition.SequenceTable;
 
-        % Initialize Data Configuration
-        Data.Config = Setting.(camera);
-        Data.Config.Serial = camera;
-        Data.Config.MaxImage = Setting.NumAcquisitions;
-
+    cameras = unique(Setting.Acquisition.SequenceTable.Camera);
+    for i = 1:length(cameras)
+        camera = char(cameras(i));
+        Data.(camera) = struct();
+        Data.(camera).Config = Setting.(camera);
+        Data.(camera).Config.Serial = camera;
+        Data.(camera).Config.MaxImage = Setting.Acquisition.NumAcquisitions;
         switch camera
             case {'Andor19330', 'Andor19331'}
-                setCurrentAndor(camera)    
-                [ret, Data.Config.YPixels, Data.Config.XPixels] = GetDetector();
+                setCurrentAndor(camera)
+                [ret, Data.(camera).Config.YPixels, Data.(camera).Config.XPixels] = GetDetector();
                 CheckWarning(ret)
-                if Data.Config.NumFrames == 1
-                    [ret, Data.Config.Exposure, Data.Config.Accumulate] = GetAcquisitionTimings();
+                if Data.(camera).Config.NumFrames == 1
+                    [ret, Data.(camera).Config.Exposure, Data.(camera).Config.Accumulate] = GetAcquisitionTimings();
                     CheckWarning(ret)
                 end
             case 'Zelux'
                 Data.Config.XPixels = 1440;
                 Data.Config.YPixels = 1080;            
         end
-        
-        % Initialize Data storage
-        num_images = length(Data.Config.Acquisition);
-        for j = 1:num_images
-            field = Data.Config.Acquisition{j};
-            Data.(field) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage, 'uint16');
-        end
-        AllData{i} = Data;
     end
     
-    dsize = whos('AllData').bytes*9.53674e-7;
-    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', num_cameras, dsize)
-    for i = 1:num_cameras
-       disp(AllData{i}.Config) 
+    num_images = height(Setting.Acquisition.SequenceTable);
+    for i = 1:num_images
+        camera = char(Setting.Acquisition.SequenceTable.Camera(i));
+        label = Setting.Acquisition.SequenceTable.Label(i);
+        note = Setting.Acquisition.SequenceTable.Note(i);
+        
+        % Initialize Data storage
+        Data.(camera).(label) = zeros(Data.Config.XPixels, Data.Config.YPixels, Data.Config.MaxImage, 'uint16');
+        Data.(camera).Config.(label) = note;
     end
+    
+    for i = 1:num_cameras
+        fprintf('Config for camera %d: \n', i)
+        camera = char(cameras(i));
+        disp(Data.(camera).Config) 
+    end
+
+    dsize = whos('Data').bytes*9.53674e-7;
+    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', num_cameras, dsize)
     
 end
