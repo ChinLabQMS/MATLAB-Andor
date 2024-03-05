@@ -9,7 +9,7 @@ function setCurrentAndor(serial, Handle, options)
         serial_str = serial;
         serial = str2double(serial(6:end));
     else
-        serial_str = ['Andor', char(serial)];
+        serial_str = ['Andor', num2str(serial)];
     end
 
     Handle = getAndorHandle(serial_str, Handle, "verbose",options.verbose);

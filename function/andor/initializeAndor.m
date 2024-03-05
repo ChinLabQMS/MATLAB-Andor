@@ -14,10 +14,10 @@ function Handle = initializeAndor(serial, Handle, options)
     end
     
     for serial_number = serial
-        serial_str = ['Andor', char(serial_number)];
+        serial_str = ['Andor', num2str(serial_number)];
         Handle = getAndorHandle(serial_str, Handle, "verbose",options.verbose);
 
-        SetCurrentCamera(Handle.(serial_str))
+        [ret] = SetCurrentCamera(Handle.(serial_str));
         CheckWarning(ret)
 
         [ret] = AndorInitialize(pwd);                      

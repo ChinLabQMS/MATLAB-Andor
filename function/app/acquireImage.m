@@ -10,10 +10,10 @@ function Image = acquireImage(Acquisition, Handle)
         camera = char(Acquisition.SequenceTable.Camera(i));
         switch camera
             case {'Andor19330', 'Andor19331'}
-                setCurrentAndor(camera, Handle);
+                setCurrentAndor(camera, Handle,"verbose",false);
                 Image{i} = acquireAndorImage("timeout", Acquisition.Timeout);
             case 'Zelux'
-                Image{i} = acquireZeluxImage(Handle.Zelux{:}, "timeout", Acquisition.Timeout);
+                Image{i} = acquireZeluxImage(Handle.Zelux{2}, "timeout", Acquisition.Timeout, 'verbose',false);
         end
     end
 end

@@ -4,17 +4,18 @@ function Handle = getAndorHandle(serial, Handle, options)
         Handle (1, 1) struct = struct()
         options.verbose = true
     end
-    
+
     if isnumeric(serial)
         serial_str = ['Andor', char(serial)];
     else
         serial_str = serial;
+        serial = str2double(serial(6:end));
     end
 
     if ~isfield(Handle, serial_str)
         Handle = getCameraHandle(Handle, 'verbose',options.verbose);
         if ~isfield(Handle, serial_str)
-            error('Could not find camera with serial number %d', serial_number)
+            error('Could not find camera with serial number %d', serial)
         end
     end
 end
@@ -70,6 +71,6 @@ function Handle = getCameraHandle(Handle, options)
         end
         
         % Update stored Handle
-        Handle.(['Andor', char(Number)]) = CameraHandle;
+        Handle.(['Andor', num2str(Number)]) = CameraHandle;
     end
 end
