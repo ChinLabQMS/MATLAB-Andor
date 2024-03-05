@@ -6,34 +6,18 @@ function setCurrentAndor(serial, Handle, options)
     end
 
     if isstring(serial) || ischar(serial)
+        serial_str = serial;
         serial = str2double(serial(6:end));
+    else
+        serial_str = ['Andor', char(serial)];
     end
 
-    [ret, NumCameras] = GetAvailableCameras();
+    Handle = getAndorHandle(serial_str, Handle, "verbose",options.verbose);
+    [ret] = SetCurrentCamera(Handle.(serial_str));
     CheckWarning(ret)
-    fprintf('Number of Cameras found: %d\n\n',NumCameras)
-
-    for i = 1: NumCameras
-        [ret,CameraHandle] = GetCameraHandle(i-1);
-        CheckWarning(ret)
     
-        [ret] = SetCurrentCamera(CameraHandle);
-        CheckWarning(ret)
-
-        [ret, Number] = GetCameraSerialNumber();
-        CheckWarning(ret)
-        
-        if ret == atmcd.DRV_SUCCESS
-            if Number == serial
-                fprintf('Camera %d (serial: %d, handle: %d) is set to current CCD\n',...
-                    i, Number, CameraHandle)
-                return
-            end
-        else
-            fprintf('Camera %d (Serial: %d, handle: %d) is NOT initialized, can not obtain serial number\n', i, Number, CameraHandle)
-        end
-    end
-
-    error('Serial number %d is not found, please check CCD connections', serial)
-    
+    if options.verbose
+        fprintf('Camera (serial: %d, handle: %d) is set to current CCD\n',...
+                serial, Handle.(serial_str))
+    end   
 end

@@ -12,56 +12,21 @@ function Handle = initializeAndor(serial, Handle, options)
         fprintf('\n******Start initialization******\n\n')
         fprintf('Number of Cameras found: %d\n\n',NumCameras)
     end
-
-    for i = 1:NumCameras
-        
-        [ret, CameraHandle] = GetCameraHandle(i-1);
-        CheckWarning(ret)
     
-        [ret] = SetCurrentCamera(CameraHandle);
+    for serial_number = serial
+        serial_str = ['Andor', char(serial_number)];
+        Handle = getAndorHandle(serial_str, Handle, "verbose",options.verbose);
+
+        SetCurrentCamera(Handle.(serial_str))
         CheckWarning(ret)
 
-        % Record the initial state of the camera
-        initialized = true;
-
-        % Try to get camera serial number
-        [ret, Number] = GetCameraSerialNumber();
-        if ret == atmcd.DRV_NOT_INITIALIZED
-            initialized = false;
-
-            [ret] = AndorInitialize(pwd);                      
-            CheckWarning(ret)
-            if ret == atmcd.DRV_SUCCESS
-                [ret, Number] = GetCameraSerialNumber();
-                CheckWarning(ret)
-            else
-                if options.verbose
-                    fprintf('Camera %d is not available, please check connections in other applications.\n',i)
-                end
-                continue
-            end
+        [ret] = AndorInitialize(pwd);                      
+        CheckWarning(ret)
+        if options.verbose
+            fprintf('Camera (serial: %d, handle: %d) is set to current CCD\n',...
+                    serial_number, Handle.(serial_str))
         end
-        
-        
-
-        if ~ismember(Number, serial)
-            % Return the camera to its initial state
-            if ~initialized
-                % Temperature is maintained on shutting down.
-                % 0 - Returns to ambient temperature on ShutDown
-                % 1 - Temperature is maintained on ShutDown
-                [ret] = SetCoolerMode(1);
-                CheckWarning(ret)
-
-                [ret] = AndorShutDown;
-                CheckWarning(ret)
-            end
-            continue
-        else
-            fprintf('Camera %d (serial: %d, handle: %d) is initialized.\n', ...
-                i, Number, CameraHandle)
-        end
-
+    
         % Set temperature
         [ret] = SetTemperature(-70);
         CheckWarning(ret)
@@ -73,10 +38,11 @@ function Handle = initializeAndor(serial, Handle, options)
         % Free internal memory
         [ret] = FreeInternalMemory();
         if ret == atmcd.DRV_ACQUIRING
-            fprintf('Acquisition in process, aborting...')
             ret = AbortAcquisition();
             CheckWarning(ret)
-            fprintf('Acquisition aborted.\n')
+            if options.verbose
+                fprintf('In-progress acquisition is aborted.')
+            end
         end
     
         % Configuring Acquisition
@@ -126,11 +92,4 @@ function Handle = initializeAndor(serial, Handle, options)
         CheckWarning(ret)
 
     end
-
-end
-
-function Handle = getAndorHandle()
-    [ret, NumCameras] = GetAvailableCameras();
-    CheckWarning(ret)
-    
 end

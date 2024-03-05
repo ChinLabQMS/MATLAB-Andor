@@ -15,7 +15,7 @@ function [image, num_frames] = acquireAndorImage(options)
     [ret, XPixels, YPixels] = GetDetector();
     CheckWarning(ret)
     
-    num_frames = 1;
+    num_frames = 0;
 
     % Taking data from Andor camera
     [ret] = StartAcquisition();

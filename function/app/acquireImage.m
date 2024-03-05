@@ -1,7 +1,7 @@
-function Image = acquireImage(Acquisition, ZeluxHandle)
+function Image = acquireImage(Acquisition, Handle)
     arguments
         Acquisition (1, 1) struct
-        ZeluxHandle = {}
+        Handle (1, 1) struct = struct()
     end
     
     num_images = height(Acquisition.SequenceTable);
@@ -10,10 +10,10 @@ function Image = acquireImage(Acquisition, ZeluxHandle)
         camera = char(Acquisition.SequenceTable.Camera(i));
         switch camera
             case {'Andor19330', 'Andor19331'}
-                setCurrentAndor(camera)
+                setCurrentAndor(camera, Handle);
                 Image{i} = acquireAndorImage("timeout", Acquisition.Timeout);
             case 'Zelux'
-                Image{i} = acquireZeluxImage(ZeluxHandle{2}, "timeout", Acquisition.Timeout);
+                Image{i} = acquireZeluxImage(Handle.Zelux{:}, "timeout", Acquisition.Timeout);
         end
     end
 end
