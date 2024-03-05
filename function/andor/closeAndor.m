@@ -1,59 +1,56 @@
-function closeAndor(serial)
+function closeAndor(serial, Handle, options)
     arguments
         serial = [19330, 19331]
+        Handle (1, 1) struct = struct()
+        options.verbose (1, 1) logical = true
     end
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
+    
+    if options.verbose
+        fprintf('\n******Shutting down CCD******\n\n')
+        fprintf('Number of Cameras found: %d\n\n',NumCameras)
+    end
 
-    fprintf('\n******Shutting down CCD******\n\n')
-    fprintf('Number of Cameras found: %d\n\n',NumCameras)
+    for serial_number = serial
+        serial_str = ['Andor', char(serial_number)];
+        Handle = getAndorHandle(serial_str, Handle, "verbose",options.verbose);
 
-    for i = 1:NumCameras
-
-        [ret,CameraHandle] = GetCameraHandle(i-1);
+        SetCurrentCamera(Handle.(serial_str))
         CheckWarning(ret)
     
-        [ret] = SetCurrentCamera(CameraHandle);
-        CheckWarning(ret)
-    
-        [ret, Status] = GetStatus();        
+        [ret, Status] = GetStatus();
         if ret == atmcd.DRV_NOT_INITIALIZED
-            fprintf('Camera %d (handle: %d) is NOT initialized. \n', ...
-                    i, CameraHandle)
+            if options.verbose
+                fprintf('Camera (serial: %d, handle: %d) is NOT initialized. \n', ...
+                        serial_number, Handle.(serial_str))
+            end
             continue
         end
-    
-        [ret, Number] = GetCameraSerialNumber();
-        CheckWarning(ret)
-        
-        if ismember(Number, serial)
-            fprintf('Closing Camera %d...\n',i)
 
-            % Abort data acquisition
-            if Status == atmcd.DRV_ACQUIRING
-                [ret] = AbortAcquisition;
-                CheckWarning(ret)
-            end
-    
-            % Close shutter
-            [ret] = SetShutter(1, 2, 1, 1);
+        % Abort data acquisition
+        if Status == atmcd.DRV_ACQUIRING
+            [ret] = AbortAcquisition;
             CheckWarning(ret)
-
-            % Temperature is maintained on shutting down.
-            % 0 - Returns to ambient temperature on ShutDown
-            % 1 - Temperature is maintained on ShutDown
-            [ret] = SetCoolerMode(1);
-            CheckWarning(ret)
-
-            [ret] = AndorShutDown;
-            CheckWarning(ret)
-            fprintf('Camera %d (serial: %d, handle: %d) is closed.\n', ...
-                    i, Number, CameraHandle)
-        else
-            fprintf('Camera %d (serial: %d, handle: %d) is kept initialized. \n', ...
-                    i, Number, CameraHandle)
         end
-    end
-    
+
+        % Close shutter
+        [ret] = SetShutter(1, 2, 1, 1);
+        CheckWarning(ret)
+
+        % Temperature is maintained on shutting down.
+        % 0 - Returns to ambient temperature on ShutDown
+        % 1 - Temperature is maintained on ShutDown
+        [ret] = SetCoolerMode(1);
+        CheckWarning(ret)
+
+        [ret] = AndorShutDown;
+        CheckWarning(ret)
+
+        if options.verbose
+            fprintf('Camera (serial: %d, handle: %d) is closed.\n', ...
+                    serial_number, Handle.(serial_str))
+        end
+    end    
 end
