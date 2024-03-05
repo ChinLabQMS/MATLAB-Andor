@@ -5,3 +5,5 @@ mean_signal = mean_image - mean_background;
 figure
 imagesc(mean_signal)
 daspect([1 1 1])
+
+%%

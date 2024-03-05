@@ -1,7 +1,10 @@
-function setCurrentAndor(serial)
+function setCurrentAndor(serial, Handle, options)
     arguments
         serial = 19330
+        Handle (1, 1) struct = struct()
+        options.verbose = true
     end
+
     if isstring(serial) || ischar(serial)
         serial = str2double(serial(6:end));
     end

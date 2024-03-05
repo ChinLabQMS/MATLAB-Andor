@@ -1,12 +1,17 @@
-function initializeAndor(serial)
+function Handle = initializeAndor(serial, Handle, options)
     arguments
         serial = [19330, 19331]
+        Handle (1, 1) struct = struct()
+        options.verbose = true
     end
 
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
-    fprintf('\n******Start initialization******\n\n')
-    fprintf('Number of Cameras found: %d\n\n',NumCameras)
+
+    if options.verbose
+        fprintf('\n******Start initialization******\n\n')
+        fprintf('Number of Cameras found: %d\n\n',NumCameras)
+    end
 
     for i = 1:NumCameras
         
@@ -30,9 +35,14 @@ function initializeAndor(serial)
                 [ret, Number] = GetCameraSerialNumber();
                 CheckWarning(ret)
             else
-                fprintf('Camera %d is not available, please check connections in other applications.\n',i)
+                if options.verbose
+                    fprintf('Camera %d is not available, please check connections in other applications.\n',i)
+                end
+                continue
             end
         end
+        
+        
 
         if ~ismember(Number, serial)
             % Return the camera to its initial state
@@ -117,4 +127,10 @@ function initializeAndor(serial)
 
     end
 
+end
+
+function Handle = getAndorHandle()
+    [ret, NumCameras] = GetAvailableCameras();
+    CheckWarning(ret)
+    
 end
