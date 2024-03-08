@@ -13,7 +13,7 @@ function [Data, dsize] = initializeData(Setting)
         Data.(camera).Config = Setting.(camera);
         Data.(camera).Config.Serial = camera;
         Data.(camera).Config.MaxImage = Setting.Acquisition.NumAcquisitions;
-        Data.(camera).Config.Acquisition = struct();
+        Data.(camera).Config.Note = struct();
         switch camera
             case {'Andor19330', 'Andor19331'}
                 setCurrentAndor(camera)
@@ -38,7 +38,7 @@ function [Data, dsize] = initializeData(Setting)
         % Initialize Data storage
         Data.(camera).(label) = zeros(Data.(camera).Config.XPixels, ...
             Data.(camera).Config.YPixels, Data.(camera).Config.MaxImage, 'uint16');
-        Data.(camera).Config.Acquisition.(label) = note;
+        Data.(camera).Config.Note.(label) = note;
     end
     
     for i = 1:length(cameras)
@@ -48,7 +48,7 @@ function [Data, dsize] = initializeData(Setting)
     end
 
     dsize = whos('Data').bytes*9.53674e-7;
-    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n', ...
+    fprintf('Data storage initialized for %d cameras, total memory is %g MB\n\n', ...
         length(cameras), dsize)
     
 end
