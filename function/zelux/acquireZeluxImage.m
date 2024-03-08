@@ -1,7 +1,7 @@
 function imageData2D = acquireZeluxImage(tlCamera, options)
     arguments
         tlCamera
-        options.refresh (1, 1) double = 0.1
+        options.refresh (1, 1) double = 0.01
         options.timeout (1, 1) double = 30
         options.verbose (1, 1) logical = true
     end
