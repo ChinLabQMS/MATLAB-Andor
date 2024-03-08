@@ -23,7 +23,7 @@ function Image = acquireImage(Acquisition, Handle)
         switch camera
             case {'Andor19330', 'Andor19331'}
                 setCurrentAndor(camera, Handle,"verbose",false);
-                Image{i} = acquireAndorImage("mode",2);
+                Image{i} = acquireAndorImage("mode",2, "timeout",Acquisition.Timeout);
             case 'Zelux'
                 Image{i} = acquireZeluxImage(Handle.Zelux{2}, "timeout", Acquisition.Timeout, 'verbose',false);
         end
