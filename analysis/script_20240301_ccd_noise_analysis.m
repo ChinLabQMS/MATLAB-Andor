@@ -44,20 +44,60 @@ for exposure = [0, 200, 400, 600, 800, 1000]
         RawBackground.(camera).(name) = Background.(name){i}.(label);
     end
 end
-save("RawBackground_20240301_HSSpeed=2_VSSpeed=1", "-struct", "RawBackground")
+RawBackground = rmfield(RawBackground, 'Zelux');
+
+%%
+save("calibration\RawBackground_20240301_HSSpeed=2_VSSpeed=1", "-struct", "RawBackground")
 
 %% 
 RawBackground = load('calibration\RawBackground_20240301_HSSpeed=2_VSSpeed=1.mat');
 
-%% Get the mean and variance of the data with 2 max filtered
+%%
+images = RawBackground.Andor19330.Exposure_0;
+new_images = removeOutliers(images);
+
+subplot(1,2,1)
+imagesc(mean(images,3))
+daspect([1 1 1])
+colorbar
+
+subplot(1,2,2)
+imagesc(mean(new_images,3,'omitmissing'))
+daspect([1 1 1])
+colorbar
+
+%%
 StatBackground = struct();
-cameras = fieldnames(RawBackground);
+
+cameras = {'Andor19330','Andor19331'};
 for i = 1:length(cameras)
     camera = cameras{i};
-    names = fieldnames(RawBackground);
-    for j = 1:length(names)
-        StatBackground.(camera).(names{j}) = struct( ...
-            'Mean', trimmean(RawBackground.(camera).(name{j}), 5, 3), ...
-            'STD', trimstd())
+    labels = fieldnames(RawBackground.(camera));
+    StatBackground.(camera) = struct();
+
+    for j = 1:length(labels)
+        label = labels{j};
+        disp(camera)
+        disp(label)
+        images = removeOutliers(RawBackground.(camera).(label));
+        StatBackground.(camera).(label) = struct( ...
+            'Mean', mean(images, 3, 'omitmissing'), ...
+            'STD', std(images, 0, 3, 'omitmissing'));
     end
 end
+
+save('calibration\StatBackground_20240301_HSSpeed=2_VSSpeed=1.mat', '-struct', 'StatBackground')
+
+%%
+StatBackground = load("calibration\StatBackground_20240301_HSSpeed=2_VSSpeed=1.mat");
+
+%%
+subplot(1,2,1)
+imagesc(StatBackground.Andor19330.Exposure_0.Mean)
+daspect([1 1 1])
+colorbar
+
+subplot(1,2,2)
+imagesc(StatBackground.Andor19330.Exposure_0.STD)
+daspect([1 1 1])
+colorbar
