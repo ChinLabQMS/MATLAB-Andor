@@ -66,6 +66,10 @@ function setModeFull(options)
     [ret, ReadoutTime] = GetReadOutTime();
     CheckWarning(ret)
 
+    % Free internal memory
+    [ret] = FreeInternalMemory();
+    CheckWarning(ret)
+
     fprintf('\n***Full frame mode***\n')
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Exposure time: %4.2fs\n', options.exposure)

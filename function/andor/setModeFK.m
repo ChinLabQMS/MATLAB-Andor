@@ -38,7 +38,8 @@ function setModeFK(options)
     [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, ...
                             options.exposure, 4, 1, 1, settings.offset);
     CheckWarning(ret)
-
+    
+    % Set Fast Kinetic vertical shift speed
     [ret] = SetFKVShiftSpeed(1);
     CheckWarning(ret)
     
@@ -76,6 +77,10 @@ function setModeFK(options)
 
     % Get the kinetic cycle time
     [ret, ~, ~, kinetic] = GetAcquisitionTimings();
+    CheckWarning(ret)
+
+    % Free internal memory
+    [ret] = FreeInternalMemory();
     CheckWarning(ret)
     
     fprintf('\n***Fast Kinetic mode***\n')
