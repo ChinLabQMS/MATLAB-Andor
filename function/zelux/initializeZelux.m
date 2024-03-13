@@ -2,6 +2,7 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
     arguments
         options.exposure (1, 1) double = 0.2 % exposure time in seconds
         options.external_trigger (1, 1) logical = true
+        options.verbose (1,1) logical = true
     end
     
     oldPath = cd([pwd, '/function/zelux/dlls']);
@@ -9,7 +10,9 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
     % Load TLCamera DotNet assembly. The assembly .dll is assumed to be in the 
     % same folder as the scripts.
     NET.addAssembly([pwd, '/Thorlabs.TSI.TLCamera.dll']);
-    disp('Dot NET assembly loaded.');
+    if options.verbose
+        fprintf('Dot NET assembly loaded.')
+    end
     try
         tlCameraSDK = Thorlabs.TSI.TLCamera.TLCameraSDK.OpenTLCameraSDK;
     catch
@@ -18,13 +21,18 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
     end
     cd(oldPath)
 
+    % NET.addAssembly([pwd, '/function/zelux/dlls/Thorlabs.TSI.TLCamera.dll']);
+    % disp('Dot NET assembly loaded.')
+    % tlCameraSDK = Thorlabs.TSI.TLCamera.TLCameraSDK.OpenTLCameraSDK;
+
     % Get serial numbers of connected TLCameras.
     serialNumbers = tlCameraSDK.DiscoverAvailableCameras;
-    disp([num2str(serialNumbers.Count), ' camera was discovered.']);
+    if options.verbose
+        fprintf('%d camera was discovered.\n', serialNumbers.Count)
+    end
 
     if (serialNumbers.Count > 0)
         % Open the first camera using the serial number.
-        disp('Opening the first camera.')
         tlCamera = tlCameraSDK.OpenCamera(serialNumbers.Item(0), false);
         
         % Set exposure time and gain of the camera.
@@ -39,12 +47,17 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         % Set the number of frames per hardware trigger and start trigger
         % acquisition
         if options.external_trigger
-            disp('Setting up hardware/external triggered image acquisition.');
+            if options.verbose
+                disp('Setting up hardware/external triggered image acquisition.');
+            end
             tlCamera.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.HardwareTriggered;
         else
-            disp('Setting up software/internal triggered image acquisition.')
+            if options.verbose
+                disp('Setting up software/internal triggered image acquisition.')
+            end
             tlCamera.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.SoftwareTriggered;
         end
+       
         tlCamera.FramesPerTrigger_zeroForUnlimited = 1;
         tlCamera.Arm;
     else

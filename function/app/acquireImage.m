@@ -12,8 +12,9 @@ function Image = acquireImage(Acquisition, Handle)
         camera = char(Acquisition.SequenceTable.Camera(i));
         switch camera
             case {'Andor19330', 'Andor19331'}
-                setCurrentAndor(camera, Handle,"verbose",false);
+                freeAndorMemory(camera, Handle)
                 acquireAndorImage("mode",1);
+            case 'Zelux'
         end
     end
 
