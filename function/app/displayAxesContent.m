@@ -16,7 +16,7 @@ function displayAxesContent(Axes, Content, Live)
             end
             
             imagesc(Axes, content)
-            colorbar(Axes, content)
+            colorbar(Axes)
 
         case 'Plot'
             
