@@ -11,7 +11,7 @@ function displayAxesContent(Axes, Content, Live)
             switch Content.ImageFormat
                 case 'Raw'
                     content = Live.Image{Content.ImageIndex};
-                otherwise
+                case 'Background-subtracted'
                     content = Live.Image{Content.ImageIndex};
             end
             
