@@ -12,7 +12,7 @@ function displayAxesContent(Axes, Content, Live)
                 case 'Raw'
                     content = Live.Image{Content.ImageIndex};
                 case 'Background-subtracted'
-                    content = Live.Image{Content.ImageIndex};
+                    content = Live.Image{Content.ImageIndex} - Live.Background{Content.ImageIndex};
             end
             
             imagesc(Axes, content)

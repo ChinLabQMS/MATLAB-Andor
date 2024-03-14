@@ -29,8 +29,7 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
                 if Data.(camera).Config.NumFrames == 1
                     [ret, Data.(camera).Config.Exposure, Data.(camera).Config.Accumulate] = GetAcquisitionTimings();
                     CheckWarning(ret)
-                end                
-                Live.(camera) = struct('Background', StatBackground.(camera).SmoothMean);
+                end
             case 'Zelux'
                 Data.(camera).Config.XPixels = 1440;
                 Data.(camera).Config.YPixels = 1080;
@@ -39,6 +38,7 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
     
     % Initialize storage for each shot in sequence
     num_images = height(Setting.Acquisition.SequenceTable);
+    Live.Background = cell(1, num_images);
     for i = 1:num_images
         camera = char(Setting.Acquisition.SequenceTable.Camera(i));
         label = Setting.Acquisition.SequenceTable.Label{i};
@@ -48,6 +48,13 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
         Data.(camera).(label) = zeros(Data.(camera).Config.XPixels, ...
             Data.(camera).Config.YPixels, Data.(camera).Config.MaxImage, 'uint16');
         Data.(camera).Config.Note.(label) = note;
+        
+        % Initialize Background offset
+        if isfield(StatBackground, camera)
+            Live.Background{i} = StatBackground.(camera).SmoothMean;
+        else
+            Live.Background{i} = 0;
+        end
     end
     
     % Print out camera config and memory usage
