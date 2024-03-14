@@ -218,4 +218,7 @@ StatBackground.(camera).SmoothMean = mean_new;
 StatBackground.(camera).NoiseVar = mean(var_image,'all');
 
 %%
-save('calibration\StatBackground_20240310_HSSpeed=2_VSSpeed=1.mat', '-struct', 'StatBackground')
+save('calibration\StatBackground_20240311_HSSpeed=2_VSSpeed=1.mat', '-struct', 'StatBackground')
+
+%%
+StatBackground = load('calibration\StatBackground_20240311_HSSpeed=2_VSSpeed=1.mat');

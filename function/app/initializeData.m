@@ -1,12 +1,17 @@
-function [Data, dsize] = initializeData(Setting, CameraHandle)
+function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
     arguments
         Setting (1, 1) struct
         CameraHandle (1, 1) struct = struct()
     end
     
-    Data = struct();
-    Data.SequenceTable = Setting.Acquisition.SequenceTable;
+    tic
     
+    Data = struct('SequenceTable',Setting.Acquisition.SequenceTable);
+    Live = struct('Current',0);
+    
+    % Load saved calibration file
+    StatBackground = load(fullfile("calibration/",Setting.Analysis.BackgroundFile));
+
     % Initialize Config for each active camera
     cameras = unique(Setting.Acquisition.SequenceTable.Camera);
     for i = 1:length(cameras)
@@ -24,7 +29,8 @@ function [Data, dsize] = initializeData(Setting, CameraHandle)
                 if Data.(camera).Config.NumFrames == 1
                     [ret, Data.(camera).Config.Exposure, Data.(camera).Config.Accumulate] = GetAcquisitionTimings();
                     CheckWarning(ret)
-                end
+                end                
+                Live.(camera) = struct('Background', StatBackground.(camera).SmoothMean);
             case 'Zelux'
                 Data.(camera).Config.XPixels = 1440;
                 Data.(camera).Config.YPixels = 1080;
@@ -53,5 +59,6 @@ function [Data, dsize] = initializeData(Setting, CameraHandle)
    
     dsize = whos('Data').bytes*9.53674e-7;
     fprintf('Data storage initialized for %d cameras, total memory is %g MB\n\n', ...
-        length(cameras), dsize)    
+        length(cameras), dsize)
+    toc
 end
