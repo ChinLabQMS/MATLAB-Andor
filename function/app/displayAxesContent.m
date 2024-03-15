@@ -1,22 +1,27 @@
-function displayAxesContent(Axes, Content, Live)
+function [ContentSetting, Live] = displayAxesContent(Axes, ContentSetting, Live)
     arguments
         Axes
-        Content (1,1) struct
+        ContentSetting (1,1) struct
         Live (1,1) struct
     end
 
-    switch Content.Style
-
+    switch ContentSetting.Style
         case 'Image'
-            switch Content.ImageFormat
+            switch ContentSetting.ImageFormat
                 case 'Raw'
-                    content = Live.Image{Content.ImageIndex};
+                    display_content = Live.Image{ContentSetting.ImageIndex};
                 case 'Background-subtracted'
-                    content = Live.Image{Content.ImageIndex} - Live.Background{Content.ImageIndex};
+                    display_content = double(Live.Image{ContentSetting.ImageIndex}) - Live.Background{ContentSetting.ImageIndex};
             end
-            
-            imagesc(Axes, content)
-            colorbar(Axes)
+            if isempty(ContentSetting.ImageObj)
+                ContentSetting.ImageObj = imagesc(Axes, display_content);
+                colorbar(Axes)
+            else
+                [x_size, y_size] = size(display_content);
+                ContentSetting.ImageObj.XData = [1, y_size];
+                ContentSetting.ImageObj.YData = [1, x_size];
+                ContentSetting.ImageObj.CData = display_content;
+            end
 
         case 'Plot'
             

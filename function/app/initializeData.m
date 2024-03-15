@@ -7,7 +7,7 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
     tic
     
     Data = struct('SequenceTable',Setting.Acquisition.SequenceTable);
-    Live = struct('Current',0);
+    Live = struct('Current',0, 'SequenceTable',Setting.Acquisition.SequenceTable);
     
     % Load saved calibration file
     StatBackground = load(fullfile("calibration/",Setting.Analysis.BackgroundFile));
