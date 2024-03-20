@@ -7,7 +7,7 @@ function [image, num_frames] = acquireAndorImage(options)
 %Available name-value pairs:
 % "timeout": double, time out limit for acquisition in seconds, default is
 % 20. Acquisition will be aborted if timeout.
-% "mode": double, mode for acquisition
+% "mode": double, mode for acquisition.
 
     arguments
         options.mode (1, 1) double = 0 % 0: start + acquire; 1: only start; 2: only acquire
@@ -18,6 +18,7 @@ function [image, num_frames] = acquireAndorImage(options)
     CheckWarning(ret)
     
     num_frames = 0;
+    image = zeros(XPixels, YPixels, 'uint16');
 
     % Taking data from Andor camera
     switch options.mode
@@ -29,14 +30,13 @@ function [image, num_frames] = acquireAndorImage(options)
         case 1
             [ret] = StartAcquisition();
             CheckWarning(ret)
-            image = [];
             return
         case 2
             [ret] = WaitForAcquisitionTimeOut(1000*options.timeout);
             CheckWarning(ret)
     end
     
-    if ret == atmcd.DRV_NO_NEW_DATA      
+    if ret == atmcd.DRV_NO_NEW_DATA
         ret = AbortAcquisition();
         CheckWarning(ret)
         error('Acquisition time out after %d seconds, aborting acquisition...\n', ...

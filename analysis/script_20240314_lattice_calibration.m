@@ -23,5 +23,3 @@ daspect([1 1 1])
 colorbar
 
 %%
-f = parfeval(backgroundPool,@magic,1,3);
-fetchOutputs(f)
