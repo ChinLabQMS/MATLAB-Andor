@@ -1,10 +1,21 @@
 %% Initialize Andor CCDs
-initializeAndor()
-% setCurrentAndor(19330)
-setCurrentAndor(19331)
+initializeAndor();
+setCurrentAndor(19330)
+% setCurrentAndor(19331)
+setModeFK(exposure=0.2, num_frames=2, external_trigger=false)
 
-%% Acquire image from Andor
-setModeFK(exposure=0.2, num_frames=2)
+[ret, XPixels, YPixels] = GetDetector();
+CheckWarning(ret)
+
+%%
+image = acquireAndorImage();
+
+figure
+imagesc(image)
+daspect([1 1 1])
+colorbar
+
+%% Acquire images from Andor
 num_image = 0;
 max_image = Inf;
 

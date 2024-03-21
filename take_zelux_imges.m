@@ -1,5 +1,5 @@
 %% Initialize Zelux camera
-[tlCameraSDK, tlCamera] = initializeZelux(exposure=0.000001, external_trigger=false);
+[tlCameraSDK, tlCamera] = initializeZelux(exposure=0.0001, external_trigger=false);
 
 %% Take one image from Zelux
 image = acquireZeluxImage(tlCamera);

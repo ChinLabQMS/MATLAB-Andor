@@ -5,12 +5,8 @@ function Handle = initializeAndor(serial, Handle, options)
         options.verbose = true
     end
 
-    [ret, NumCameras] = GetAvailableCameras();
-    CheckWarning(ret)
-
     if options.verbose
         fprintf('\n******Start initialization******\n\n')
-        fprintf('Number of Cameras found: %d\n\n',NumCameras)
     end
     
     for serial_number = serial
@@ -37,13 +33,7 @@ function Handle = initializeAndor(serial, Handle, options)
         
         % Free internal memory
         [ret] = FreeInternalMemory();
-        if ret == atmcd.DRV_ACQUIRING
-            ret = AbortAcquisition();
-            CheckWarning(ret)
-            if options.verbose
-                fprintf('In-progress acquisition is aborted.')
-            end
-        end
+        CheckWarning(ret)
     
         % Configuring Acquisition
     

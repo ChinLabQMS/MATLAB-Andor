@@ -1,14 +1,37 @@
-function setModeFK(options)
+function vargout = setModeFK(options)
     arguments
         options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
-        options.num_frames (1, 1) double {mustBeMember(options.num_frames,[1, 2, 4, 8])} = 2
-        options.external_trigger (1, 1) logical = true
+        options.external_trigger (1,1) logical = true
+        options.num_frames = 2        
+        options.crop = false
+        options.crop_height = 100
+        options.crop_width = 100        
+        options.horizontal_speed = 2
+        options.vertical_speed = 1
     end
-    
+    if ischar(options.horizontal_speed)
+        switch options.horizontal_speed
+            case '1MHz'
+                options.horizontal_speed = 2;
+            case '3MHz'
+                options.horizontal_speed = 1;
+            case '5MHz'
+                options.horizontal_speed = 0;
+        end
+    end
+    if ischar(options.num_frames)
+        options.num_frames = str2double(options.num_frames(end));
+    end
+
     switch options.num_frames
         case 1
-            setModeFull('exposure', options.exposure, ...
-                'external_trigger',options.external_trigger)
+            vargout = setModeFull('exposure', options.exposure, ...
+                        'external_trigger',options.external_trigger, ...
+                        'crop',options.crop, ...
+                        'crop_height',options.crop_height, ...
+                        'crop_width',options.crop_width, ...
+                        'horizontal_speed',options.horizontal_speed, ...
+                        'vertical_speed',options.vertical_speed);
             return
         case 2
             settings.exposed_rows = 512;
@@ -23,8 +46,6 @@ function setModeFK(options)
 
     % Get the current CCD serial number
     [ret, Number] = GetCameraSerialNumber();
-    CheckWarning(ret)
-
     if ret == atmcd.DRV_NOT_INITIALIZED
         error('Camera NOT initialized.\n')
     end
@@ -92,6 +113,10 @@ function setModeFK(options)
         fprintf('Trigger: External\n\n')
     else
         fprintf('Trigger: Internal\n\n')
+    end
+
+    if nargout == 1
+        vargout = kinetic;
     end
 
 end

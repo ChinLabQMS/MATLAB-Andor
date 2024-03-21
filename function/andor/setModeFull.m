@@ -1,18 +1,16 @@
-function setModeFull(options)
+function vargout = setModeFull(options)
     arguments
         options.exposure (1,1) double {mustBePositive,mustBeFinite} = 0.2
+        options.external_trigger (1,1) logical = true
         options.crop (1,1) logical = false
         options.crop_height (1,1) double {mustBePositive,mustBeFinite} = 100
-        options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100
-        options.external_trigger (1,1) logical = true
+        options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100        
         options.horizontal_speed (1,1) double {mustBeMember(options.horizontal_speed,[0,1,2,3])} = 2
         options.vertical_speed (1,1) double {mustBeMember(options.vertical_speed,[0,1,2,3,4,5])} = 1
     end
 
     % Get the current CCD serial number
     [ret, Number] = GetCameraSerialNumber();
-    CheckWarning(ret)
-
     if ret == atmcd.DRV_NOT_INITIALIZED
         error('Camera NOT initialized.')
     end
@@ -78,6 +76,10 @@ function setModeFull(options)
         fprintf('Trigger: External\n\n')
     else
         fprintf('Trigger: Internal\n\n')
+    end
+
+    if nargout == 1
+        vargout = ReadoutTime;
     end
 
 end
