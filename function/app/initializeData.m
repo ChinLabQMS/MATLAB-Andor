@@ -29,6 +29,9 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
                 if Data.(camera).Config.NumFrames == 1
                     [ret, Data.(camera).Config.Exposure, Data.(camera).Config.Accumulate] = GetAcquisitionTimings();
                     CheckWarning(ret)
+                else
+                    [ret, Data.(camera).Config.Exposure] = GetFKExposureTime();
+                    CheckWarning(ret)
                 end
             case 'Zelux'
                 Data.(camera).Config.XPixels = 1440;
