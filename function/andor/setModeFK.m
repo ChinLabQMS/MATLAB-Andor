@@ -54,6 +54,18 @@ function vargout = setModeFK(options)
     [ret] = SetAcquisitionMode(4);
     CheckWarning(ret)
 
+    % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
+    [ret] = SetIsolatedCropMode(0, 1024, 1024, 1, 1);
+    CheckWarning(ret)
+    
+    % Get detector size (with croped mode ON this may change)
+    [ret, YPixels, XPixels] = GetDetector();
+    CheckWarning(ret)
+    
+    % Set the image size
+    [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
+    CheckWarning(ret)
+
     % Configure fast kinetics mode acquisition
     % (exposed rows, series length, exposure, 4 for Image, horizontal binning, vertical binning, offset)
     [ret] = SetFastKineticsEx(settings.exposed_rows, options.num_frames, ...
@@ -84,18 +96,6 @@ function vargout = setModeFK(options)
     [ret] = SetVSSpeed(1);
     CheckWarning(ret)
     
-    % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
-    [ret] = SetIsolatedCropMode(0, 1024, 1024, 1, 1);
-    CheckWarning(ret)
-    
-    % Get detector size (with croped mode ON this may change)
-    [ret, YPixels, XPixels] = GetDetector();
-    CheckWarning(ret)
-    
-    % Set the image size
-    [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
-    CheckWarning(ret)
-
     % Get the kinetic cycle time
     [ret, ~, ~, kinetic] = GetAcquisitionTimings();
     CheckWarning(ret)

@@ -59,7 +59,7 @@ function [image, num_frames] = acquireAndorImage(options)
 
     [ret, first, last] = GetNumberAvailableImages();
     CheckWarning(ret)
-    [ret, ImgData, ~, ~] = GetImages(first, last, YPixels*XPixels);
+    [ret, ImgData, ~, ~] = GetImages16(first, last, YPixels*XPixels);
     CheckWarning(ret)
 
     if ret == atmcd.DRV_SUCCESS
