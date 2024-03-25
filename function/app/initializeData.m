@@ -7,7 +7,8 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
     tic
     
     Data = struct('SequenceTable',Setting.Acquisition.SequenceTable);
-    Live = struct('Current',0, 'SequenceTable',Setting.Acquisition.SequenceTable);
+    Live = struct('Current',0, ...
+                  'SequenceTable',Setting.Acquisition.SequenceTable);
     
     % Load saved calibration file
     StatBackground = load(fullfile("calibration/",Setting.Analysis.BackgroundFile));
@@ -33,6 +34,7 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
             case 'Zelux'
                 Data.(camera).Config.XPixels = 1440;
                 Data.(camera).Config.YPixels = 1080;
+                Live.ZeluxState = 'active';
         end
     end
     
