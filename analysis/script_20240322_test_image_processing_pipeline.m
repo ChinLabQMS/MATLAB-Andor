@@ -80,12 +80,20 @@ daspect([1 1 1])
 colorbar
 
 %%
-box3 = box2.*(box2>threshold);
+mask = box2>threshold;
+box3 = box2.*mask;
 
 figure
 imagesc(box3)
 daspect([1 1 1])
 colorbar
+
+%%
+CC = bwconncomp(mask,4);
+
+%%
+p = regionprops(CC,"Area");
+[maxArea,maxIdx] = max([p.Area])
 
 %%
 sd = size(box3);
