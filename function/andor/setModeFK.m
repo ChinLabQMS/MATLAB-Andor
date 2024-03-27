@@ -47,7 +47,7 @@ function vargout = setModeFK(options)
     % Get the current CCD serial number
     [ret, Number] = GetCameraSerialNumber();
     if ret == atmcd.DRV_NOT_INITIALIZED
-        error('Camera NOT initialized.\n')
+        error('Camera NOT initialized.')
     end
 
     % Set acquisition mode; 4 for fast kinetics
