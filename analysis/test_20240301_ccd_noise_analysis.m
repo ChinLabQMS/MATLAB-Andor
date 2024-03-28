@@ -102,7 +102,7 @@ imagesc(StatBackground.Andor19330.Exposure_0.STD)
 daspect([1 1 1])
 colorbar
 
-%% Look at caoped "clean" background
+%% Look at capped "clean" background
 CleanBackground = struct('Andor19330', struct(), ...
                          'Andor19331', struct(), ...
                          'Config', struct('HSSpeed',2,'VSSpeed',1, ...
@@ -115,17 +115,23 @@ CleanBackground.Andor19331 = Data.Andor19331.Image;
 save('calibration\CleanBackground_20240311_HSSpeed=2_VSSpeed=1.mat', '-struct', 'CleanBackground')
 
 %%
+clear
+clc
+
 CleanBackground = load('calibration\CleanBackground_20240311_HSSpeed=2_VSSpeed=1.mat');
+% CleanBackground = load('calibration\CleanBackground_20240327_HSSpeed=2_VSSpeed=1.mat').Data;
+% CleanBackground = load('calibration\CleanBackground_20240327-2_HSSpeed=2_VSSpeed=1.mat').Data;
 
 %% Get the statistics of the clean background
 StatBackground = struct();
-StatBackground.Config = CleanBackground.Config;
+% StatBackground.Config = CleanBackground.Config;
+StatBackground.Config = CleanBackground.Andor19330.Config;
 
 cameras = {'Andor19330','Andor19331'};
 for i = 1:length(cameras)
     camera = cameras{i};
     StatBackground.(camera) = struct();
-    images = removeOutliers(CleanBackground.(camera));
+    images = removeOutliers(CleanBackground.(camera).Image);
     StatBackground.(camera) = struct( ...
         'Mean', mean(images, 3, 'omitmissing'), ...
         'Var', var(images, 0, 3, 'omitmissing'));
@@ -135,6 +141,12 @@ end
 camera = 'Andor19331';
 mean_image = StatBackground.(camera).Mean;
 var_image = StatBackground.(camera).Var;
+
+%% Check time dependence (stability)
+mean_time = reshape(mean(CleanBackground.(camera).Image,[1,2],'omitmissing'),1,[]);
+
+figure
+plot(mean_time)
 
 %%
 figure
@@ -164,6 +176,7 @@ mean_fft = abs(fftshift(fft2(mean_image)));
 
 figure
 histogram(log(mean_fft),'EdgeColor','none')
+set(gca,'YScale','log')
 
 %%
 mask = log(mean_fft) > 7.7;
@@ -211,6 +224,7 @@ diff_fft = abs(fftshift(fft(mean_new - mean_image)));
 
 figure
 imagesc(log(diff_fft))
+daspect([1 1 1])
 colorbar
 
 %%
@@ -218,7 +232,4 @@ StatBackground.(camera).SmoothMean = mean_new;
 StatBackground.(camera).NoiseVar = mean(var_image,'all');
 
 %%
-save('calibration\StatBackground_20240311_HSSpeed=2_VSSpeed=1.mat', '-struct', 'StatBackground')
-
-%%
-StatBackground = load('calibration\StatBackground_20240311_HSSpeed=2_VSSpeed=1.mat');
+save('calibration\StatBackground_20240327-2_HSSpeed=2_VSSpeed=1.mat', '-struct', 'StatBackground')

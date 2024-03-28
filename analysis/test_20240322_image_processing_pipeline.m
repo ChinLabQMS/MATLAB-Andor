@@ -58,7 +58,7 @@ daspect([1 1 1])
 title('With linear offset subtraction')
 colorbar
 
-%% Test peak finding algorithm
+%% Test peak finding algorithm, first look at sparse peaks
 box_x = 1:400;
 box_y = 301:700;
 box0 = sample_new(box_x,box_y);
@@ -68,14 +68,17 @@ imagesc(box0)
 daspect([1 1 1])
 colorbar
 
-%%
+%% Histogram of counts
+[N, edges] = histcounts(box0(:),'Normalization','pdf');
+centers = movmean(edges,2,'Endpoints','discard');
 
-histogram(box0(:),'Normalization','pdf')
+histogram('BinEdges',edges,'BinCounts',N,'EdgeColor','none')
 hold on
-xl = xlim();
-x = linspace(xl(1),xl(2),100);
-y = normpdf(x,0,1);
-plot(x,y)
+y = normpdf(centers,0,sqrt(noise_var));
+plot(centers,y)
+
+%%
+plot(centers,log(N./y))
 
 %%
 threshold = 15;
