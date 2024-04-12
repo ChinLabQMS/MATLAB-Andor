@@ -104,7 +104,7 @@ function vargout = setModeFK(options)
     [ret] = FreeInternalMemory();
     CheckWarning(ret)
     
-    fprintf('\n***Fast Kinetic mode***\n')
+    fprintf('\n******Fast Kinetic mode******\n\n')
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Number of frames: %d\n', options.num_frames)
     fprintf('Exposure time: %5.3fs\n', options.exposure)

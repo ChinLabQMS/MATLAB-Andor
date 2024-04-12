@@ -1,10 +1,63 @@
 %% Initialize Andor CCDs
-initializeAndor();
-setCurrentAndor(19330)
-% setCurrentAndor(19331)
-setModeFK(exposure=0.2, num_frames=2, external_trigger=false)
+Handle = initializeAndor();
+% setCurrentAndor(19330)
+setCurrentAndor(19331, Handle)
+setModeFK(exposure=0.2, num_frames=8, external_trigger=false)
 
 [ret, XPixels, YPixels] = GetDetector();
+CheckWarning(ret)
+
+%% Test fast kinetic readout
+series_length = 32;
+exposed_rows = 1024/series_length;
+offset = 1024-1024/series_length;
+
+[ret] = SetFastKineticsEx(exposed_rows, series_length, ...
+                        0.2, 4, 1, 1, offset);
+CheckWarning(ret)
+
+%%
+[ret] = FreeInternalMemory();
+CheckWarning(ret)
+
+%%
+[ret] = StartAcquisition();
+CheckWarning(ret)
+
+%%
+[ret, first, last] = GetNumberAvailableImages();
+CheckWarning(ret)
+
+%%
+[ret, Status] = GetStatus();
+CheckWarning(ret)
+CheckWarning(Status)
+
+%%
+index = 2;
+
+[ret, ImgData, ~, ~] = GetImages16(index,index,YPixels*XPixels/series_length);
+CheckWarning(ret)
+
+imageData = reshape(ImgData,YPixels,[]);
+
+figure
+imagesc(imageData)
+colorbar
+
+%%
+[ret, ImgData, ~, ~] = GetImages16(first,last,YPixels*XPixels);
+CheckWarning(ret)
+
+imageData = reshape(ImgData,YPixels,[]);
+
+figure
+imagesc(imageData)
+daspect([1 1 1])
+colorbar
+
+%%
+[ret, ImgData] = GetAcquiredData(YPixels*XPixels);
 CheckWarning(ret)
 
 %%
@@ -48,10 +101,8 @@ while num_image < max_image
 end
 
 %% 
-
 figure
 plot(count_data)
-
 
 %% Close Andor
 closeAndor()

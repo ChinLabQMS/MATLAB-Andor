@@ -4,13 +4,14 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         options.external_trigger (1, 1) logical = true
         options.verbose (1,1) logical = true
     end
-    
+        
     oldPath = cd([pwd, '/function/zelux/dlls']);
 
     % Load TLCamera DotNet assembly. The assembly .dll is assumed to be in the 
     % same folder as the scripts.
     NET.addAssembly([pwd, '/Thorlabs.TSI.TLCamera.dll']);
     if options.verbose
+        fprintf('\n******Zelux Initialization******\n\n')
         fprintf('Dot NET assembly loaded.')
     end
     try

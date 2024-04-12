@@ -4,7 +4,7 @@ function vargout = setModeFull(options)
         options.external_trigger (1,1) logical = true
         options.crop (1,1) logical = false
         options.crop_height (1,1) double {mustBePositive,mustBeFinite} = 100
-        options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 100        
+        options.crop_width (1,1) double {mustBePositive,mustBeFinite} = 1024        
         options.horizontal_speed (1,1) double {mustBeMember(options.horizontal_speed,[0,1,2,3])} = 2
         options.vertical_speed (1,1) double {mustBeMember(options.vertical_speed,[0,1,2,3,4,5])} = 1
     end
@@ -68,7 +68,7 @@ function vargout = setModeFull(options)
     [ret] = FreeInternalMemory();
     CheckWarning(ret)
 
-    fprintf('\n***Full frame mode***\n')
+    fprintf('\n******Full frame mode******\n\n')
     fprintf('Current camera serial number: %d\n', Number)
     fprintf('Exposure time: %4.2fs\n', options.exposure)
     fprintf('Readout time for 1 image: %5.3fs\n', ReadoutTime)
