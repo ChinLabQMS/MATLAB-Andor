@@ -1,10 +1,20 @@
-mean_bg = mean(Data.Bg, 3);
-mean_sig = mean(Data.Img, 3) - mean_bg;
+clear
+clc
+
+data_path = 'data/r=40_calibration_pattern';
+Data = load(data_path).Data;
+
+mean_sig = mean(Data.Andor19330.Image, 3);
+
+figure
+imagesc(mean_sig)
+daspect([1 1 1])
+colorbar
 
 %%
-target1 = [303, 508];
-target2 = [261, 548];
-target3 = [360, 570];
+target1 = [315, 491];
+target2 = [354, 454];
+target3 = [367, 551];
 
 anchor1 = [0, 0];
 anchor2 = [100, 0];
@@ -30,8 +40,8 @@ b = [res(5), res(6)]
 
 %%
 theta = 0:0.01:2*pi;
-x1 = 20*sin(theta);
-y1 = 20*cos(theta);
+x1 = 40*sin(theta);
+y1 = 40*cos(theta);
 
 x2 = x1 + anchor2(1);
 y2 = y1 + anchor2(2);
@@ -51,8 +61,6 @@ transformed = M * [x3; y3] + b';
 x_new3 = transformed(1,:);
 y_new3 = transformed(2, :);
 
-%%
-
 figure
 imagesc(mean_sig)
 daspect([1 1 1])
@@ -63,5 +71,60 @@ plot(y_new1, x_new1, Color='r')
 plot(y_new2, x_new2, Color='r')
 plot(y_new3, x_new3, Color='r')
 
-xlim([450 650])
-ylim([200 400])
+plot(y_new1, x_new1+512, Color='r')
+plot(y_new2, x_new2+512, Color='r')
+plot(y_new3, x_new3+512, Color='r')
+
+title('Calibration pattern on atoms')
+
+%%
+data_path = 'data/r=50_darkspot_onatoms_centered.mat';
+Data = load(data_path).Data;
+
+images = Data.Andor19330.Image;
+mean_sig = mean(images, 3);
+
+theta = 0:0.01:2*pi;
+x1 = 50*sin(theta);
+y1 = 50*cos(theta);
+
+transformed = M * [x1; y1] + b';
+x_new1 = transformed(1,:);
+y_new1 = transformed(2, :);
+
+figure
+imagesc(mean_sig)
+daspect([1 1 1])
+colorbar
+
+hold on
+plot(y_new1, x_new1, Color='r')
+plot(y_new1, x_new1+512, Color='r')
+
+title('Radius=50 circle')
+
+%%
+data_path = 'data/r=20_darkspot_onatoms_centered.mat';
+Data = load(data_path).Data;
+
+images = Data.Andor19330.Image;
+mean_sig = mean(images, 3);
+
+theta = 0:0.01:2*pi;
+x1 = 20*sin(theta);
+y1 = 20*cos(theta);
+
+transformed = M * [x1; y1] + b';
+x_new1 = transformed(1,:);
+y_new1 = transformed(2, :);
+
+figure
+imagesc(mean_sig)
+daspect([1 1 1])
+colorbar
+
+hold on
+plot(y_new1, x_new1, Color='r')
+plot(y_new1, x_new1+512, Color='r')
+
+title('Radius=20 circle')

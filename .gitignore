@@ -5,3 +5,4 @@ resources/
 *.MATLABDriveTag
 *.prj
 .DS_Store
+.ipynb_checkpoints/
