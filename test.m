@@ -27,3 +27,13 @@ subplot(1,2,2)
 imagesc(sample2)
 daspect([1 1 1])
 colorbar
+
+%%
+images = Data.Andor19330.Image;
+mean_image = mean(images, 3);
+
+figure
+imagesc(mean_image);
+daspect([1 1 1]);
+title('Mean Image')
+colorbar;
