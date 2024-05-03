@@ -2,7 +2,7 @@ clear
 clc
 
 %% Load dataset
-images = load("calibration\Data_for_PSF_fitting_test.mat").Data.Andor19330.Image;
+images = load("data\Data_for_PSF_fitting_test2.mat").Data.Andor19330.Image;
 
 %% Background subtraction
 background = load("calibration\StatBackground_20240311_HSSpeed=2_VSSpeed=1.mat").Andor19330.SmoothMean;
@@ -81,7 +81,7 @@ plot(centers,y)
 plot(centers,log(N./y))
 
 %%
-threshold = 15;
+threshold = 20;
 box1 = box0.*(box0>threshold);
 
 figure
@@ -98,7 +98,7 @@ daspect([1 1 1])
 colorbar
 
 %%
-mask = box2>0.9*threshold;
+mask = box2>threshold;
 box3 = box2.*mask;
 
 figure
@@ -121,27 +121,22 @@ text(p.Centroid(:,1),p.Centroid(:,2),arrayfun(@num2str, p.Area, 'UniformOutput',
 colorbar
 
 %%
-sd = size(box3);
-[x, y] = find(box3);
+p_new = p((p.Area > 50) & (p.Area < 180), :);
 
-% initialize outputs
-cent=[];%
-cent_map=zeros(sd);
+figure
+imagesc(box0)
+daspect([1 1 1])
+viscircles(p_new.Centroid,5,'LineWidth',1)
+text(p_new.Centroid(:,1), p_new.Centroid(:,2), arrayfun(@num2str, p_new.Area, 'UniformOutput',0))
+colorbar
 
-x=x+edg-1;
-y=y+edg-1;
-for j=1:length(y)
-    if (d(x(j),y(j))>d(x(j)-1,y(j)-1 )) &&...
-            (d(x(j),y(j))>d(x(j)-1,y(j))) &&...
-            (d(x(j),y(j))>d(x(j)-1,y(j)+1)) &&...
-            (d(x(j),y(j))>d(x(j),y(j)-1)) && ...
-            (d(x(j),y(j))>d(x(j),y(j)+1)) && ...
-            (d(x(j),y(j))>d(x(j)+1,y(j)-1)) && ...
-            (d(x(j),y(j))>d(x(j)+1,y(j))) && ...
-            (d(x(j),y(j))>d(x(j)+1,y(j)+1))
-        
-        cent = [cent ;  y(j) ; x(j)];
-        cent_map(x(j),y(j))=cent_map(x(j),y(j))+1; % if a binary matrix output is desired
-        
+%%
+function findPeaks(data, options)
+    arguments
+        data (:,:) double
+        options.isolated = false
     end
+    
+    
+    
 end

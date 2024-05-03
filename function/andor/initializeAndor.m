@@ -22,6 +22,17 @@ function Handle = initializeAndor(serial, Handle, options)
             fprintf('Camera (serial: %d, handle: %d) is set to current CCD\n',...
                     serial_number, Handle.(serial_str))
         end
+        
+        % Get status and abort acquisition if it is acquiring
+        [ret, status] = GetStatus();
+        CheckWarning(ret)
+        if status == atmcd.DRV_ACQUIRING
+            [ret] = AbortAcquisition();
+            CheckWarning(ret)
+            if options.verbose
+                fprintf('Acquisition aborted\n')
+            end
+        end
     
         % Set temperature
         [ret] = SetTemperature(-70);
