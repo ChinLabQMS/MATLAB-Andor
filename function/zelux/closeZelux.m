@@ -1,4 +1,5 @@
 function closeZelux(tlCameraSDK, tlCamera)
+    fprintf('\n******Close Zelux******\n\n')
 
     % Stop image acquisition
     disp('Stopping image acquisition.');

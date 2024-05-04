@@ -9,7 +9,7 @@ function closeAndor(serial, Handle, options)
     CheckWarning(ret)
     
     if options.verbose
-        fprintf('\n******Shutting down CCD******\n\n')
+        fprintf('\n******Close Andor CCD******\n\n')
         fprintf('Number of Cameras found: %d\n\n',NumCameras)
     end
 
