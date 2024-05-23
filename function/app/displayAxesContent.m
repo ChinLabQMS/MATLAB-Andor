@@ -1,4 +1,4 @@
-function [ContentSetting, Live] = displayAxesContent(Axes, ContentSetting, Live)
+function ContentSetting  = displayAxesContent(Axes, ContentSetting, Live)
     arguments
         Axes
         ContentSetting (1,1) struct
@@ -11,7 +11,9 @@ function [ContentSetting, Live] = displayAxesContent(Axes, ContentSetting, Live)
                 case 'Raw'
                     display_content = Live.Image{ContentSetting.ImageIndex};
                 case 'Background-subtracted'
-                    display_content = double(Live.Image{ContentSetting.ImageIndex}) - Live.Background{ContentSetting.ImageIndex};
+                    display_content = Live.Signal{ContentSetting.ImageIndex};
+                case 'Background offset'
+                    display_content = Live.Offset{ContentSetting.ImageIndex};
             end
             if isempty(ContentSetting.ImageObj)
                 ContentSetting.ImageObj = imagesc(Axes, display_content);
@@ -24,6 +26,17 @@ function [ContentSetting, Live] = displayAxesContent(Axes, ContentSetting, Live)
             end
 
         case 'Plot'
-            
+            switch ContentSetting.PlotContent
+                case 'MeanCount'
+                    display_content = mean(Live.Signal{ContentSetting.ImageIndex}, 'all');
+                case 'MaxCount'
+                    display_content = max(Live.Signal{ContentSetting.ImageIndex}, [], 'all');
+            end
+            if isempty(ContentSetting.PlotObj)
+                ContentSetting.PlotObj = plot(Axes, display_content);
+            else
+                ContentSetting.PlotObj.XData = [ContentSetting.PlotObj.XData, ContentSetting.PlotObj.XData(end)+1];
+                ContentSetting.PlotObj.YData = [ContentSetting.PlotObj.YData, display_content];
+            end
     end
 end

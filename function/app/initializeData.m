@@ -7,8 +7,7 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
     tic
     
     Data = struct('SequenceTable',Setting.Acquisition.SequenceTable);
-    Live = struct('Current',0, ...
-                  'SequenceTable',Setting.Acquisition.SequenceTable);
+    Live = struct('CurrentIndex',0);
     
     % Load saved calibration file
     StatBackground = load(fullfile("calibration/",Setting.Analysis.BackgroundFile));
@@ -37,11 +36,10 @@ function [Data, Live, dsize] = initializeData(Setting, CameraHandle)
             case 'Zelux'
                 Data.(camera).Config.XPixels = 1440;
                 Data.(camera).Config.YPixels = 1080;
-                Live.ZeluxState = 'active';
         end
     end
     
-    % Initialize storage for each shot in sequence
+    % Initialize storage for each shot in sequence and populate background
     num_images = height(Setting.Acquisition.SequenceTable);
     Live.Background = cell(1, num_images);
     for i = 1:num_images

@@ -11,7 +11,7 @@ meanimage = mean(Data.Andor19330.Image,3);
 imagesc(meanimage)
 daspect([1 1 1])
 colorbar
-
+ 
 %%
 index = 1;
 sample1 = Data.Andor19330.Image(:,:,index);

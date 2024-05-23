@@ -3,7 +3,10 @@ function [offset,variance,residuals] = cancelOffset(signal,num_frames,options)
         signal
         num_frames (1,1) double = 1
         options.y_bg_size (1,1) double = 100
-        options.noise_var (1,1) double = 31;
+        options.alarm_offset (1,1) double = 10
+        options.alarm_var (1,1) double = 50
+        options.verbose (1,1) logical = true
+        options.note (:,1) char = ''
     end
    
     [XPixels,YPixels] = size(signal);
@@ -41,14 +44,16 @@ function [offset,variance,residuals] = cancelOffset(signal,num_frames,options)
         residuals{i,2} = BgBoxNew2;
     end
     
-    warning('off','backtrace')
-    if any(variance>6)
-        warning('Noticable background noise variance after cancellation: max = %4.2f, min = %4.2f.', ...
-            max(variance(:)),min(variance(:)))
+    if options.verbose
+        warning('off','backtrace')
+        if any(variance>options.alarm_var)
+            warning('%s\nNoticable background noise variance after cancellation: max = %4.2f, min = %4.2f.', ...
+                options.note,max(variance(:)),min(variance(:)))
+        end
+        if any(abs(offset)>options.alarm_offset)
+            warning('%s\nNoticable background offset after subtraction: max = %4.2f, min = %4.2f.Please check imaging conditions.', ...
+                options.note,max(offset(:)),min(offset(:)))
+        end
+        warning('on','backtrace')
     end
-    if any(abs(offset)>2)
-        warning('Noticable background offset after subtraction: max = %4.2f, min = %4.2f.Please check imaging conditions.', ...
-            max(offset(:)),min(offset(:)))
-    end
-    warning('on','backtrace')
 end

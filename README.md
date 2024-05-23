@@ -11,7 +11,7 @@ We control Andor ([iKon-M 934 CCD](https://andor.oxinst.com/products/ikon-xl-and
 **Thorlabs Zelux Camera Configuration** Under folder [function/zelux](/function/zelux).
 
 **User Interface for image acquisition**
-- [ImageAcquisition](ImageAcquisition.mlapp)
+- [ImageAcquisition](ImageAcquisition.mlapp): the main app for image acquisition. Some external functions are under [function/app](/function/app).
 
 ### Basic analysis functions
 
