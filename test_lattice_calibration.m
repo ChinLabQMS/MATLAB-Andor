@@ -1,3 +1,5 @@
+% May 2024 lattice calibration- Special Optics tube lenses, new mirror
+% setup
 %% Load the dataset
 clear; clc;
 Data = load("data/calibration_test_40shots.mat").Data;

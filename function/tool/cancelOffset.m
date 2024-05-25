@@ -6,7 +6,7 @@ function [offset,variance,residuals] = cancelOffset(signal,num_frames,options)
         options.alarm_offset (1,1) double = 10
         options.alarm_var (1,1) double = 50
         options.verbose (1,1) logical = true
-        options.note (:,1) char = ''
+        options.note (:,1) char = 'Andor'
     end
    
     [XPixels,YPixels] = size(signal);
@@ -47,11 +47,11 @@ function [offset,variance,residuals] = cancelOffset(signal,num_frames,options)
     if options.verbose
         warning('off','backtrace')
         if any(variance>options.alarm_var)
-            warning('%s\nNoticable background noise variance after cancellation: max = %4.2f, min = %4.2f.', ...
+            warning('(%s) Noticable background noise variance after cancellation: max = %4.2f, min = %4.2f.', ...
                 options.note,max(variance(:)),min(variance(:)))
         end
         if any(abs(offset)>options.alarm_offset)
-            warning('%s\nNoticable background offset after subtraction: max = %4.2f, min = %4.2f.Please check imaging conditions.', ...
+            warning('(%s) Noticable background offset after subtraction: max = %4.2f, min = %4.2f.Please check imaging conditions.', ...
                 options.note,max(offset(:)),min(offset(:)))
         end
         warning('on','backtrace')
