@@ -15,17 +15,9 @@ We control Andor ([iKon-M 934 CCD](https://andor.oxinst.com/products/ikon-xl-and
 
 ### Basic analysis functions
 
-**Fit 2D Gaussian**
-- [fit2dGaussian](/function/tool/fit2dGaussian.m)
+#### Tools
+Under folder [function/tool](/function/tool).
 
-**Background subtraction**
-
-**ROI selection**
-
-**Lattice phase calibration**
-
-**DMD pixel calibration**
+#### Image processing
 
 ### Data processing scripts
-
-**CCD noise analysis**
