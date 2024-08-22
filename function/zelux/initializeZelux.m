@@ -5,7 +5,9 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         options.verbose (1,1) logical = true
     end
         
+    % Old initializeZelux
     oldPath = cd([pwd, '/function/zelux/dlls']);
+    % disp(pwd)
 
     % Load TLCamera DotNet assembly. The assembly .dll is assumed to be in the 
     % same folder as the scripts.

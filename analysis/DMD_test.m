@@ -39,8 +39,8 @@ end
 
 %%
 figure(WindowState="fullscreen")
-% imshow(rgb_image)
-imshow(dmd_image(:,:,24))
+imshow(rgb_image)
+% imshow(dmd_image(:,:,24))
 daspect([1 1 1])
 
 %%
@@ -59,4 +59,13 @@ end
 % end
 % for col = 1 : columns
 %     xline(col, 'Color', 'k', 'LineWidth', 1);
+% end
+%% 
+% Writing RBG image
+% imwrite(rgb_image, './test/rgb_image.tif')
+
+% Writing binary images
+% for i=1:24
+%     T = compose("./test/dmd_image%d.tif", i);
+%     imwrite(dmd_im~age(:,:,i), T);
 % end

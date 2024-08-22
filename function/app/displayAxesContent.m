@@ -33,7 +33,7 @@ function ContentSetting  = displayAxesContent(Axes, ContentSetting, Live)
                     display_content = max(Live.Signal{ContentSetting.ImageIndex}, [], 'all');
             end
             if isempty(ContentSetting.PlotObj)
-                ContentSetting.PlotObj = plot(Axes, display_content);
+                ContentSetting.PlotObj = plot(Axes, display_content, '--o', 'LineWidth', 3);
             else
                 ContentSetting.PlotObj.XData = [ContentSetting.PlotObj.XData, ContentSetting.PlotObj.XData(end)+1];
                 ContentSetting.PlotObj.YData = [ContentSetting.PlotObj.YData, display_content];
