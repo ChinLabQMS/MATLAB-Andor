@@ -16,7 +16,7 @@ function Handle = initializeAndor(serial, Handle, options)
         [ret] = SetCurrentCamera(Handle.(serial_str));
         CheckWarning(ret)
 
-        [ret] = AndorInitialize(pwd);                      
+        [ret] = AndorInitialize(pwd);
         CheckWarning(ret)
         if options.verbose
             fprintf('Camera (serial: %d, handle: %d) is set to current CCD\n',...
