@@ -1,18 +1,16 @@
-classdef AndorCamera < Camera
-    %ANDORCAMERA AndorCamera class
+classdef ImageCollector
+    %IMAGECOLLECTOR Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
-        SerialNumber = 19330
-        ImageSize = [1024, 1024]
-        ExternalTrigger = true
-        Exposure = 1
+        Property1
     end
     
     methods
-        function obj = AndorCamera(serial_number)
-            %ANDORCAMERA Construct an instance of this class
-            
+        function obj = ImageCollector(inputArg1,inputArg2)
+            %IMAGECOLLECTOR Construct an instance of this class
+            %   Detailed explanation goes here
+            obj.Property1 = inputArg1 + inputArg2;
         end
         
         function outputArg = method1(obj,inputArg)

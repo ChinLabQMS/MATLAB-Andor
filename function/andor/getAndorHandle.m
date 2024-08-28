@@ -13,10 +13,10 @@ function Handle = getAndorHandle(serial, Handle, options)
     end
 
     if ~isfield(Handle, serial_str)
-        Handle = getCameraHandle(Handle, 'verbose',options.verbose);
-        if ~isfield(Handle, serial_str)
-            error('Could not find camera with serial number %d', serial)
-        end
+        Handle = getCameraHandle(Handle, 'verbose', options.verbose);
+    end
+    if ~isfield(Handle, serial_str)
+        error('Could not find camera with serial number %d', serial)
     end
 end
 
@@ -25,34 +25,30 @@ function Handle = getCameraHandle(Handle, options)
         Handle
         options.verbose = true
     end
-
     [ret, NumCameras] = GetAvailableCameras();
     CheckWarning(ret)
-
-    for i = 1:NumCameras
-    
+    for i = 1:NumCameras    
         [ret, CameraHandle] = GetCameraHandle(i-1);
-        CheckWarning(ret)
-    
+        CheckWarning(ret)    
         [ret] = SetCurrentCamera(CameraHandle);
         CheckWarning(ret)
 
-        % Record the initial state of the camera
-        initialized = true;
-
         % Try to get camera serial number
-        [ret, Number] = GetCameraSerialNumber();
+        % Record the initial state of the camera
+        initialized = true;        
+        [ret, number] = GetCameraSerialNumber();
         if ret == atmcd.DRV_NOT_INITIALIZED
-            initialized = false;
-    
+            % If camera is not initialized, initialize to get the serial number
+            initialized = false;    
             [ret] = AndorInitialize(pwd);                      
             CheckWarning(ret)
             if ret == atmcd.DRV_SUCCESS
-                [ret, Number] = GetCameraSerialNumber();
+                [ret, number] = GetCameraSerialNumber();
                 CheckWarning(ret)
             else
+                % Unable to initialize a connected camera
                 if options.verbose
-                    fprintf('Camera %d is not available, please check connections in other applications.\n',i)
+                    warning('Camera %d is connected but can not be initialized, please check connections in other applications.\n',i)
                 end
                 continue
             end
@@ -65,12 +61,11 @@ function Handle = getCameraHandle(Handle, options)
             % 1 - Temperature is maintained on ShutDown
             [ret] = SetCoolerMode(1);
             CheckWarning(ret)
-
             [ret] = AndorShutDown;
             CheckWarning(ret)
         end
         
         % Update stored Handle
-        Handle.(['Andor', num2str(Number)]) = CameraHandle;
+        Handle.(['Andor', num2str(number)]) = CameraHandle;
     end
 end

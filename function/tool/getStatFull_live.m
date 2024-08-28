@@ -214,7 +214,7 @@ function Lat = loadCalibration(Mode,varargin)
 %             load('LatUpperCCD_20210614.mat','Lat')
             load("Lat_CCD19330_20230216_Atoms","Lat")
         case 'Lower'
-            load('precalibration_lowerccd_20240522.mat','Lat')
+            load('calibration/precalibration_lowerccd_20240522.mat','Lat')
     end
     
     if nargin>1
