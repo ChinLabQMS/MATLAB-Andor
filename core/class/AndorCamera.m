@@ -1,26 +1,12 @@
 classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class
 
-    properties (SetAccess=private)
+    properties (SetAccess = private)
         Initialized = false
-        ExternalTrigger = true
-        Exposure = nan
-        ImageSizeX = 1024
-        ImageSizeY = 1024
+        CameraConfig = AndorCameraConfig
         SerialNumber {mustBeMember(SerialNumber, [19330, 19331])}
         CameraIndex (1, 1) double = nan
         CameraHandle (1, 1) double = nan
-        Cropped (1, 1) logical = false
-        FastKinetic (1, 1) logical = false
-        FastKineticSeriesLength (1, 1) double {mustBePositive, mustBeInteger} = 2
-        FastKineticExposedRows (1, 1) double {mustBePositive, mustBeInteger} = 512
-        FastKineticOffset (1, 1) double {mustBePositive, mustBeInteger} = 512
-        HSSpeed (1, 1) double = nan
-        VSSpeed (1, 1) double = nan
-    end
-    properties (Dependent)
-        HSSpeedStr (1, 1) string
-        VSSpeedStr (1, 1) string
     end
 
     methods
@@ -93,18 +79,42 @@ classdef AndorCamera < Camera
                     CheckWarning(ret)
                 end
             end
-            
-            obj = obj.abortAcquisition('verbose', options.verbose);
-            
+                        
             % Basic config
-            [ret, obj.ImageSizeX, obj.ImageSizeY] = GetDetector();
-            CheckWarning(ret)
             [ret] = SetTemperature(-70);
             CheckWarning(ret)
             [ret] = CoolerON();
             CheckWarning(ret)
             [ret] = FreeInternalMemory();
             CheckWarning(ret)
+            [ret] = SetAcquisitionMode(1);
+            CheckWarning(ret)
+            [ret] = SetReadMode(4);
+            CheckWarning(ret)
+            [ret] = SetTriggerMode(1);                      
+            CheckWarning(ret)
+            [ret] = SetShutter(1, 1, 0, 0);
+            CheckWarning(ret)
+            [ret, XPixels, YPixels] = GetDetector();
+            CheckWarning(ret)            
+            [ret] = SetImage(1, 1, 1, XPixels, 1, YPixels);
+            CheckWarning(ret)
+            [ret] = SetBaselineClamp(0);          
+            CheckWarning(ret)
+            % Set Pre-Amp Gain, 0 (1x), 1 (2x), 2 (4x).
+            [ret] = SetPreAmpGain(2);
+            CheckWarning(ret)
+            % Set Horizontal speed. (0,0) = 5 MHz, (0,1) = 3 MHz, (0,2) = 1 MHz, (0,3) = 50 kHz
+            [ret] = SetHSSpeed(0, 2);
+            CheckWarning(ret)
+            % Set Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
+            [ret] = SetVSSpeed(1);
+            CheckWarning(ret)
+            [ret] = EnableKeepCleans(1);
+            CheckWarning(ret)
+
+            obj.CameraConfig.XPixels = XPixels;
+            obj.CameraConfig.YPixels = YPixels;
 
             if options.verbose
                 if obj.Initialized
@@ -129,6 +139,7 @@ classdef AndorCamera < Camera
                 options.verbose (1, 1) logical = true
             end
             if obj.Initialized
+                % Select the current camera and abort acquisition
                 obj = obj.abortAcquisition("verbose", options.verbose);
                 % Temperature is maintained on shutting down.
                 % 0 - Returns to ambient temperature on ShutDown
@@ -147,17 +158,37 @@ classdef AndorCamera < Camera
             end
         end
         
-        function obj = abortAcquisition(obj, options)
+        function obj = config(obj, name, value)
+            arguments
+                obj
+            end
+            arguments (Repeating)
+                name
+                value
+            end
+            arg_len = length(name);
+            for i = 1:arg_len
+                obj.CameraConfig.(name{i}) = value{i};
+            end
+            obj.setToCurrent()
+            if ~obj.CameraConfig.FastKinetic
+
+            else
+
+            end
+        end
+
+        function startAcquisition(obj)
+            obj.setToCurrent()
+        end
+
+        function abortAcquisition(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
             end
-            if ~obj.Initialized
-                return
-            end
+            obj.setToCurrent()
             % Get status and abort acquisition if it is acquiring
-            [ret] = SetCurrentCamera(obj.CameraHandle);
-            CheckWarning(ret)
             [ret, status] = GetStatus();
             CheckWarning(ret)
             if status == atmcd.DRV_ACQUIRING
@@ -169,17 +200,17 @@ classdef AndorCamera < Camera
                 end
             end
         end
-    
+        
+        function image = fetchImage(obj)
+            obj.setToCurrent()
+        end
+
         function [temperature, status] = checkTemperature(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
             end
-            if ~obj.Initialized
-                return
-            end
-            [ret] = SetCurrentCamera(obj.CameraHandle);
-            CheckWarning(ret)
+            obj.setToCurrent()
             [ret, temperature] = GetTemperatureF();    
             switch ret
                 case atmcd.DRV_TEMPERATURE_STABILIZED
@@ -201,38 +232,17 @@ classdef AndorCamera < Camera
                         temperature, status)
             end
         end
-
-        function obj = config(obj, options)
-        end
-
-        function obj = configFK(obj, options)
-            arguments
-                obj (1, 1) AndorCamera
-                options.verbose (1, 1) logical = true
-            end
-        end
         
-        function image = acquireImage(obj)
-        end
+    end
 
-        function val = get.HSSpeedStr(obj)
-            if ~obj.Initialized || isnan(obj.HSSpeed)
-                val = 'NaN';
-            else
-                [ret, speed] = GetHSSpeed(0, 0, obj.HSSpeed);
-                CheckWarning(ret)
-                val = string(strcat(num2str(speed), ' MHz'));
+    methods (Access = private, Hidden)
+        function setToCurrent(obj)
+            if ~obj.Initialized
+                warning('Camera not initialized!')
+                return
             end
-        end
-        
-        function val = get.VSSpeedStr(obj)
-            if ~obj.Initialized || isnan(obj.VSSpeed)
-                val = 'NaN';
-            else
-                [ret, speed] = GetVSSpeed(0, 0, obj.VSSpeed);
-                CheckWarning(ret)
-                val = string(strcat(num2str(speed), ' us'));
-            end
+            [ret] = SetCurrentCamera(obj.CameraHandle);
+            CheckWarning(ret)
         end
     end
 end
