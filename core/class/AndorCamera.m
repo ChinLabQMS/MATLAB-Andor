@@ -9,6 +9,10 @@ classdef AndorCamera < Camera
         CameraHandle (1, 1) double = nan
     end
 
+    properties (Dependent)
+        CameraLabel
+    end
+
     methods
         function obj = AndorCamera(serial_number, options)
             arguments
@@ -120,14 +124,13 @@ classdef AndorCamera < Camera
 
             if options.verbose
                 if obj.Initialized
-                    fprintf('Camera (index: %d, handle: %d, serial#: %d) is initialized.\n', ...
-                            obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
+                    fprintf('%s: Camera initialized.\n', obj.CameraLabel)
                 else
                     warning('off', 'backtrace')
-                    warning('Camera (serial#: %d) initialization fails.', obj.SerialNumber)
+                    warning('%s initialization fails.', obj.CameraLabel)
                     for i = 1:size(missing_camera, 1)
                         if missing_camera(i)
-                            warning('Camera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
+                            warning('AndorCamera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
                         end
                     end
                     warning('on', 'backtrace')
@@ -154,8 +157,7 @@ classdef AndorCamera < Camera
                     obj.Initialized = false;
                 end
                 if options.verbose && ~obj.Initialized
-                    fprintf('Camera (index: %d, handle: %d, serial#: %d) is closed\n', ...
-                            obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
+                    fprintf('%s: Camera closed\n', obj.CameraLabel)
                 end
             end
         end
@@ -228,8 +230,7 @@ classdef AndorCamera < Camera
             [ret] = StartAcquisition();
             CheckWarning(ret)
             if options.verbose
-                fprintf('Camera (index: %d, handle: %d, serial#: %d): Acquisition started\n', ...
-                    obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
+                fprintf('%s: Acquisition started\n', obj.CameraLabel)
             end
         end
 
@@ -246,8 +247,7 @@ classdef AndorCamera < Camera
                 [ret] = AbortAcquisition();
                 CheckWarning(ret)
                 if options.verbose
-                    fprintf('Camera (index: %d, handle: %d, serial#: %d): Acquisition aborted\n', ...
-                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
+                    fprintf('%s: Acquisition aborted\n', obj.CameraLabel)
                 end
             end
             % Free internal memory
@@ -295,9 +295,8 @@ classdef AndorCamera < Camera
             [ret, keep_clean_time] = GetKeepCleanTime();
             CheckWarning(ret)
             if options.verbose
-                fprintf('Camera (index: %d, handle: %d, serial#: %d):\n\tReadout time: %g s\n\tExposure time: %g s\n\tKeep clean time: %g s\n', ...
-                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber, ...
-                        readout_time, exposure_time, keep_clean_time)
+                fprintf('%s:\n\tReadout time: %g s\n\tExposure time: %g s\n\tKeep clean time: %g s\n', ...
+                        obj.CameraLabel, readout_time, exposure_time, keep_clean_time)
             end
         end
 
@@ -324,20 +323,15 @@ classdef AndorCamera < Camera
                     status = sprintf('Unknown status (%d)', ret);
             end
             if options.verbose
-                fprintf('Camera (index: %d, handle: %d, serial#: %d):\n\tCurrent temperature: %g C\n\tStatus: %s\n', ...
-                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber, ...
-                        temperature, status)
+                fprintf('%s:\n\tCurrent temperature: %g C\n\tStatus: %s\n', ...
+                        obj.CameraLabel, temperature, status)
             end
         end
 
-        function disp(obj)
-            fprintf('AndorCamera (index: %d, handle: %d, serial#: %d)\n\tInitialized: %d\n\tCameraConfig:\n\n', ...
-                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber, obj.Initialized)
-            disp(obj.CameraConfig)
-        end
-        
-        function delete(obj)
-            obj.close();
+        function camera_name = get.CameraLabel(obj)
+            camera_name = string(sprintf('[%s] AndorCamera (index: %d, handle: %d, serial#: %d)', ...
+                                 datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
+                                 obj.CameraIndex, obj.CameraHandle, obj.SerialNumber));                
         end
 
     end

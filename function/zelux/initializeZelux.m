@@ -5,7 +5,6 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         options.verbose (1,1) logical = true
     end
         
-    % Old initializeZelux
     oldPath = cd([pwd, '/function/zelux/dlls']);
     % disp(pwd)
 
@@ -23,10 +22,6 @@ function [tlCameraSDK, tlCamera] = initializeZelux(options)
         error('Unable to load SDK, check if the camera is already initialized.')
     end
     cd(oldPath)
-
-    % NET.addAssembly([pwd, '/function/zelux/dlls/Thorlabs.TSI.TLCamera.dll']);
-    % disp('Dot NET assembly loaded.')
-    % tlCameraSDK = Thorlabs.TSI.TLCamera.TLCameraSDK.OpenTLCameraSDK;
 
     % Get serial numbers of connected TLCameras.
     serialNumbers = tlCameraSDK.DiscoverAvailableCameras;
