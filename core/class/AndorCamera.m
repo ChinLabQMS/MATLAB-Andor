@@ -17,6 +17,7 @@ classdef AndorCamera < Camera
             end
             obj.SerialNumber = serial_number;
             obj = obj.init('verbose', options.verbose);
+            obj = obj.config();
         end
 
         function obj = init(obj, options)
@@ -59,7 +60,7 @@ classdef AndorCamera < Camera
                     initialized = true;
                 end
                 
-                % If the connected camera is the one to initialize
+                % If the connected initialized camera is the one to initialize
                 if serial_number == obj.SerialNumber
                     obj.CameraIndex = i;
                     obj.CameraHandle = camera_handle;
@@ -79,6 +80,7 @@ classdef AndorCamera < Camera
                     CheckWarning(ret)
                 end
             end
+            obj.abortAcquisition("verbose", options.verbose)
                         
             % Basic config
             [ret] = SetTemperature(-70);
@@ -140,7 +142,7 @@ classdef AndorCamera < Camera
             end
             if obj.Initialized
                 % Select the current camera and abort acquisition
-                obj = obj.abortAcquisition("verbose", options.verbose);
+                obj.abortAcquisition("verbose", options.verbose);
                 % Temperature is maintained on shutting down.
                 % 0 - Returns to ambient temperature on ShutDown
                 % 1 - Temperature is maintained on ShutDown
@@ -166,20 +168,69 @@ classdef AndorCamera < Camera
                 name
                 value
             end
+            % Configure camera settings
             arg_len = length(name);
             for i = 1:arg_len
                 obj.CameraConfig.(name{i}) = value{i};
             end
-            obj.setToCurrent()
-            if ~obj.CameraConfig.FastKinetic
-
+            % Apply the settings, set current camera and abort acquisition
+            obj.abortAcquisition()
+            % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
+            [ret] = SetIsolatedCropMode(double(obj.CameraConfig.Cropped), obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, 1, 1);
+            CheckWarning(ret)
+            % Get detector size (with croped mode ON this may change)
+            [ret, YPixels, XPixels] = GetDetector();
+            CheckWarning(ret)
+            % Set the image size
+            [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
+            CheckWarning(ret)
+            if obj.CameraConfig.FastKinetic
+                % Set acquisition mode; 4 for fast kinetics
+                [ret] = SetAcquisitionMode(4);
+                CheckWarning(ret)
+                % Configure fast kinetics mode acquisition
+                % (exposed rows, series length, exposure, 4 for Image, horizontal binning, vertical binning, offset)
+                [ret] = SetFastKineticsEx(obj.CameraConfig.FastKineticExposedRows, ...
+                                          obj.CameraConfig.FastKineticSeriesLength, ...
+                                          obj.CameraConfig.Exposure, ...
+                                          4, 1, 1, ...
+                                          obj.CameraConfig.FastKineticOffset);
+                CheckWarning(ret)
+                % Set Fast Kinetic vertical shift speed
+                [ret] = SetFKVShiftSpeed(obj.CameraConfig.VSSpeed);
+                CheckWarning(ret)
             else
-
+                % Set acquisition mode; 1 for Image
+                [ret] = SetAcquisitionMode(1);
+                CheckWarning(ret)
+                % Set exposure time
+                [ret] = SetExposureTime(obj.CameraConfig.Exposure);
+                CheckWarning(ret)
             end
+            % Set trigger mode; 0 for internal, 1 for external
+            [ret] = SetTriggerMode(double(obj.CameraConfig.ExternalTrigger));
+            CheckWarning(ret)
+            % Set horizontal speed
+            [ret] = SetHSSpeed(0, obj.CameraConfig.HSSpeed);
+            CheckWarning(ret)
+            % Set vertical speed
+            [ret] = SetVSSpeed(obj.CameraConfig.VSSpeed);
+            CheckWarning(ret)
+
         end
 
-        function startAcquisition(obj)
-            obj.setToCurrent()
+        function startAcquisition(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = true
+            end
+            obj.abortAcquisition('verbose', options.verbose)
+            [ret] = StartAcquisition();
+            CheckWarning(ret)
+            if options.verbose
+                fprintf('Camera (index: %d, handle: %d, serial#: %d): Acquisition started\n', ...
+                    obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
+            end
         end
 
         function abortAcquisition(obj, options)
@@ -199,19 +250,65 @@ classdef AndorCamera < Camera
                         obj.CameraIndex, obj.CameraHandle, obj.SerialNumber)
                 end
             end
-        end
-        
-        function image = fetchImage(obj)
-            obj.setToCurrent()
+            % Free internal memory
+            [ret] = FreeInternalMemory();
+            CheckWarning(ret)
         end
 
-        function [temperature, status] = checkTemperature(obj, options)
+        function is_acquiring = isAcquiring(obj)
+            obj.setToCurrent()
+            [ret, status] = GetStatus();
+            CheckWarning(ret)
+            is_acquiring = status == atmcd.DRV_ACQUIRING;
+        end
+        
+        function [image, num_frames] = getImage(obj)
+            obj.setToCurrent()
+            [ret, first, last] = GetNumberAvailableImages();
+            CheckWarning(ret)
+            [ret, ImgData, ~, ~] = GetImages16(first, last, obj.CameraConfig.YPixels*obj.CameraConfig.XPixels);
+            CheckWarning(ret)
+            if ret == atmcd.DRV_SUCCESS
+                num_frames = last - first + 1;
+                image = uint16(flip(transpose(reshape(ImgData, obj.CameraConfig.YPixels, obj.CameraConfig.XPixels)), 1));
+            else
+                num_frames = 0;
+                image = [];
+            end
+        end
+
+        function [exposure_time, readout_time, keep_clean_time] = getTimings(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = true
+            end
+            obj.abortAcquisition()
+            if obj.CameraConfig.FastKinetic
+                [ret, exposure_time] = GetFKExposureTime();
+                CheckWarning(ret)
+            else
+                [ret, exposure_time] = GetAcquisitionTimings();
+                CheckWarning(ret)
+            end
+            [ret, readout_time] = GetReadOutTime();
+            CheckWarning(ret)
+            [ret, keep_clean_time] = GetKeepCleanTime();
+            CheckWarning(ret)
+            if options.verbose
+                fprintf('Camera (index: %d, handle: %d, serial#: %d):\n\tReadout time: %g s\n\tExposure time: %g s\n\tKeep clean time: %g s\n', ...
+                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber, ...
+                        readout_time, exposure_time, keep_clean_time)
+            end
+        end
+
+        function [is_stable, temperature, status] = checkTemperature(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
             end
             obj.setToCurrent()
-            [ret, temperature] = GetTemperatureF();    
+            [ret, temperature] = GetTemperatureF();
+            is_stable = ret == atmcd.DRV_TEMPERATURE_STABILIZED;
             switch ret
                 case atmcd.DRV_TEMPERATURE_STABILIZED
                     status = 'Temperature has stabilized at set point.';
@@ -232,17 +329,31 @@ classdef AndorCamera < Camera
                         temperature, status)
             end
         end
+
+        function disp(obj)
+            fprintf('AndorCamera (index: %d, handle: %d, serial#: %d)\n\tInitialized: %d\n\tCameraConfig:\n\n', ...
+                        obj.CameraIndex, obj.CameraHandle, obj.SerialNumber, obj.Initialized)
+            disp(obj.CameraConfig)
+        end
         
+        function delete(obj)
+            obj.close();
+        end
+
     end
 
     methods (Access = private, Hidden)
         function setToCurrent(obj)
             if ~obj.Initialized
-                warning('Camera not initialized!')
-                return
+                if isnan(obj.CameraHandle)
+                    error('Camera is not initialized.')
+                else
+                    obj = obj.init();
+                end
             end
             [ret] = SetCurrentCamera(obj.CameraHandle);
             CheckWarning(ret)
         end
     end
+
 end

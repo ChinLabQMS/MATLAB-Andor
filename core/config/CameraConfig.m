@@ -1,4 +1,4 @@
-classdef (Abstract) CameraConfig < handle
+classdef (Abstract) CameraConfig
     %CAMERACONFIG
     
     properties (Abstract, SetAccess = {?Camera})

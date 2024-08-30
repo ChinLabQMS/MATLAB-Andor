@@ -1,4 +1,4 @@
-classdef (Abstract) Camera
+classdef (Abstract) Camera < handle
     %CAMERA
 
     properties (Abstract, SetAccess = private)
@@ -11,7 +11,7 @@ classdef (Abstract) Camera
         close(obj)
         config(obj)
         startAcquisition(obj)
-        image = fetchImage(obj)
+        image = getImage(obj)
     end
 
 end
