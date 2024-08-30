@@ -73,7 +73,7 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function config(obj, name, value)
+        function obj = config(obj, name, value)
             arguments
                 obj
             end
@@ -107,8 +107,31 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function image = getImage(obj)
-            image = zeros(obj.CameraConfig.XPixels, obj.CameraConfig.YPixels);
+        function [image, num_frames] = getImage(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = true
+            end
+            if ~obj.Initialized
+                error('%s: Camera not initialized.', obj.CameraLabel)
+            end
+            if ~obj.CameraConfig.ExternalTrigger
+                obj.CameraHandle.IssueSoftwareTrigger;
+            end
+            num_frames = obj.CameraHandle.NumberOfQueuedFrames;
+            if num_frames == 0
+                warning('%s: No image frame available.', obj.CameraLabel)
+                image = [];
+                return
+            end
+            if num_frames > 1
+                warning('%s: Data processing falling behind acquisition. %d remains.', obj.CameraLabel, obj.CameraHandle.NumberOfQueuedFrames)
+            end
+            imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
+            image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.CameraConfig.XPixels, obj.CameraConfig.YPixels]);
+            if options.verbose
+                fprintf('%s: Image frame number: %d\n', obj.CameraLabel, imageFrame.FrameNumber)
+            end
         end
 
         function label = get.CameraLabel(obj)

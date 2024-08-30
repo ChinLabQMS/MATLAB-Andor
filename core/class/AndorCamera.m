@@ -263,18 +263,19 @@ classdef AndorCamera < Camera
         end
         
         function [image, num_frames] = getImage(obj)
+            if obj.isAcquiring()
+                warn('Camera is acquiring, please wait for acquisition to finish.')
+                num_frames = 0;
+                image = [];
+                return
+            end
             obj.setToCurrent()
             [ret, first, last] = GetNumberAvailableImages();
             CheckWarning(ret)
             [ret, ImgData, ~, ~] = GetImages16(first, last, obj.CameraConfig.YPixels*obj.CameraConfig.XPixels);
             CheckWarning(ret)
-            if ret == atmcd.DRV_SUCCESS
-                num_frames = last - first + 1;
-                image = uint16(flip(transpose(reshape(ImgData, obj.CameraConfig.YPixels, obj.CameraConfig.XPixels)), 1));
-            else
-                num_frames = 0;
-                image = [];
-            end
+            num_frames = last - first + 1;
+            image = uint16(flip(transpose(reshape(ImgData, obj.CameraConfig.YPixels, obj.CameraConfig.XPixels)), 1));
         end
 
         function [exposure_time, readout_time, keep_clean_time] = getTimings(obj, options)
