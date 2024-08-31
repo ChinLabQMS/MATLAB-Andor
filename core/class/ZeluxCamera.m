@@ -42,16 +42,18 @@ classdef ZeluxCamera < Camera
                 options.verbose (1, 1) logical = true
             end
             % Get serial numbers of connected TLCameras.
-            serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
-            if serialNumbers.Count - 1 < obj.CameraIndex
-                error('%s: Camera index out of range. Number of cameras found: %d', obj.CameraLabel, serialNumbers.Count)
-            end
-            obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIndex), false);
-            obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
-            obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
-            obj.Initialized = true;
-            if options.verbose
-                fprintf('%s: Camera initialized.\n', obj.CameraLabel)
+            if ~obj.Initialized
+                serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
+                if serialNumbers.Count - 1 < obj.CameraIndex
+                    error('%s: Camera index out of range. Number of cameras found: %d', obj.CameraLabel, serialNumbers.Count)
+                end
+                obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIndex), false);
+                obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
+                obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
+                obj.Initialized = true;
+                if options.verbose
+                    fprintf('%s: Camera initialized.\n', obj.CameraLabel)
+                end
             end
         end
 
@@ -97,8 +99,14 @@ classdef ZeluxCamera < Camera
         end
 
         function startAcquisition(obj)
-            obj.abortAcquisition();
-            obj.CameraHandle.Arm;
+            % Put the camera in armed state, ready to receive trigger.
+            if ~obj.CameraHandle.IsArmed
+                obj.CameraHandle.Arm;
+            end
+            % Issue a software trigger if triggered internally.
+            if ~obj.CameraConfig.ExternalTrigger
+                obj.CameraHandle.IssueSoftwareTrigger;
+            end
         end
 
         function abortAcquisition(obj)
@@ -110,17 +118,16 @@ classdef ZeluxCamera < Camera
         function [image, num_frames] = getImage(obj, options)
             arguments
                 obj
-                options.verbose (1, 1) logical = true
+                options.verbose (1, 1) logical = false
             end
             if ~obj.Initialized
                 error('%s: Camera not initialized.', obj.CameraLabel)
             end
-            if ~obj.CameraConfig.ExternalTrigger
-                obj.CameraHandle.IssueSoftwareTrigger;
-            end
             num_frames = obj.CameraHandle.NumberOfQueuedFrames;
             if num_frames == 0
-                warning('%s: No image frame available.', obj.CameraLabel)
+                if options.verbose
+                    warning('%s: No image frame available.', obj.CameraLabel)
+                end
                 image = [];
                 return
             end
@@ -130,14 +137,13 @@ classdef ZeluxCamera < Camera
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.CameraConfig.XPixels, obj.CameraConfig.YPixels]);
             if options.verbose
-                fprintf('%s: Image frame number: %d\n', obj.CameraLabel, imageFrame.FrameNumber)
+                fprintf('%s: Image acquired, frame number: %d\n', obj.CameraLabel, imageFrame.FrameNumber)
             end
         end
 
-        function label = get.CameraLabel(obj)
-            label = sprintf('[%s] ZeluxCamera (index: %d)', ...
-                            datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
-                            obj.CameraIndex);
+        function camera_label = get.CameraLabel(obj)
+            camera_label = string(sprintf('[%s] ZeluxCamera (index: %d)', ...
+                datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), obj.CameraIndex));
         end
 
     end

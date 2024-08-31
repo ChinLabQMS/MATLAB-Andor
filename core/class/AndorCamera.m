@@ -262,14 +262,19 @@ classdef AndorCamera < Camera
             is_acquiring = status == atmcd.DRV_ACQUIRING;
         end
         
-        function [image, num_frames] = getImage(obj)
+        function [image, num_frames] = getImage(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = false
+            end
             if obj.isAcquiring()
-                warn('Camera is acquiring, please wait for acquisition to finish.')
+                if options.verbose
+                    warning('%s: Camera is acquiring, please wait for acquisition to finish.', obj.CameraLabel)
+                end
                 num_frames = 0;
                 image = [];
                 return
             end
-            obj.setToCurrent()
             [ret, first, last] = GetNumberAvailableImages();
             CheckWarning(ret)
             [ret, ImgData, ~, ~] = GetImages16(first, last, obj.CameraConfig.YPixels*obj.CameraConfig.XPixels);
@@ -296,7 +301,7 @@ classdef AndorCamera < Camera
             [ret, keep_clean_time] = GetKeepCleanTime();
             CheckWarning(ret)
             if options.verbose
-                fprintf('%s:\n\tReadout time: %g s\n\tExposure time: %g s\n\tKeep clean time: %g s\n', ...
+                fprintf('%s: Readout time = %g s, Exposure time = %g s, Keep clean time = %g s\n', ...
                         obj.CameraLabel, readout_time, exposure_time, keep_clean_time)
             end
         end
@@ -324,7 +329,7 @@ classdef AndorCamera < Camera
                     status = sprintf('Unknown status (%d)', ret);
             end
             if options.verbose
-                fprintf('%s:\n\tCurrent temperature: %g C\n\tStatus: %s\n', ...
+                fprintf('%s: Current temperature = %g C, Status = %s\n', ...
                         obj.CameraLabel, temperature, status)
             end
         end
@@ -341,7 +346,7 @@ classdef AndorCamera < Camera
         function setToCurrent(obj)
             if ~obj.Initialized
                 if isnan(obj.CameraHandle)
-                    error('Camera is not initialized.')
+                    error('%s: Camera is not initialized.', obj.CameraLabel)
                 else
                     obj = obj.init();
                 end

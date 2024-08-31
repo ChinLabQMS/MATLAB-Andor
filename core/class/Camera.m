@@ -27,6 +27,7 @@ classdef (Abstract) Camera < handle
 
         function delete(obj)
             obj.close();
+            delete@handle(obj)
         end
     end
 
