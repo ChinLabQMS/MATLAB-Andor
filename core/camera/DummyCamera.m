@@ -3,7 +3,6 @@ classdef DummyCamera < Camera
 
     properties (SetAccess = private)
         Initialized = false
-        CameraLabel = "DummyCamera"
         CameraConfig = ZeluxCameraConfig()
     end
 
@@ -34,7 +33,7 @@ classdef DummyCamera < Camera
         end
 
         function label = get.CurrentLabel(obj)
-            label = string(sprintf('[%s] %s', datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), obj.CameraLabel));
+            label = string(sprintf('[%s] DummyCamera', datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss")));
         end
     end
 

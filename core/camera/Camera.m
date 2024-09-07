@@ -3,7 +3,6 @@ classdef (Abstract) Camera < handle
 
     properties (Abstract, SetAccess = private)
         Initialized (1, 1) logical
-        CameraLabel (1, 1) string
         CameraConfig (1, 1) CameraConfig
     end
 

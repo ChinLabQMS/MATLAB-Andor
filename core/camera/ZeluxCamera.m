@@ -3,7 +3,6 @@ classdef ZeluxCamera < Camera
     
     properties (SetAccess = private)
         Initialized = false;
-        CameraLabel = 'Zelux'
         CameraConfig = ZeluxCameraConfig()
         CameraIndex (1, 1) double = 0
         CameraSDK = nan
@@ -33,11 +32,11 @@ classdef ZeluxCamera < Camera
             cd(old_path)
 
             obj.CameraIndex = index;
-            obj = obj.init('verbose', options.verbose);
-            obj = obj.config();
+            obj.init('verbose', options.verbose);
+            obj.config();
         end
         
-        function obj = init(obj, options)
+        function init(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
@@ -76,7 +75,7 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function obj = config(obj, name, value)
+        function config(obj, name, value)
             arguments
                 obj
             end
@@ -87,6 +86,7 @@ classdef ZeluxCamera < Camera
             for i = 1:length(name)
                 obj.CameraConfig.(name{i}) = value{i};
             end
+            obj.abortAcquisition();
             obj.CameraHandle.ExposureTime_us = obj.CameraConfig.Exposure * 1e6;
             if obj.CameraConfig.ExternalTrigger
                 obj.CameraHandle.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.HardwareTriggered;

@@ -3,7 +3,6 @@ classdef AndorCamera < Camera
 
     properties (SetAccess = private)
         Initialized = false
-        CameraLabel = 'Andor'
         CameraConfig = AndorCameraConfig()
         SerialNumber {mustBeMember(SerialNumber, [19330, 19331])}
         CameraIndex (1, 1) double = nan
@@ -21,12 +20,11 @@ classdef AndorCamera < Camera
                 options.verbose (1, 1) logical = true
             end
             obj.SerialNumber = serial_number;
-            obj.CameraLabel = sprintf('Andor%d', obj.SerialNumber);
-            obj = obj.init('verbose', options.verbose);
-            obj = obj.config();
+            obj.init('verbose', options.verbose);
+            obj.config();
         end
 
-        function obj = init(obj, options)
+        function init(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
@@ -140,7 +138,7 @@ classdef AndorCamera < Camera
             end
         end
 
-        function obj = close(obj, options)
+        function close(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = true
@@ -164,7 +162,7 @@ classdef AndorCamera < Camera
             end
         end
         
-        function obj = config(obj, name, value)
+        function config(obj, name, value)
             arguments
                 obj
             end
