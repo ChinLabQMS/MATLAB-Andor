@@ -3,11 +3,12 @@ classdef (Abstract) Camera < handle
 
     properties (Abstract, SetAccess = private)
         Initialized (1, 1) logical
+        CameraLabel (1, 1) string
         CameraConfig (1, 1) CameraConfig
     end
 
     properties (Abstract, Dependent)
-        CameraLabel (1, 1) string
+        CurrentLabel (1, 1) string
     end
 
     methods (Abstract)

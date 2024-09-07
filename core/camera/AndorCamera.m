@@ -3,14 +3,15 @@ classdef AndorCamera < Camera
 
     properties (SetAccess = private)
         Initialized = false
-        CameraConfig = AndorCameraConfig
+        CameraLabel = 'Andor'
+        CameraConfig = AndorCameraConfig()
         SerialNumber {mustBeMember(SerialNumber, [19330, 19331])}
         CameraIndex (1, 1) double = nan
         CameraHandle (1, 1) double = nan
     end
 
     properties (Dependent)
-        CameraLabel
+        CurrentLabel
     end
 
     methods
@@ -20,6 +21,7 @@ classdef AndorCamera < Camera
                 options.verbose (1, 1) logical = true
             end
             obj.SerialNumber = serial_number;
+            obj.CameraLabel = sprintf('Andor%d', obj.SerialNumber);
             obj = obj.init('verbose', options.verbose);
             obj = obj.config();
         end
@@ -124,10 +126,10 @@ classdef AndorCamera < Camera
 
             if options.verbose
                 if obj.Initialized
-                    fprintf('%s: Camera initialized.\n', obj.CameraLabel)
+                    fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
                 else
                     warning('off', 'backtrace')
-                    warning('%s initialization fails.', obj.CameraLabel)
+                    warning('%s initialization fails.', obj.CurrentLabel)
                     for i = 1:size(missing_camera, 1)
                         if missing_camera(i)
                             warning('AndorCamera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
@@ -157,7 +159,7 @@ classdef AndorCamera < Camera
                     obj.Initialized = false;
                 end
                 if options.verbose && ~obj.Initialized
-                    fprintf('%s: Camera closed\n', obj.CameraLabel)
+                    fprintf('%s: Camera closed\n', obj.CurrentLabel)
                 end
             end
         end
@@ -218,7 +220,6 @@ classdef AndorCamera < Camera
             % Set vertical speed
             [ret] = SetVSSpeed(obj.CameraConfig.VSSpeed);
             CheckWarning(ret)
-
         end
 
         function startAcquisition(obj, options)
@@ -230,7 +231,7 @@ classdef AndorCamera < Camera
             [ret] = StartAcquisition();
             CheckWarning(ret)
             if options.verbose
-                fprintf('%s: Acquisition started\n', obj.CameraLabel)
+                fprintf('%s: Acquisition started\n', obj.CurrentLabel)
             end
         end
 
@@ -247,7 +248,7 @@ classdef AndorCamera < Camera
                 [ret] = AbortAcquisition();
                 CheckWarning(ret)
                 if options.verbose
-                    fprintf('%s: Acquisition aborted\n', obj.CameraLabel)
+                    fprintf('%s: Acquisition aborted\n', obj.CurrentLabel)
                 end
             end
             % Free internal memory
@@ -262,17 +263,18 @@ classdef AndorCamera < Camera
             is_acquiring = status == atmcd.DRV_ACQUIRING;
         end
         
-        function [image, num_frames] = getImage(obj, options)
+        function [image, num_frames, is_saturated] = getImage(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = false
             end
             if obj.isAcquiring()
                 if options.verbose
-                    warning('%s: Camera is acquiring, please wait for acquisition to finish.', obj.CameraLabel)
+                    warning('%s: Camera is acquiring, please wait for acquisition to finish.', obj.CurrentLabel)
                 end
                 num_frames = 0;
                 image = [];
+                is_saturated = false;
                 return
             end
             [ret, first, last] = GetNumberAvailableImages();
@@ -281,6 +283,7 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
             num_frames = last - first + 1;
             image = uint16(flip(transpose(reshape(ImgData, obj.CameraConfig.YPixels, obj.CameraConfig.XPixels)), 1));
+            is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
         end
 
         function [exposure_time, readout_time, keep_clean_time] = getTimings(obj, options)
@@ -302,7 +305,7 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
             if options.verbose
                 fprintf('%s: Readout time = %g s, Exposure time = %g s, Keep clean time = %g s\n', ...
-                        obj.CameraLabel, readout_time, exposure_time, keep_clean_time)
+                        obj.CurrentLabel, readout_time, exposure_time, keep_clean_time)
             end
         end
 
@@ -330,11 +333,11 @@ classdef AndorCamera < Camera
             end
             if options.verbose
                 fprintf('%s: Current temperature = %g C, Status = %s\n', ...
-                        obj.CameraLabel, temperature, status)
+                        obj.CurrentLabel, temperature, status)
             end
         end
 
-        function camera_name = get.CameraLabel(obj)
+        function camera_name = get.CurrentLabel(obj)
             camera_name = string(sprintf('[%s] AndorCamera (index: %d, handle: %d, serial#: %d)', ...
                                  datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
                                  obj.CameraIndex, obj.CameraHandle, obj.SerialNumber));                
@@ -346,7 +349,7 @@ classdef AndorCamera < Camera
         function setToCurrent(obj)
             if ~obj.Initialized
                 if isnan(obj.CameraHandle)
-                    error('%s: Camera is not initialized.', obj.CameraLabel)
+                    error('%s: Camera is not initialized.', obj.CurrentLabel)
                 else
                     obj = obj.init();
                 end

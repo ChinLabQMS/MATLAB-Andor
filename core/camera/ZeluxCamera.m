@@ -3,6 +3,7 @@ classdef ZeluxCamera < Camera
     
     properties (SetAccess = private)
         Initialized = false;
+        CameraLabel = 'Zelux'
         CameraConfig = ZeluxCameraConfig()
         CameraIndex (1, 1) double = 0
         CameraSDK = nan
@@ -10,7 +11,7 @@ classdef ZeluxCamera < Camera
     end
 
     properties (Dependent)
-        CameraLabel
+        CurrentLabel
     end
     
     methods
@@ -45,14 +46,14 @@ classdef ZeluxCamera < Camera
             if ~obj.Initialized
                 serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
                 if serialNumbers.Count - 1 < obj.CameraIndex
-                    error('%s: Camera index out of range. Number of cameras found: %d', obj.CameraLabel, serialNumbers.Count)
+                    error('%s: Camera index out of range. Number of cameras found: %d', obj.CurrentLabel, serialNumbers.Count)
                 end
                 obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIndex), false);
                 obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
                 obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
                 obj.Initialized = true;
                 if options.verbose
-                    fprintf('%s: Camera initialized.\n', obj.CameraLabel)
+                    fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
                 end
             end
         end
@@ -70,7 +71,7 @@ classdef ZeluxCamera < Camera
                 obj.CameraHandle = nan;
                 obj.CameraSDK = nan;
                 if options.verbose
-                    fprintf('%s: Camera closed.\n', obj.CameraLabel)
+                    fprintf('%s: Camera closed.\n', obj.CurrentLabel)
                 end
             end
         end
@@ -82,9 +83,6 @@ classdef ZeluxCamera < Camera
             arguments (Repeating)
                 name
                 value
-            end
-            if ~obj.Initialized
-                error('%s: Camera not initialized.', obj.CameraLabel)
             end
             for i = 1:length(name)
                 obj.CameraConfig.(name{i}) = value{i};
@@ -115,33 +113,32 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function [image, num_frames] = getImage(obj, options)
+        function [image, num_frames, is_saturated] = getImage(obj, options)
             arguments
                 obj
                 options.verbose (1, 1) logical = false
             end
-            if ~obj.Initialized
-                error('%s: Camera not initialized.', obj.CameraLabel)
-            end
             num_frames = obj.CameraHandle.NumberOfQueuedFrames;
             if num_frames == 0
                 if options.verbose
-                    warning('%s: No image frame available.', obj.CameraLabel)
+                    warning('%s: No image frame available.', obj.CurrentLabel)
                 end
                 image = [];
+                is_saturated = false;
                 return
             end
             if num_frames > 1
-                warning('%s: Data processing falling behind acquisition. %d remains.', obj.CameraLabel, obj.CameraHandle.NumberOfQueuedFrames)
+                warning('%s: Data processing falling behind acquisition. %d remains.', obj.CurrentLabel, obj.CameraHandle.NumberOfQueuedFrames)
             end
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.CameraConfig.XPixels, obj.CameraConfig.YPixels]);
+            is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
             if options.verbose
-                fprintf('%s: Image acquired, frame number: %d\n', obj.CameraLabel, imageFrame.FrameNumber)
+                fprintf('%s: Image acquired, frame number: %d\n', obj.CurrentLabel, imageFrame.FrameNumber)
             end
         end
 
-        function camera_label = get.CameraLabel(obj)
+        function camera_label = get.CurrentLabel(obj)
             camera_label = string(sprintf('[%s] ZeluxCamera (index: %d)', ...
                 datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), obj.CameraIndex));
         end

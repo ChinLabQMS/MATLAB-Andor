@@ -1,5 +1,4 @@
-classdef DataConfig
-    %DATACONFIG
+classdef AcquisitorConfig
     
     properties (SetAccess = {?DataCollector})
     end

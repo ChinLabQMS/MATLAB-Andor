@@ -8,4 +8,8 @@ classdef (Abstract) CameraConfig
         YPixels (1, 1) double
     end
 
+    properties (Abstract, Constant)
+        MaxPixelValue (1, 1) double
+    end
+
 end
