@@ -14,21 +14,13 @@ classdef AndorCamera < Camera
     end
 
     methods
-        function obj = AndorCamera(serial_number, options)
-            arguments
-                serial_number (1, 1) double
-                options.verbose (1, 1) logical = true
-            end
+        function obj = AndorCamera(serial_number)
             obj.SerialNumber = serial_number;
-            obj.init('verbose', options.verbose);
-            obj.config();
+            obj.init()
+            obj.config()
         end
 
-        function init(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
+        function init(obj)
             if isnan(obj.CameraIndex)
                 % Find all connected cameras
                 [ret, num_cameras] = GetAvailableCameras();
@@ -84,7 +76,20 @@ classdef AndorCamera < Camera
                     CheckWarning(ret)
                 end
             end
-            obj.abortAcquisition("verbose", options.verbose)
+
+            if ~obj.Initialized
+                warning('off', 'backtrace')
+                warning('%s initialization fails.', obj.CurrentLabel)
+                for i = 1:size(missing_camera, 1)
+                    if missing_camera(i)
+                        warning('AndorCamera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
+                    end
+                end
+                warning('on', 'backtrace')
+                error('%s initialization fails.', obj.CurrentLabel)
+            end
+
+            obj.abortAcquisition()
                         
             % Basic config
             [ret] = SetTemperature(-70);
@@ -121,31 +126,14 @@ classdef AndorCamera < Camera
 
             obj.CameraConfig.XPixels = XPixels;
             obj.CameraConfig.YPixels = YPixels;
-
-            if options.verbose
-                if obj.Initialized
-                    fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
-                else
-                    warning('off', 'backtrace')
-                    warning('%s initialization fails.', obj.CurrentLabel)
-                    for i = 1:size(missing_camera, 1)
-                        if missing_camera(i)
-                            warning('AndorCamera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
-                        end
-                    end
-                    warning('on', 'backtrace')
-                end
-            end
+        
+            init@Camera(obj)
         end
 
-        function close(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
+        function close(obj)
             if obj.Initialized
                 % Select the current camera and abort acquisition
-                obj.abortAcquisition("verbose", options.verbose);
+                obj.abortAcquisition()
                 % Temperature is maintained on shutting down.
                 % 0 - Returns to ambient temperature on ShutDown
                 % 1 - Temperature is maintained on ShutDown
@@ -155,26 +143,14 @@ classdef AndorCamera < Camera
                 CheckWarning(ret)
                 if ret == atmcd.DRV_SUCCESS
                     obj.Initialized = false;
-                end
-                if options.verbose && ~obj.Initialized
-                    fprintf('%s: Camera closed\n', obj.CurrentLabel)
+                    close@Camera(obj)
                 end
             end
         end
         
-        function config(obj, name, value)
-            arguments
-                obj
-            end
-            arguments (Repeating)
-                name
-                value
-            end
-            % Configure camera settings
-            arg_len = length(name);
-            for i = 1:arg_len
-                obj.CameraConfig.(name{i}) = value{i};
-            end
+        function config(obj, varargin)
+            config@Camera(obj, varargin{:})
+
             % Apply the settings, set current camera and abort acquisition
             obj.abortAcquisition()
             % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
@@ -220,24 +196,13 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
-        function startAcquisition(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
-            obj.abortAcquisition('verbose', options.verbose)
+        function startAcquisition(obj)
+            obj.abortAcquisition()
             [ret] = StartAcquisition();
             CheckWarning(ret)
-            if options.verbose
-                fprintf('%s: Acquisition started\n', obj.CurrentLabel)
-            end
         end
 
-        function abortAcquisition(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
+        function abortAcquisition(obj)
             obj.setToCurrent()
             % Get status and abort acquisition if it is acquiring
             [ret, status] = GetStatus();
@@ -245,9 +210,7 @@ classdef AndorCamera < Camera
             if status == atmcd.DRV_ACQUIRING
                 [ret] = AbortAcquisition();
                 CheckWarning(ret)
-                if options.verbose
-                    fprintf('%s: Acquisition aborted\n', obj.CurrentLabel)
-                end
+                fprintf('%s: Acquisition aborted\n', obj.CurrentLabel)
             end
             % Free internal memory
             [ret] = FreeInternalMemory();
@@ -261,15 +224,8 @@ classdef AndorCamera < Camera
             is_acquiring = status == atmcd.DRV_ACQUIRING;
         end
         
-        function [image, num_frames, is_saturated] = getImage(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = false
-            end
+        function [image, num_frames, is_saturated] = getImage(obj)
             if obj.isAcquiring()
-                if options.verbose
-                    warning('%s: Camera is acquiring, please wait for acquisition to finish.', obj.CurrentLabel)
-                end
                 num_frames = 0;
                 image = [];
                 is_saturated = false;
@@ -284,11 +240,7 @@ classdef AndorCamera < Camera
             is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
         end
 
-        function [exposure_time, readout_time, keep_clean_time] = getTimings(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
+        function [exposure_time, readout_time, keep_clean_time] = getTimings(obj)
             obj.abortAcquisition()
             if obj.CameraConfig.FastKinetic
                 [ret, exposure_time] = GetFKExposureTime();
@@ -301,17 +253,11 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
             [ret, keep_clean_time] = GetKeepCleanTime();
             CheckWarning(ret)
-            if options.verbose
-                fprintf('%s: Readout time = %g s, Exposure time = %g s, Keep clean time = %g s\n', ...
-                        obj.CurrentLabel, readout_time, exposure_time, keep_clean_time)
-            end
+            fprintf('%s: Readout time = %g s, Exposure time = %g s, Keep clean time = %g s\n', ...
+                    obj.CurrentLabel, readout_time, exposure_time, keep_clean_time)
         end
 
-        function [is_stable, temperature, status] = checkTemperature(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = true
-            end
+        function [is_stable, temperature, status] = checkTemperature(obj)
             obj.setToCurrent()
             [ret, temperature] = GetTemperatureF();
             is_stable = ret == atmcd.DRV_TEMPERATURE_STABILIZED;
@@ -329,10 +275,8 @@ classdef AndorCamera < Camera
                 otherwise
                     status = sprintf('Unknown status (%d)', ret);
             end
-            if options.verbose
-                fprintf('%s: Current temperature = %g C, Status = %s\n', ...
-                        obj.CurrentLabel, temperature, status)
-            end
+            fprintf('%s: Current temperature = %g C, Status = %s\n', ...
+                    obj.CurrentLabel, temperature, status)
         end
 
         function camera_name = get.CurrentLabel(obj)
@@ -346,11 +290,7 @@ classdef AndorCamera < Camera
     methods (Access = private, Hidden)
         function setToCurrent(obj)
             if ~obj.Initialized
-                if isnan(obj.CameraHandle)
-                    error('%s: Camera is not initialized.', obj.CurrentLabel)
-                else
-                    obj = obj.init();
-                end
+                error('%s: Camera is not initialized.', obj.CurrentLabel)
             end
             [ret] = SetCurrentCamera(obj.CameraHandle);
             CheckWarning(ret)

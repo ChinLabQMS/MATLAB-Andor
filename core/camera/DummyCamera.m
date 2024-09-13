@@ -13,13 +13,12 @@ classdef DummyCamera < Camera
     methods
         function init(obj)
             obj.Initialized = true;
+            init@Camera(obj)
         end
 
         function close(obj)
             obj.Initialized = false;
-        end
-
-        function config(obj)
+            close@Camera(obj)
         end
 
         function startAcquisition(obj)
@@ -29,7 +28,7 @@ classdef DummyCamera < Camera
         end
 
         function image = getImage(obj)
-            image = rand(obj.CameraConfig.XPixels, obj.CameraConfig.YPixels);
+            image = randi(obj.CameraConfig.MaxPixelValue, obj.CameraConfig.XPixels, obj.CameraConfig.YPixels);
         end
 
         function label = get.CurrentLabel(obj)
