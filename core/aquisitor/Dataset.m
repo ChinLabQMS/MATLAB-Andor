@@ -2,9 +2,10 @@ classdef Dataset < dynamicprops
     properties
         AcquisitionConfig
     end
+
     methods
-        function obj = Dataset()
-            % obj.AcqusitorConfig = config;
+        function obj = Dataset(config, cameras)
+            obj.AcqusitorConfig = config;
             % sequence_table = obj.AcqusitorConfig.SequenceTable;
             % cameras = unique(sequence_table.Camera);
             % for i = 1:length(cameras)
@@ -20,8 +21,10 @@ classdef Dataset < dynamicprops
             % end
         end
 
-        function update()
+        function update(obj, index, new_data)
+        end
 
+        function save(obj)
         end
 
     end
