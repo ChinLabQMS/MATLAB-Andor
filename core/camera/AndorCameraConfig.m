@@ -1,7 +1,7 @@
 classdef AndorCameraConfig < CameraConfig
     %ANDORCAMERACONFIG
     
-    properties (SetAccess = {?AndorCamera})
+    properties (SetAccess = {?Camera})
         Exposure = 0.2
         ExternalTrigger = true
         XPixels = 1024

@@ -1,26 +1,24 @@
 classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class
 
-    properties (SetAccess = private)
-        Initialized = false
-        CameraConfig = AndorCameraConfig()
-        SerialNumber {mustBeMember(SerialNumber, [19330, 19331])}
-        CameraIndex (1, 1) double = nan
-        CameraHandle (1, 1) double = nan
-    end
-
-    properties (Dependent)
-        CurrentLabel
+    properties (SetAccess = protected)
+        CameraIndex = nan
+        CameraHandle = nan
     end
 
     methods
-        function obj = AndorCamera(serial_number)
-            obj.SerialNumber = serial_number;
-            obj.init()
-            obj.config()
+        function obj = AndorCamera(camera_identifier, config)
+            arguments
+                camera_identifier {mustBeMember(camera_identifier, [19330, 19331])} = 19330
+                config (1, 1) AndorCameraConfig = AndorCameraConfig()
+            end
+            obj@Camera(camera_identifier, config)
         end
 
         function init(obj)
+            if obj.Initialized
+                return
+            end
             if isnan(obj.CameraIndex)
                 % Find all connected cameras
                 [ret, num_cameras] = GetAvailableCameras();
@@ -32,7 +30,7 @@ classdef AndorCamera < Camera
             missing_camera = false(size(i_range));
             for i = i_range
                 [ret, camera_handle] = GetCameraHandle(i-1);
-                CheckWarning(ret)    
+                CheckWarning(ret)
                 [ret] = SetCurrentCamera(camera_handle);
                 CheckWarning(ret)
                 
@@ -53,11 +51,12 @@ classdef AndorCamera < Camera
                         continue
                     end
                 else
+                    % Camera is already initialized
                     initialized = true;
                 end
-                
+
                 % If the connected initialized camera is the one to initialize
-                if serial_number == obj.SerialNumber
+                if serial_number == obj.CameraIdentifier
                     obj.CameraIndex = i;
                     obj.CameraHandle = camera_handle;
                     obj.Initialized = true;
@@ -76,17 +75,17 @@ classdef AndorCamera < Camera
                     CheckWarning(ret)
                 end
             end
-
+            
+            % If camera with specific identifier is not found, raise error
             if ~obj.Initialized
                 warning('off', 'backtrace')
-                warning('%s initialization fails.', obj.CurrentLabel)
                 for i = 1:size(missing_camera, 1)
                     if missing_camera(i)
-                        warning('AndorCamera (index: %d) is connected but failed to initialize, please check if there are connections in other applications.', i)
+                        warning('AndorCamera (index: %d) is connected but failed to initialize, please check if remaining connection in other applications.', i)
                     end
                 end
                 warning('on', 'backtrace')
-                error('%s initialization fails.', obj.CurrentLabel)
+                error('%s: Camera initialization fails.', obj.CurrentLabel)
             end
 
             obj.abortAcquisition()
@@ -98,36 +97,17 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
             [ret] = FreeInternalMemory();
             CheckWarning(ret)
-            [ret] = SetAcquisitionMode(1);
-            CheckWarning(ret)
-            [ret] = SetReadMode(4);
-            CheckWarning(ret)
-            [ret] = SetTriggerMode(1);                      
-            CheckWarning(ret)
             [ret] = SetShutter(1, 1, 0, 0);
-            CheckWarning(ret)
-            [ret, XPixels, YPixels] = GetDetector();
-            CheckWarning(ret)            
-            [ret] = SetImage(1, 1, 1, XPixels, 1, YPixels);
             CheckWarning(ret)
             [ret] = SetBaselineClamp(0);          
             CheckWarning(ret)
             % Set Pre-Amp Gain, 0 (1x), 1 (2x), 2 (4x).
             [ret] = SetPreAmpGain(2);
             CheckWarning(ret)
-            % Set Horizontal speed. (0,0) = 5 MHz, (0,1) = 3 MHz, (0,2) = 1 MHz, (0,3) = 50 kHz
-            [ret] = SetHSSpeed(0, 2);
-            CheckWarning(ret)
-            % Set Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
-            [ret] = SetVSSpeed(1);
-            CheckWarning(ret)
-            [ret] = EnableKeepCleans(1);
-            CheckWarning(ret)
-
-            obj.CameraConfig.XPixels = XPixels;
-            obj.CameraConfig.YPixels = YPixels;
-        
-            init@Camera(obj)
+            
+            % Config to current CameraConfig settings
+            obj.config()
+            fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
         end
 
         function close(obj)
@@ -143,7 +123,7 @@ classdef AndorCamera < Camera
                 CheckWarning(ret)
                 if ret == atmcd.DRV_SUCCESS
                     obj.Initialized = false;
-                    close@Camera(obj)
+                    fprintf('%s: Camera closed.\n', obj.CurrentLabel)
                 end
             end
         end
@@ -155,12 +135,6 @@ classdef AndorCamera < Camera
             obj.abortAcquisition()
             % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
             [ret] = SetIsolatedCropMode(double(obj.CameraConfig.Cropped), obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, 1, 1);
-            CheckWarning(ret)
-            % Get detector size (with croped mode ON this may change)
-            [ret, YPixels, XPixels] = GetDetector();
-            CheckWarning(ret)
-            % Set the image size
-            [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
             CheckWarning(ret)
             if obj.CameraConfig.FastKinetic
                 % Set acquisition mode; 4 for fast kinetics
@@ -185,6 +159,15 @@ classdef AndorCamera < Camera
                 [ret] = SetExposureTime(obj.CameraConfig.Exposure);
                 CheckWarning(ret)
             end
+            % Get detector size (with croped mode ON this may change)
+            [ret, YPixels, XPixels] = GetDetector();
+            CheckWarning(ret)
+            % Set the image size
+            [ret] = SetImage(1, 1, 1, YPixels, 1, XPixels);
+            CheckWarning(ret)
+            % Set read mode; 4 for Image
+            [ret] = SetReadMode(4);
+            CheckWarning(ret)
             % Set trigger mode; 0 for internal, 1 for external
             [ret] = SetTriggerMode(double(obj.CameraConfig.ExternalTrigger));
             CheckWarning(ret)
@@ -224,7 +207,7 @@ classdef AndorCamera < Camera
             is_acquiring = status == atmcd.DRV_ACQUIRING;
         end
         
-        function [image, num_frames, is_saturated] = getImage(obj)
+        function [image, num_frames, is_saturated] = acquireImage(obj)
             if obj.isAcquiring()
                 num_frames = 0;
                 image = [];
@@ -241,7 +224,7 @@ classdef AndorCamera < Camera
         end
 
         function [exposure_time, readout_time, keep_clean_time] = getTimings(obj)
-            obj.abortAcquisition()
+            obj.setToCurrent()
             if obj.CameraConfig.FastKinetic
                 [ret, exposure_time] = GetFKExposureTime();
                 CheckWarning(ret)
@@ -279,21 +262,17 @@ classdef AndorCamera < Camera
                     obj.CurrentLabel, temperature, status)
         end
 
-        function camera_name = get.CurrentLabel(obj)
-            camera_name = string(sprintf('[%s] AndorCamera (index: %d, handle: %d, serial#: %d)', ...
-                                 datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
-                                 obj.CameraIndex, obj.CameraHandle, obj.SerialNumber));                
-        end
-
     end
 
-    methods (Access = private, Hidden)
+    methods (Access = protected, Hidden)
         function setToCurrent(obj)
-            if ~obj.Initialized
-                error('%s: Camera is not initialized.', obj.CurrentLabel)
+            obj.checkStatus()
+            if ~isnan(obj.CameraHandle)
+                [ret] = SetCurrentCamera(obj.CameraHandle);
+                CheckWarning(ret)
+            else
+                error('%s: Camera handle is not set, please initialize first.', obj.CurrentLabel)
             end
-            [ret] = SetCurrentCamera(obj.CameraHandle);
-            CheckWarning(ret)
         end
     end
 

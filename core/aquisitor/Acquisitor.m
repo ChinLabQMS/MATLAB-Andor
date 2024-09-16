@@ -1,20 +1,44 @@
 classdef Acquisitor < handle
 
-    properties (SetAccess = private)
+    properties (SetAccess = protected)
         CurrentIndex = 0
-        Config = AcquisitionConfig()
-        Cameras = struct('Andor19330', nan, 'Andor19331', nan, 'Zelux', nan)
+        AcquisitionConfig
+        Cameras = struct('Andor19330', AndorCamera(19330), ...
+                         'Andor19331', AndorCamera(19331), ...
+                         'Zelux', ZeluxCamera(0))
         Data = nan
     end
 
-    properties (Dependent)
+    properties (Dependent, Hidden)
         CurrentLabel
     end
     
     methods
-        function obj = Acquisitor(varargin)
-            obj.config(varargin{:})
+        function obj = Acquisitor(config)
+            arguments
+                config (1, 1) AcquisitionConfig = AcquisitionConfig()
+            end
+            obj.AcquisitionConfig = config;
+        end
+
+        function init(obj)
+            % Initialize active cameras and initialize Data storage
+            active_cameras = obj.AcquisitionConfig.ActiveCameras;
+            for i = 1:length(active_cameras)
+                camera = active_cameras{i};
+                obj.Cameras.(camera).init();
+            end
+            obj.initData();
             fprintf("%s: Acquisitor initialized.\n", obj.CurrentLabel)
+        end
+
+        function close(obj)
+            % Close all cameras
+            all_cameras = fieldnames(obj.Cameras);
+            for i = 1:length(all_cameras)
+                camera = all_cameras{i};
+                obj.Cameras.(camera).close();
+            end
         end
 
         function config(obj, name, value)
@@ -27,80 +51,75 @@ classdef Acquisitor < handle
             end
             arg_len = length(name);
             for i = 1:arg_len
-                obj.Config.(name{i}) = value{i};
+                obj.AcquisitionConfig.(name{i}) = value{i};
             end
-            obj.initCameras()
-            obj.initData()
+            obj.init()
         end
 
-        function initCameras(obj)
-            % init cameras to get handles and live status
-            camera_names = fieldnames(obj.Cameras);
-            active_cameras = string(unique(obj.Config.SequenceTable.Camera));
-            for i = 1:length(camera_names)
-                camera_name = camera_names{i};
-                if isnan(obj.Cameras.(camera_name))
-                    camera_class = CameraLookup.(camera_name).CameraClass;
-                    camera_params = CameraLookup.(camera_name).InitParams;
-                    obj.Cameras.(camera_name) = feval(camera_class, camera_params{:});
-                    if ~ismember(camera_name, active_cameras)
-                        obj.Cameras.(camera_name).close()
-                    end
-                elseif ismember(camera_name, active_cameras)
-                    obj.Cameras.(camera_name).init()
-                end
-            end
+        function configCamera(obj, camera, varargin)
+            obj.Cameras.(camera).config(varargin{:})
         end
 
-        function configCamera(obj, camera_name, vargin)
-            obj.Cameras.(camera_name).config(vargin{:});
+        function initCamera(obj, camera)
+            obj.Cameras.(camera).init()
         end
 
-        function initCamera(obj, camera_name)
-            if ~obj.Cameras.(camera_name).Initialized
-                obj.Cameras.(camera_name).init();
-            end
-        end
-
-        function closeCamera(obj, camera_name)
-            obj.Cameras.(camera_name).close();
+        function closeCamera(obj, camera)
+            obj.Cameras.(camera).close()
         end
 
         function initData(obj)
             % Allocate empty storage for data and initialize the current index
             obj.CurrentIndex = 0;
-            obj.Data = Dataset(obj.Config, obj.Cameras);
+            obj.Data = Dataset(obj.AcquisitionConfig, obj.Cameras);
         end
         
         function saveData(obj)
+            if obj.CurrentIndex == 0
+                error("%s: No data to save.", obj.CurrentLabel)
+            end
             obj.Data.save()
         end
 
-        function runAcquisition(obj)
-            % TODO: update new_data with the data from the cameras
-            new_data = nan;
-            obj.Data.update(obj.CurrentIndex, new_data);
+        function run(obj)
             obj.CurrentIndex = obj.CurrentIndex + 1;
-            fprintf("%s: Acquisition %d/%d completed.\n", obj.CurrentLabel, obj.CurrentIndex, obj.Config.NumAcquisitions)
+
+            % TODO: change how the acquisition is imeplemented to enable mutiple images from the same camera     
+            sequence_table = obj.AcquisitionConfig.ActiveSequence;
+            sequence_length = height(sequence_table);
+            new_images = cell(1, sequence_length);
+            % Send "start acquisition" commands
+            for i = 1:sequence_length
+                camera_name = char(sequence_table.Camera(i));
+                obj.Cameras.(camera_name).startAcquisition();
+            end
+            % Acquire images
+            for i = 1:sequence_length
+                camera = char(sequence_table.Camera(i));
+                new_images{i} = obj.Cameras.(camera).acquire('refresh', obj.AcquisitionConfig.RefreshInterval, 'timeout', obj.AcquisitionConfig.Timeout);
+            end
+            
+            obj.Data.add(obj.CurrentIndex, new_images);
+            fprintf("%s: Acquisition completed.\n", obj.CurrentLabel)
         end
 
         function label = get.CurrentLabel(obj)
-            label = string(sprintf('[%s] Acquisitor', datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss")));
+            label = string(sprintf('[%s] %s (CurrentIndex: %d)', ...
+                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
+                           class(obj), obj.CurrentIndex));
         end
 
         function disp(obj)
             disp@handle(obj)
-            disp(obj.Config)
+            disp(obj.AcquisitionConfig)
         end
 
         function delete(obj)
-            for camera_name = fieldnames(obj.Cameras)'
-                camera = camera_name{1};
-                obj.Cameras.(camera).delete();
-            end
+            obj.close()
             delete@handle(obj)
             fprintf("%s: Acquisitor closed.\n", obj.CurrentLabel)
         end
 
     end
+
 end

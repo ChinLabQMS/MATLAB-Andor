@@ -1,22 +1,23 @@
 classdef ZeluxCamera < Camera
     %ZELUXCAMERA Zelux camera class
     
-    properties (SetAccess = private)
-        Initialized = false;
-        CameraConfig = ZeluxCameraConfig()
-        CameraIndex (1, 1) double = 0
+    properties (SetAccess = protected)
         CameraSDK = nan
         CameraHandle = nan
     end
-
-    properties (Dependent)
-        CurrentLabel
-    end
     
     methods
-        function obj = ZeluxCamera(index)
+        function obj = ZeluxCamera(index, config)
             arguments
                 index (1, 1) double = 0
+                config = ZeluxCameraConfig()
+            end
+            obj@Camera(index, config)
+        end
+        
+        function init(obj)
+            if obj.Initialized
+                return
             end
             % Load TLCamera DotNet assembly.
             % The assembly .dll is assumed to be in the same folder as the scripts.
@@ -30,24 +31,17 @@ classdef ZeluxCamera < Camera
             end
             cd(old_path)
 
-            obj.CameraIndex = index;
-            obj.init()
-            obj.config()
-        end
-        
-        function init(obj)
             % Get serial numbers of connected TLCameras.
-            if ~obj.Initialized
-                serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
-                if serialNumbers.Count - 1 < obj.CameraIndex
-                    error('%s: Camera index out of range. Number of cameras found: %d', obj.CurrentLabel, serialNumbers.Count)
-                end
-                obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIndex), false);
-                obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
-                obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
-                obj.Initialized = true;
-                init@Camera(obj)
+            serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
+            if serialNumbers.Count - 1 < obj.CameraIdentifier
+                error('%s: Camera index out of range. Number of cameras found: %d', obj.CurrentLabel, serialNumbers.Count)
             end
+            obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIdentifier), false);
+            obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
+            obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
+            obj.Initialized = true;
+            obj.config()
+            fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
         end
 
         function close(obj)
@@ -58,7 +52,7 @@ classdef ZeluxCamera < Camera
                 obj.Initialized = false;
                 obj.CameraHandle = nan;
                 obj.CameraSDK = nan;
-                close@Camera(obj)
+                fprintf('%s: Camera closed.\n', obj.CurrentLabel)
             end
         end
 
@@ -75,6 +69,7 @@ classdef ZeluxCamera < Camera
         end
 
         function startAcquisition(obj)
+            obj.checkStatus()
             % Put the camera in armed state, ready to receive trigger.
             if ~obj.CameraHandle.IsArmed
                 obj.CameraHandle.Arm;
@@ -88,10 +83,15 @@ classdef ZeluxCamera < Camera
         function abortAcquisition(obj)
             if obj.Initialized && obj.CameraHandle.IsArmed
                 obj.CameraHandle.Disarm;
+                fprintf('%s: Acquisition aborted.\n', obj.CurrentLabel)
             end
         end
 
-        function [image, num_frames, is_saturated] = getImage(obj)
+        function is_acquiring = isAcquiring(obj)
+            is_acquiring = obj.CameraHandle.NumberOfQueuedFrames == 0;
+        end
+
+        function [image, num_frames, is_saturated] = acquireImage(obj)
             num_frames = obj.CameraHandle.NumberOfQueuedFrames;
             if num_frames == 0
                 image = [];
@@ -104,11 +104,6 @@ classdef ZeluxCamera < Camera
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.CameraConfig.XPixels, obj.CameraConfig.YPixels]);
             is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
-        end
-
-        function camera_label = get.CurrentLabel(obj)
-            camera_label = string(sprintf('[%s] ZeluxCamera (index: %d)', ...
-                datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), obj.CameraIndex));
         end
 
     end

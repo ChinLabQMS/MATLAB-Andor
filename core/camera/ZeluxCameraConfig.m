@@ -1,7 +1,7 @@
 classdef ZeluxCameraConfig < CameraConfig
     %ZELUXCAMERACONFIG
     
-    properties (SetAccess = {?ZeluxCamera})
+    properties (SetAccess = {?Camera})
         Exposure = 0.001
         ExternalTrigger = true
         XPixels = 1080
