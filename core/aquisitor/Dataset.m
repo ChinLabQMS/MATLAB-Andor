@@ -56,7 +56,7 @@ classdef Dataset < dynamicprops
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
                 if shift
-                    obj.(camera).(label) = shift(obj.(camera).(label), 1, 3);
+                    obj.(camera).(label) = circshift(obj.(camera).(label), -1, 3);
                 end
                 obj.(camera).(label)(:,:,insert_index) = new_data{i};
             end
@@ -78,7 +78,7 @@ classdef Dataset < dynamicprops
 
         function label = get.CurrentLabel(obj)
             label = string(sprintf('[%s] %s', ...
-                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
+                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                            class(obj)));
         end
 

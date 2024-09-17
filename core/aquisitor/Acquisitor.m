@@ -108,6 +108,7 @@ classdef Acquisitor < handle
         end
 
         function runAcquisitions(obj)
+            obj.config()
             for i = 1:obj.AcquisitionConfig.NumAcquisitions
                 obj.runSingleAcquisition();
             end
@@ -115,7 +116,7 @@ classdef Acquisitor < handle
 
         function label = get.CurrentLabel(obj)
             label = string(sprintf('[%s] %s (CurrentIndex: %d)', ...
-                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss"), ...
+                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                            class(obj), obj.CurrentIndex));
         end
 
