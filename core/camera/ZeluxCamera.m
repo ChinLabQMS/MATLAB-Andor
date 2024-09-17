@@ -87,14 +87,14 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function is_acquiring = isAcquiring(obj)
-            is_acquiring = obj.CameraHandle.NumberOfQueuedFrames == 0;
+        function num_available = getNumberNewImages(obj)
+            num_available = obj.CameraHandle.NumberOfQueuedFrames;
         end
 
         function [image, num_frames, is_saturated] = acquireImage(obj)
-            num_frames = obj.CameraHandle.NumberOfQueuedFrames;
+            num_frames = obj.getNumberNewImages();
             if num_frames == 0
-                image = [];
+                image = zeros(obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
                 is_saturated = false;
                 return
             end

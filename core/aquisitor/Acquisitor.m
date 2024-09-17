@@ -2,11 +2,12 @@ classdef Acquisitor < handle
 
     properties (SetAccess = protected)
         CurrentIndex = 0
-        AcquisitionConfig
         Cameras = struct('Andor19330', AndorCamera(19330), ...
                          'Andor19331', AndorCamera(19331), ...
                          'Zelux', ZeluxCamera(0))
-        Data = nan
+        AcquisitionConfig
+        DataHandle
+        NewImages
     end
 
     properties (Dependent, Hidden)
@@ -71,36 +72,45 @@ classdef Acquisitor < handle
         function initData(obj)
             % Allocate empty storage for data and initialize the current index
             obj.CurrentIndex = 0;
-            obj.Data = Dataset(obj.AcquisitionConfig, obj.Cameras);
+            obj.DataHandle = Dataset(obj.AcquisitionConfig, obj.Cameras);
         end
         
         function saveData(obj)
             if obj.CurrentIndex == 0
                 error("%s: No data to save.", obj.CurrentLabel)
             end
-            obj.Data.save()
+            obj.DataHandle.save()
         end
 
-        function run(obj)
+        function runSingleAcquisition(obj)
             obj.CurrentIndex = obj.CurrentIndex + 1;
-
-            % TODO: change how the acquisition is imeplemented to enable mutiple images from the same camera     
             sequence_table = obj.AcquisitionConfig.ActiveSequence;
-            sequence_length = height(sequence_table);
-            new_images = cell(1, sequence_length);
-            % Send "start acquisition" commands
-            for i = 1:sequence_length
-                camera_name = char(sequence_table.Camera(i));
-                obj.Cameras.(camera_name).startAcquisition();
+            new_images = cell(1, height(obj.AcquisitionConfig.ActiveAcquisition));
+            index = 1;
+            for i = 1:height(sequence_table)
+                camera = obj.Cameras.(char(sequence_table.Camera(i)));
+                type = char(sequence_table.Type(i));
+                switch type
+                    case 'Start'
+                        camera.startAcquisition();
+                    case 'Acquire'
+                        new_images{index} = camera.acquire('refresh', obj.AcquisitionConfig.Refresh, 'timeout', obj.AcquisitionConfig.Timeout);
+                        index = index + 1;
+                    case 'Full'
+                        camera.startAcquisition();
+                        new_images{index} = camera.acquire('refresh', obj.AcquisitionConfig.Refresh, 'timeout', obj.AcquisitionConfig.Timeout);
+                        index = index + 1;
+                end
             end
-            % Acquire images
-            for i = 1:sequence_length
-                camera = char(sequence_table.Camera(i));
-                new_images{i} = obj.Cameras.(camera).acquire('refresh', obj.AcquisitionConfig.RefreshInterval, 'timeout', obj.AcquisitionConfig.Timeout);
-            end
-            
-            obj.Data.add(obj.CurrentIndex, new_images);
+            obj.NewImages = new_images;
+            obj.DataHandle.update(obj.CurrentIndex, obj.NewImages)
             fprintf("%s: Acquisition completed.\n", obj.CurrentLabel)
+        end
+
+        function runAcquisitions(obj)
+            for i = 1:obj.AcquisitionConfig.NumAcquisitions
+                obj.runSingleAcquisition();
+            end
         end
 
         function label = get.CurrentLabel(obj)

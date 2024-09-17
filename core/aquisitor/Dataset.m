@@ -19,7 +19,7 @@ classdef Dataset < dynamicprops
             obj.AcquisitionConfig = config;
             
             % Initialize Config for each active camera
-            sequence_table = config.ActiveSequence;
+            sequence_table = config.ActiveAcquisition;
             active_cameras = config.ActiveCameras;
             for i = 1:length(active_cameras)
                 camera = active_cameras{i};
@@ -28,23 +28,22 @@ classdef Dataset < dynamicprops
                 obj.(camera).Config = struct(cameras.(camera).CameraConfig);
                 obj.(camera).Config.NumAcquisitions = config.NumAcquisitions;
                 obj.(camera).Config.Note = struct();
-            end
-            for i = 1:height(sequence_table)
-                camera = char(sequence_table.Camera(i));
-                label = sequence_table.Label(i);
-                note = sequence_table.Note(i);
-                obj.(camera).Config.Note.(label) = note;
-                if obj.(camera).Config.MaxPixelValue <= 65535
-                    obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, obj.(camera).Config.YPixels, obj.(camera).Config.NumAcquisitions, "uint16");
-                else
-                    error("%s: Unsupported pixel value range.", obj.CurrentLabel)
+                subsequence = sequence_table((sequence_table.Camera == camera), :);
+                for j = 1:height(subsequence)
+                    label = subsequence.Label(j);
+                    obj.(camera).Config.Note.(label) = subsequence.Note(j);
+                    if obj.(camera).Config.MaxPixelValue <= 65535
+                        obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, obj.(camera).Config.YPixels, obj.(camera).Config.NumAcquisitions, "uint16");
+                    else
+                        error("%s: Unsupported pixel value range.", obj.CurrentLabel)
+                    end    
                 end
             end
             fprintf('%s: Data storage initialized for %d cameras, total memory is %g MB\n', ...
                 obj.CurrentLabel, length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
         end
 
-        function add(obj, index, new_data)
+        function update(obj, index, new_data)
             if index > obj.AcquisitionConfig.NumAcquisitions
                 insert_index = obj.AcquisitionConfig.NumAcquisitions;
                 shift = true;
@@ -52,7 +51,7 @@ classdef Dataset < dynamicprops
                 insert_index = index;
                 shift = false;
             end
-            sequence_table = obj.AcquisitionConfig.ActiveSequence;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);

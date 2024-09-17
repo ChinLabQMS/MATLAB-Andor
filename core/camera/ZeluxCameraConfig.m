@@ -1,5 +1,4 @@
 classdef ZeluxCameraConfig < CameraConfig
-    %ZELUXCAMERACONFIG
     
     properties (SetAccess = {?Camera})
         Exposure = 0.001

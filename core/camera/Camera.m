@@ -1,9 +1,9 @@
 classdef Camera < handle
-    %CAMERA
+    %CAMERA Base class for camera objects.
 
     properties (SetAccess = protected)
-        Initialized (1, 1) logical = false
         CameraConfig (1, 1)
+        Initialized (1, 1) logical = false
     end
 
     properties (SetAccess = immutable)
@@ -17,7 +17,7 @@ classdef Camera < handle
     methods
         function obj = Camera(identifier, config)
             arguments
-                identifier = ""
+                identifier = "Test"
                 config = AndorCameraConfig()
             end
             obj.CameraIdentifier = identifier;
@@ -60,14 +60,14 @@ classdef Camera < handle
         function abortAcquisition(obj)
         end
 
-        function is_acquiring = isAcquiring(obj)
-            is_acquiring = false;
+        function num_available = getNumberNewImages(obj)
+            num_available = 1;
         end
         
         function [image, num_frames, is_saturated] = acquireImage(obj)
             obj.checkStatus()
-            image = randi(obj.CameraConfig.MaxPixelValue, obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
-            num_frames = 1;
+            num_frames = obj.getNumberNewImages();
+            image = zeros(obj.CameraConfig.MaxPixelValue, obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
             is_saturated = false;
         end
 
@@ -78,12 +78,12 @@ classdef Camera < handle
                 options.timeout (1, 1) double {mustBePositive} = 1000
             end
             timer = tic;
-            while toc(timer) < options.timeout && obj.isAcquiring()
+            while toc(timer) < options.timeout && (obj.getNumberNewImages() == 0)
                 pause(options.refresh)
             end
-            if obj.isAcquiring()
+            if toc(timer) >= options.timeout
+                warning('%s: Acquisition timeout.', obj.CurrentLabel)
                 obj.abortAcquisition()
-                error('%s: Acquisition timeout.', obj.CurrentLabel)
             end
             [image, num_frames, is_saturated] = obj.acquireImage();
         end

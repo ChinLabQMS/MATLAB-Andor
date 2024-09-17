@@ -1,0 +1,16 @@
+classdef PreprocessConfig
+    
+    properties
+        BackgroundSubtraction = true
+        BackgroundSubstractionParams = {'method', 'mean_substraction', ...
+                                        'file',   'calibration/StatBackground_20240327_HSSpeed=2_VSSpeed=1.mat'}
+
+        OffsetCorrection = true
+        OffsetCorrectionParams = {'method', 'linear_plane', ...
+                                  'region_width', 100, ...
+                                  'warning', true, ...
+                                  'warning_threshold_offset', 6, ...
+                                  'warning_threshold_var', 40}
+    end
+    
+end

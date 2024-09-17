@@ -1,5 +1,4 @@
 classdef AndorCameraConfig < CameraConfig
-    %ANDORCAMERACONFIG
     
     properties (SetAccess = {?Camera})
         Exposure = 0.2

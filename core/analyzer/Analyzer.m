@@ -1,9 +1,8 @@
 classdef Analyzer
-    %DATAANALYZER
     
     properties
-        Status
-        AnalyzerConfig
+        Preprocessor
+        Data
     end
     
     methods

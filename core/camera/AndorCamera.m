@@ -200,25 +200,36 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
-        function is_acquiring = isAcquiring(obj)
+        function [num_available, first, last] = getNumberNewImages(obj)
             obj.setToCurrent()
             [ret, status] = GetStatus();
             CheckWarning(ret)
-            is_acquiring = status == atmcd.DRV_ACQUIRING;
-        end
-        
-        function [image, num_frames, is_saturated] = acquireImage(obj)
-            if obj.isAcquiring()
-                num_frames = 0;
-                image = [];
-                is_saturated = false;
+            if status == atmcd.DRV_ACQUIRING
+                num_available = 0;
+                first = 0;
+                last = 0;
                 return
             end
             [ret, first, last] = GetNumberAvailableImages();
-            CheckWarning(ret)
+            if ret == atmcd.DRV_SUCCESS
+                num_available = last - first + 1;
+            elseif ret == atmcd.DRV_NO_NEW_DATA
+                num_available = 0;
+            else
+                CheckWarning(ret)
+                error('%s: Unable to get number of available images.', obj.CurrentLabel)
+            end
+        end
+        
+        function [image, num_available, is_saturated] = acquireImage(obj)
+            [num_available, first, last] = obj.getNumberNewImages();
+            if num_available == 0
+                image = zeros(obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
+                is_saturated = false;
+                return
+            end
             [ret, ImgData, ~, ~] = GetImages16(first, last, obj.CameraConfig.YPixels*obj.CameraConfig.XPixels);
             CheckWarning(ret)
-            num_frames = last - first + 1;
             image = uint16(flip(transpose(reshape(ImgData, obj.CameraConfig.YPixels, obj.CameraConfig.XPixels)), 1));
             is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
         end
