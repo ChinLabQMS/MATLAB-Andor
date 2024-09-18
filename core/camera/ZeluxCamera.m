@@ -33,15 +33,15 @@ classdef ZeluxCamera < Camera
 
             % Get serial numbers of connected TLCameras.
             serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
-            if serialNumbers.Count - 1 < obj.CameraIdentifier
+            if serialNumbers.Count - 1 < obj.ID
                 error('%s: Camera index out of range. Number of cameras found: %d', obj.CurrentLabel, serialNumbers.Count)
             end
-            obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.CameraIdentifier), false);
-            obj.CameraConfig.XPixels = obj.CameraHandle.ImageHeight_pixels;
-            obj.CameraConfig.YPixels = obj.CameraHandle.ImageWidth_pixels;
+            obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.ID), false);
+            obj.Config.XPixels = obj.CameraHandle.ImageWidth_pixels;
+            obj.Config.YPixels = obj.CameraHandle.ImageHeight_pixels;
             obj.Initialized = true;
             obj.config()
-            fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
+            fprintf('%s: %s initialized.\n', obj.CurrentLabel, class(obj))
         end
 
         function close(obj)
@@ -52,15 +52,14 @@ classdef ZeluxCamera < Camera
                 obj.Initialized = false;
                 obj.CameraHandle = nan;
                 obj.CameraSDK = nan;
-                fprintf('%s: Camera closed.\n', obj.CurrentLabel)
+                fprintf('%s: %s closed.\n', obj.CurrentLabel, class(obj))
             end
         end
 
         function config(obj, varargin)
             config@Camera(obj, varargin{:})
-            obj.abortAcquisition()
-            obj.CameraHandle.ExposureTime_us = obj.CameraConfig.Exposure * 1e6;
-            if obj.CameraConfig.ExternalTrigger
+            obj.CameraHandle.ExposureTime_us = obj.Config.Exposure * 1e6;
+            if obj.Config.ExternalTrigger
                 obj.CameraHandle.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.HardwareTriggered;
             else
                 obj.CameraHandle.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.SoftwareTriggered;
@@ -75,7 +74,7 @@ classdef ZeluxCamera < Camera
                 obj.CameraHandle.Arm;
             end
             % Issue a software trigger if triggered internally.
-            if ~obj.CameraConfig.ExternalTrigger
+            if ~obj.Config.ExternalTrigger
                 obj.CameraHandle.IssueSoftwareTrigger;
             end
         end
@@ -94,7 +93,7 @@ classdef ZeluxCamera < Camera
         function [image, num_frames, is_saturated] = acquireImage(obj)
             num_frames = obj.getNumberNewImages();
             if num_frames == 0
-                image = zeros(obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
+                image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
                 is_saturated = false;
                 return
             end
@@ -102,8 +101,8 @@ classdef ZeluxCamera < Camera
                 warning('%s: Data processing falling behind acquisition. %d remains.', obj.CurrentLabel, obj.CameraHandle.NumberOfQueuedFrames)
             end
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
-            image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.CameraConfig.XPixels, obj.CameraConfig.YPixels]);
-            is_saturated = any(image(:) == obj.CameraConfig.MaxPixelValue);
+            image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
+            is_saturated = any(image(:) == obj.Config.MaxPixelValue);
         end
 
     end

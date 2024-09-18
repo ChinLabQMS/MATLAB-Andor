@@ -1,31 +1,29 @@
-classdef Dataset < dynamicprops
-
-    properties
-        AcquisitionConfig
-    end
+classdef Dataset < BaseObject & dynamicprops
 
     properties (Dependent, Hidden)
-        CurrentLabel
         MemoryUsage
     end
 
     methods
 
-        function obj = Dataset(config, cameras)
+        function obj = Dataset(config)
             arguments
-                config (1, 1) AcquisitionConfig
-                cameras (1, 1) struct
+                config (1, 1) AcquisitorConfig
             end
-            obj.AcquisitionConfig = config;
-            
+            obj@BaseObject("", config)
+        end
+
+        function init(obj, cameras)
+            config = obj.Config;
             % Initialize Config for each active camera
             sequence_table = config.ActiveAcquisition;
             active_cameras = config.ActiveCameras;
             for i = 1:length(active_cameras)
                 camera = active_cameras{i};
+                camera_handle = cameras.(camera);
                 obj.addprop(camera);
                 obj.(camera) = struct();
-                obj.(camera).Config = struct(cameras.(camera).CameraConfig);
+                obj.(camera).Config = camera_handle.Config.struct();
                 obj.(camera).Config.NumAcquisitions = config.NumAcquisitions;
                 obj.(camera).Config.Note = struct();
                 subsequence = sequence_table((sequence_table.Camera == camera), :);
@@ -40,18 +38,18 @@ classdef Dataset < dynamicprops
                 end
             end
             fprintf('%s: Data storage initialized for %d cameras, total memory is %g MB\n', ...
-                obj.CurrentLabel, length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
+                obj.CurrentLabel, length(obj.Config.ActiveCameras), obj.MemoryUsage)
         end
 
         function update(obj, index, new_data)
-            if index > obj.AcquisitionConfig.NumAcquisitions
-                insert_index = obj.AcquisitionConfig.NumAcquisitions;
+            if index > obj.Config.NumAcquisitions
+                insert_index = obj.Config.NumAcquisitions;
                 shift = true;
             else
                 insert_index = index;
                 shift = false;
             end
-            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
+            sequence_table = obj.Config.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
@@ -63,23 +61,45 @@ classdef Dataset < dynamicprops
         end
 
         function s = struct(obj)
-            fields = fieldnames(obj);
+            active_cameras = obj.Config.ActiveCameras;
             s = struct();
-            for i = 1:length(fields)
-                s.(fields{i}) = obj.(fields{i});
+            s.AcquisitionConfig = obj.Config.struct();
+            for i = 1:length(active_cameras)
+                camera = active_cameras{i};
+                s.(camera) = obj.(camera);
             end
         end
 
         function save(obj)
             Data = obj.struct(); %#ok<NASGU>
             uisave('Data', 'data.mat');
-            fprintf('%s: Data saved as a structure.\n', obj.CurrentLabel)
+            fprintf('%s: %s saved as a structure.\n', obj.CurrentLabel, class(obj))
         end
 
-        function label = get.CurrentLabel(obj)
-            label = string(sprintf('[%s] %s', ...
-                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
-                           class(obj)));
+        function plot(obj, options)
+            arguments
+                obj
+                options.sample_index = 1
+            end
+            sequence_table = obj.Config.ActiveAcquisition;
+            for i = 1:height(sequence_table)
+                camera = char(sequence_table.Camera(i));
+                label = sequence_table.Label(i);
+                figure()
+                imagesc(obj.(camera).(label)(:,:,options.sample_index))
+                axis image
+                colorbar eastoutside
+                title(sprintf('Sample %d (%s: %s)', options.sample_index, camera, label))
+            end
+            for i = 1:height(sequence_table)
+                camera = char(sequence_table.Camera(i));
+                label = sequence_table.Label(i);
+                figure()
+                imagesc(mean(obj.(camera).(label), 3))
+                axis image
+                colorbar eastoutside
+                title(sprintf('Mean (%s: %s)', camera, label))
+            end
         end
 
         function usage = get.MemoryUsage(obj)

@@ -1,57 +1,18 @@
-classdef Camera < handle
+classdef Camera < BaseObject
     %CAMERA Base class for camera objects.
 
-    properties (SetAccess = protected)
-        CameraConfig (1, 1)
-        Initialized (1, 1) logical = false
-    end
-
-    properties (SetAccess = immutable)
-        CameraIdentifier
-    end
-
-    properties (Dependent, Hidden)
-        CurrentLabel (1, 1) string
-    end
-
     methods
-        function obj = Camera(identifier, config)
+        function obj = Camera(id, config)
             arguments
-                identifier = "Test"
+                id = "Test"
                 config = AndorCameraConfig()
             end
-            obj.CameraIdentifier = identifier;
-            obj.CameraConfig = config;
-        end
-    
-        function init(obj)
-            if obj.Initialized
-                return
-            end
-            obj.Initialized = true;
-            obj.config()
-            fprintf('%s: Camera initialized.\n', obj.CurrentLabel)
+            obj@BaseObject(id, config)
         end
 
-        function close(obj)
-            if obj.Initialized
-                obj.Initialized = false;
-                fprintf('%s: Camera closed.\n', obj.CurrentLabel)
-            end
-        end
-
-        function config(obj, name, value)
-            arguments
-                obj
-            end
-            arguments (Repeating)
-                name
-                value
-            end
-            obj.checkStatus()
-            for i = 1:length(name)
-                obj.CameraConfig.(name{i}) = value{i};
-            end
+        function config(obj, varargin)
+            obj.abortAcquisition()
+            config@BaseObject(obj, varargin{:})
         end
 
         function startAcquisition(obj)
@@ -67,7 +28,7 @@ classdef Camera < handle
         function [image, num_frames, is_saturated] = acquireImage(obj)
             obj.checkStatus()
             num_frames = obj.getNumberNewImages();
-            image = zeros(obj.CameraConfig.MaxPixelValue, obj.CameraConfig.XPixels, obj.CameraConfig.YPixels, "uint16");
+            image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
             is_saturated = false;
         end
 
@@ -88,30 +49,6 @@ classdef Camera < handle
             [image, num_frames, is_saturated] = obj.acquireImage();
         end
 
-        function label = get.CurrentLabel(obj)
-            label = string(sprintf('[%s] %s%s', ...
-                           datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
-                           class(obj), string(obj.CameraIdentifier)));
-        end
-
-        function disp(obj)
-            disp@handle(obj)
-            disp(obj.CameraConfig)
-        end
-
-        function delete(obj)
-            obj.close();
-            delete@handle(obj)
-        end
-
-    end
-
-    methods (Access = protected, Hidden)
-        function checkStatus(obj)
-            if ~obj.Initialized
-                error('%s: Camera not initialized.', obj.CurrentLabel)
-            end
-        end
     end
 
 end

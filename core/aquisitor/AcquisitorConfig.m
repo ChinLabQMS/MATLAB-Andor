@@ -1,4 +1,4 @@
-classdef AcquisitionConfig
+classdef AcquisitorConfig < BaseConfig
     
     properties (SetAccess = {?Acquisitor})
         SequenceTable = table( ...
@@ -24,11 +24,8 @@ classdef AcquisitionConfig
     methods
 
         function obj = set.SequenceTable(obj, sequence_table)
-            if obj.checkSequence(sequence_table)
-                obj.SequenceTable = sequence_table;
-            else
-                error("Invalid sequence table.")
-            end
+            obj.checkSequence(sequence_table)
+            obj.SequenceTable = sequence_table;
         end
 
         function active_cameras = get.ActiveCameras(obj)
@@ -49,7 +46,7 @@ classdef AcquisitionConfig
 
     methods (Hidden)
 
-        function valid = checkSequence(obj, sequence_table)
+        function checkSequence(obj, sequence_table)
             arguments
                 obj
                 sequence_table (:, 5) table
@@ -63,21 +60,21 @@ classdef AcquisitionConfig
                     switch subsequence.Type(i)
                         case "Start"
                             if start == 1
-                                valid = false;
-                                return
+                                error("%s: Invalid sequence, multiple start commands for camera %s.", obj.CurrentLabel, camera)
                             end
                             start = start + 1; 
                         case "Acquire"
                             if start == 0
-                                valid = false;
-                                return
+                                error("%s: Invalid sequence, acquire command before start command for camera %s.", obj.CurrentLabel, camera)
                             end
                             start = start - 1;
                         case "Full"
                     end
                 end
+                if start ~= 0
+                    error("%s: Invalid sequence, missing acquire command for camera %s.", obj.CurrentLabel, camera)
+                end
             end
-            valid = true;
         end
         
     end
