@@ -129,8 +129,7 @@ classdef AndorCamera < Camera
         end
         
         function config(obj, varargin)
-            config@Camera(obj, varargin{:})
-            
+            config@Camera(obj, varargin{:})            
             % Set Crop mode. 1 = ON/0 = OFF; Crop height; Crop width; Vbin; Hbin
             [ret] = SetIsolatedCropMode(double(obj.Config.Cropped), obj.Config.XPixels, obj.Config.YPixels, 1, 1);
             CheckWarning(ret)
@@ -285,8 +284,7 @@ classdef AndorCamera < Camera
 
     end
 
-    methods (Access = protected, Hidden)
-        
+    methods (Access = protected, Hidden)        
         function setToCurrent(obj)
             obj.checkStatus()
             if ~isnan(obj.CameraHandle)

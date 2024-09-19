@@ -1,5 +1,10 @@
 classdef Camera < BaseObject
     %CAMERA Base class for camera objects.
+    
+    properties (SetAccess = protected)
+        ID
+        Initialized (1, 1) logical = false
+    end
 
     methods
         function obj = Camera(id, config)
@@ -7,7 +12,23 @@ classdef Camera < BaseObject
                 id = "Test"
                 config = AndorCameraConfig()
             end
-            obj@BaseObject(id, config)
+            obj@BaseObject(config)
+            obj.ID = id;
+        end
+
+        function init(obj)
+            if obj.Initialized
+                return
+            end
+            obj.Initialized = true;
+            fprintf("%s: %s initialized.\n", obj.CurrentLabel, class(obj))
+        end
+
+        function close(obj)
+            if obj.Initialized
+                obj.Initialized = false;
+                fprintf('%s: %s closed.\n', obj.CurrentLabel, class(obj))
+            end
         end
 
         function config(obj, varargin)
@@ -16,6 +37,7 @@ classdef Camera < BaseObject
         end
 
         function startAcquisition(obj)
+            obj.checkStatus()
         end
         
         function abortAcquisition(obj)
@@ -47,6 +69,23 @@ classdef Camera < BaseObject
                 obj.abortAcquisition()
             end
             [image, num_frames, is_saturated] = obj.acquireImage();
+        end
+
+        function label = getStatusLabel(obj)
+            label = sprintf("%s (Initialized: %d)", string(obj.ID), obj.Initialized);
+        end
+
+        function delete(obj)
+            obj.close()
+        end
+
+    end
+
+    methods (Access = protected, Hidden)
+        function checkStatus(obj)
+            if ~obj.Initialized
+                error('%s: %s not initialized.', obj.CurrentLabel, class(obj))
+            end
         end
 
     end

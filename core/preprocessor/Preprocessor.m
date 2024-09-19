@@ -3,10 +3,6 @@ classdef Preprocessor < handle
     properties (SetAccess = immutable)
         PreprocessConfig
     end
-
-    properties (Dependent, Hidden)
-        CurrentLabel
-    end
     
     methods
         function obj = Preprocessor(config)

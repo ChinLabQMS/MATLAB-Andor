@@ -1,4 +1,4 @@
-classdef AcquisitorConfig < BaseConfig
+classdef AcquisitionConfig < BaseConfig
     
     properties (SetAccess = {?Acquisitor})
         SequenceTable = table( ...

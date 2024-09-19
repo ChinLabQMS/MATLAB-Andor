@@ -1,90 +1,35 @@
 classdef Acquisitor < BaseObject
 
     properties (SetAccess = protected)
-        CurrentIndex = 0
-        Cameras = struct('Andor19330', AndorCamera(19330), ...
-                         'Andor19331', AndorCamera(19331), ...
-                         'Zelux', ZeluxCamera(0))
-        DataHandle
-        NewImages
+        Cameras
+        Data
     end
-    
+
     methods
-        function obj = Acquisitor(config)
+        function obj = Acquisitor(config, cameras)
             arguments
-                config (1, 1) AcquisitorConfig = AcquisitorConfig()
+                config (1, 1) AcquisitionConfig = AcquisitionConfig()
+                cameras (1, 1) Cameras = Cameras()
             end
-            obj = obj@BaseObject("", config);
-            obj.Initialized = true;
-        end
-
-        function init(obj)
-            % Initialize active cameras and initialize Data storage
-            active_cameras = obj.Config.ActiveCameras;
-            for i = 1:length(active_cameras)
-                camera = active_cameras{i};
-                obj.Cameras.(camera).init();
-            end
-            obj.initData();
-            fprintf("%s: %s initialized.\n", obj.CurrentLabel, class(obj))
-        end
-
-        function close(obj)
-            % Close all cameras
-            all_cameras = fieldnames(obj.Cameras);
-            for i = 1:length(all_cameras)
-                camera = all_cameras{i};
-                obj.Cameras.(camera).close();
-            end
-            fprintf("%s: %s closed.\n", obj.CurrentLabel, class(obj))
+            obj@BaseObject(config);
+            obj.Cameras = cameras;
+            obj.Data = Dataset(obj.Config, obj.Cameras);
         end
 
         function config(obj, varargin)
             config@BaseObject(obj, varargin{:})
+            obj.Data = Dataset(obj.Config, obj.Cameras);
         end
 
-        function configCamera(obj, camera, varargin)
-            obj.Cameras.(camera).config(varargin{:})
+        function initCameras(obj)
+            obj.Cameras.init(obj.Config.ActiveCameras);
         end
 
-        function initCamera(obj, camera)
-            obj.Cameras.(camera).init()
-        end
-
-        function closeCamera(obj, camera)
-            obj.Cameras.(camera).close()
-        end
-
-        function configCameras(obj, varargin)
-            % Configure all active cameras
-            active_cameras = obj.Config.ActiveCameras;
-            for i = 1:length(active_cameras)
-                camera = active_cameras{i};
-                obj.configCamera(camera, varargin{:})
-            end
-        end
-
-        function initData(obj)
-            % Allocate empty storage for data and initialize the current index
-            obj.CurrentIndex = 0;
-            obj.DataHandle = Dataset(obj.Config);
-            obj.DataHandle.init(obj.Cameras)
-        end
-        
-        function saveData(obj)
-            if obj.CurrentIndex == 0
-                error("%s: No data to save.", obj.CurrentLabel)
-            end
-            obj.DataHandle.save()
-        end
-
-        function acquire(obj)
+        function new_images = acquireImage(obj)
             timer = tic;
-            obj.CurrentIndex = obj.CurrentIndex + 1;
             sequence_table = obj.Config.ActiveSequence;
             new_images = cell(1, height(obj.Config.ActiveAcquisition));
             index = 1;
-            start_time = toc(timer);
             for i = 1:height(sequence_table)
                 camera = obj.Cameras.(char(sequence_table.Camera(i)));
                 type = char(sequence_table.Type(i));
@@ -100,25 +45,19 @@ classdef Acquisitor < BaseObject
                         index = index + 1;
                 end
             end
-            acquisition_time = toc(timer) - start_time;
-            obj.NewImages = new_images;
-            obj.DataHandle.update(obj.CurrentIndex, obj.NewImages)
-            cycle_time = toc(timer);
-            storage_time = cycle_time - acquisition_time;
-            fprintf("%s: Acquisition %d completed, cycle time: %.3f s, acquisition time: %.3f s, storage time: %.3f s\n", ...
-                obj.CurrentLabel, obj.CurrentIndex, cycle_time, acquisition_time, storage_time)
+            fprintf("%s: Acquisition completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
+        end
+
+        function acquire(obj)
+            obj.Data = obj.Data.add(obj.acquireImage());
         end
 
         function run(obj)
-            obj.init()
+            obj.initCameras();
+            obj.Data = Dataset(obj.Config, obj.Cameras);
             for i = 1:obj.Config.NumAcquisitions
                 obj.acquire();
             end
-            fprintf("%s: Acquisition completed.\n", obj.CurrentLabel)
-        end
-
-        function label = getCurrentLabel(obj)
-            label = getCurrentLabel@BaseObject(obj) + sprintf("(CurrentIndex = %d)", obj.CurrentIndex);
         end
 
     end

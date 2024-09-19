@@ -2,8 +2,8 @@ classdef ZeluxCamera < Camera
     %ZELUXCAMERA Zelux camera class
     
     properties (SetAccess = protected)
-        CameraSDK = nan
-        CameraHandle = nan
+        CameraSDK
+        CameraHandle
     end
     
     methods
@@ -50,8 +50,6 @@ classdef ZeluxCamera < Camera
                 obj.CameraHandle.Dispose;
                 obj.CameraSDK.Dispose;
                 obj.Initialized = false;
-                obj.CameraHandle = nan;
-                obj.CameraSDK = nan;
                 fprintf('%s: %s closed.\n', obj.CurrentLabel, class(obj))
             end
         end

@@ -1,29 +1,40 @@
-classdef Dataset < BaseObject & dynamicprops
+classdef Dataset < BaseConfig
+
+    properties (SetAccess = protected)
+        CurrentIndex
+        Andor19330
+        Andor19331
+        Zelux
+    end
+
+    properties (SetAccess = immutable)
+        AcquisitionConfig
+    end
 
     properties (Dependent, Hidden)
         MemoryUsage
     end
 
     methods
-
-        function obj = Dataset(config)
+        function obj = Dataset(config, cameras)
             arguments
-                config (1, 1) AcquisitorConfig
+                config (1, 1) AcquisitionConfig = AcquisitionConfig()
+                cameras (1, 1) Cameras = Cameras()
             end
-            obj@BaseObject("", config)
-        end
-
-        function init(obj, cameras)
-            config = obj.Config;
-            % Initialize Config for each active camera
+            obj.CurrentIndex = 0;
+            obj.AcquisitionConfig = config;
+            % Initialize Config for each active camera;
             sequence_table = config.ActiveAcquisition;
             active_cameras = config.ActiveCameras;
             for i = 1:length(active_cameras)
                 camera = active_cameras{i};
-                camera_handle = cameras.(camera);
-                obj.addprop(camera);
+                if isprop(cameras, camera)
+                    camera_config = cameras.(camera).Config;
+                else
+                    error("%s: Camera %s not found.", obj.CurrentLabel, camera)
+                end
                 obj.(camera) = struct();
-                obj.(camera).Config = camera_handle.Config.struct();
+                obj.(camera).Config = camera_config.struct();
                 obj.(camera).Config.NumAcquisitions = config.NumAcquisitions;
                 obj.(camera).Config.Note = struct();
                 subsequence = sequence_table((sequence_table.Camera == camera), :);
@@ -33,47 +44,50 @@ classdef Dataset < BaseObject & dynamicprops
                     if obj.(camera).Config.MaxPixelValue <= 65535
                         obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, obj.(camera).Config.YPixels, obj.(camera).Config.NumAcquisitions, "uint16");
                     else
-                        error("%s: Unsupported pixel value range.", obj.CurrentLabel)
+                        error("%s: Unsupported pixel value range for camera %s.", obj.CurrentLabel, camera)
                     end    
                 end
             end
             fprintf('%s: Data storage initialized for %d cameras, total memory is %g MB\n', ...
-                obj.CurrentLabel, length(obj.Config.ActiveCameras), obj.MemoryUsage)
+                obj.CurrentLabel, length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
         end
 
-        function update(obj, index, new_data)
-            if index > obj.Config.NumAcquisitions
-                insert_index = obj.Config.NumAcquisitions;
-                shift = true;
-            else
-                insert_index = index;
-                shift = false;
-            end
-            sequence_table = obj.Config.ActiveAcquisition;
+        function obj = add(obj, new_data)
+            timer = tic;
+            obj.CurrentIndex = obj.CurrentIndex + 1;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
-                if shift
+                if obj.CurrentIndex > obj.AcquisitionConfig.NumAcquisitions
                     obj.(camera).(label) = circshift(obj.(camera).(label), -1, 3);
+                    obj.(camera).(label)(:,:,end) = new_data{i};
+                else
+                    obj.(camera).(label)(:,:,obj.CurrentIndex) = new_data{i};
                 end
-                obj.(camera).(label)(:,:,insert_index) = new_data{i};
             end
+            fprintf('%s: Data added for index %d, storage time %.3f s\n', obj.CurrentLabel, obj.CurrentIndex, toc(timer))
         end
 
         function s = struct(obj)
-            active_cameras = obj.Config.ActiveCameras;
-            s = struct();
-            s.AcquisitionConfig = obj.Config.struct();
-            for i = 1:length(active_cameras)
-                camera = active_cameras{i};
-                s.(camera) = obj.(camera);
-            end
+            s = struct@BaseConfig(obj, obj.AcquisitionConfig.ActiveCameras);
+            s.AcquisitionConfig = obj.AcquisitionConfig.struct();
         end
 
-        function save(obj)
+        function save(obj, default_name)
+            arguments
+                obj
+                default_name = 'data.mat'
+            end
+            if obj.CurrentIndex == 0
+                error('%s: No data to save.', obj.CurrentLabel)
+            end
+            if obj.CurrentIndex < obj.AcquisitionConfig.NumAcquisitions
+                warning('%s: Incomplete data, only %d of %d acquisitions.', obj.CurrentLabel, obj.CurrentIndex, obj.AcquisitionConfig.NumAcquisitions)
+            end
             Data = obj.struct(); %#ok<NASGU>
-            uisave('Data', 'data.mat');
-            fprintf('%s: %s saved as a structure.\n', obj.CurrentLabel, class(obj))
+            uisave('Data', default_name);
+            fprintf('%s: %s saved.\n', obj.CurrentLabel, class(obj))
         end
 
         function plot(obj, options)
@@ -81,7 +95,7 @@ classdef Dataset < BaseObject & dynamicprops
                 obj
                 options.sample_index = 1
             end
-            sequence_table = obj.Config.ActiveAcquisition;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
@@ -107,5 +121,9 @@ classdef Dataset < BaseObject & dynamicprops
             usage = whos('s').bytes / 1024^2;
         end
 
+        function label = getStatusLabel(obj)
+            label = sprintf(" (CurrentIndex: %d)", obj.CurrentIndex);
+        end
     end
+
 end
