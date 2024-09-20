@@ -24,3 +24,8 @@ d = a.Data;
 d_struct = d.struct;
 AcquisitionConfig.struct2obj(d_struct.AcquisitionConfig)
 Dataset.struct2obj(d_struct)
+
+%% Cameras class test
+
+c = Cameras.fromData(d_struct);
+c

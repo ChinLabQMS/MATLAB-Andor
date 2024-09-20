@@ -29,12 +29,11 @@ imagesc(image)
 axis image
 colorbar
 
-%% AndorCameraConfig test
+%% AndorCameraConfig class test
 s = c.Config.struct;
 AndorCameraConfig.struct2obj(s)
 
 %% ZeluxCamera class test
-
 close all
 
 c = ZeluxCamera;
