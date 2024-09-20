@@ -1,14 +1,14 @@
 classdef AcquisitionConfig < BaseConfig
     
-    properties (SetAccess = {?Acquisitor})
+    properties (SetAccess = {?BaseObject, ?BaseConfig})
         SequenceTable = table( ...
-            (1:8)', ...
-            categorical({'Zelux', 'Zelux', 'Andor19330', 'Andor19331', 'Andor19330', 'Andor19331', '--inactive--', '--inactive--'}, ...
+            (1:10)', ...
+            categorical({'Zelux', 'Zelux', 'Andor19330', 'Andor19331', 'Andor19330', 'Andor19331', '--inactive--', '--inactive--', '--inactive--', '--inactive--'}, ...
             {'Andor19330', 'Andor19331', 'Zelux', '--inactive--'}, 'Ordinal', true)', ...
-            ["Lattice", "DMD", "Image", "Image", "Image", "Image", "", ""]', ...
-            categorical({'Full', 'Full', 'Start', 'Start', 'Acquire', 'Acquire', 'Full', 'Full'}, ...
+            ["Lattice", "DMD", "Image", "Image", "Image", "Image", "", "", "", ""]', ...
+            categorical({'Full', 'Full', 'Start', 'Start', 'Acquire', 'Acquire', 'Full', 'Full', 'Full', 'Full'}, ...
             {'Full', 'Start', 'Acquire'}, 'Ordinal', true)', ...
-            ["", "", "", "", "", "", "", ""]', ...
+            ["", "", "", "", "", "", "", "", "", ""]', ...
             'VariableNames', {'Order', 'Camera', 'Label', 'Type', 'Note'})
         NumAcquisitions = 20
         Refresh = 0.01
@@ -30,7 +30,7 @@ classdef AcquisitionConfig < BaseConfig
 
         function active_cameras = get.ActiveCameras(obj)
             active_cameras = unique(obj.SequenceTable.Camera);
-            active_cameras = string(active_cameras(active_cameras ~= "--inactive--"));
+            active_cameras = string(active_cameras(active_cameras ~= "--inactive--"))';
         end
 
         function active_sequence = get.ActiveSequence(obj)
@@ -52,7 +52,7 @@ classdef AcquisitionConfig < BaseConfig
                 sequence_table (:, 5) table
             end
             active_cameras = unique(sequence_table.Camera);
-            active_cameras = string(active_cameras(active_cameras ~= "--inactive--"));
+            active_cameras = string(active_cameras(active_cameras ~= "--inactive--"))';
             for camera = active_cameras
                 subsequence = sequence_table(sequence_table.Camera == camera, :);
                 start = 0;
@@ -77,6 +77,12 @@ classdef AcquisitionConfig < BaseConfig
             end
         end
         
+    end
+
+    methods (Static)
+        function obj = struct2obj(s)
+            obj = BaseConfig.struct2obj(s, AcquisitionConfig());
+         end
     end
 
 end

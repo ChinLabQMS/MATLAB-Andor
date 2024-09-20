@@ -1,8 +1,11 @@
 classdef Camera < BaseObject
     %CAMERA Base class for camera objects.
     
-    properties (SetAccess = protected)
+    properties (SetAccess = immutable)
         ID
+    end
+
+    properties (SetAccess = protected, Transient)
         Initialized (1, 1) logical = false
     end
 
@@ -44,6 +47,7 @@ classdef Camera < BaseObject
         end
 
         function num_available = getNumberNewImages(obj)
+            obj.checkStatus()
             num_available = 1;
         end
         
@@ -78,7 +82,6 @@ classdef Camera < BaseObject
         function delete(obj)
             obj.close()
         end
-
     end
 
     methods (Access = protected, Hidden)
@@ -87,7 +90,6 @@ classdef Camera < BaseObject
                 error('%s: %s not initialized.', obj.CurrentLabel, class(obj))
             end
         end
-
     end
 
 end

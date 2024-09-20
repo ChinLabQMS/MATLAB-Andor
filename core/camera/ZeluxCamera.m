@@ -1,7 +1,7 @@
 classdef ZeluxCamera < Camera
     %ZELUXCAMERA Zelux camera class
     
-    properties (SetAccess = protected)
+    properties (SetAccess = protected, Transient)
         CameraSDK
         CameraHandle
     end
@@ -10,7 +10,7 @@ classdef ZeluxCamera < Camera
         function obj = ZeluxCamera(index, config)
             arguments
                 index (1, 1) double = 0
-                config = ZeluxCameraConfig()
+                config (1, 1) ZeluxCameraConfig = ZeluxCameraConfig()
             end
             obj@Camera(index, config)
         end
@@ -102,6 +102,6 @@ classdef ZeluxCamera < Camera
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);
         end
-
     end
+    
 end

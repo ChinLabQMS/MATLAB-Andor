@@ -1,4 +1,4 @@
-classdef Preprocessor < BaseObject 
+classdef Preprocessor < BaseAnalyzer
 
     properties
         Background
@@ -9,7 +9,7 @@ classdef Preprocessor < BaseObject
             arguments
                 config (1, 1) PreprocessConfig = PreprocessConfig();
             end
-            obj@BaseObject(config);
+            obj@BaseAnalyzer(config);
         end
         
     end

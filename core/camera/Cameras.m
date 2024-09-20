@@ -7,6 +7,9 @@ classdef Cameras < handle
     end
 
     methods
+        function obj = Cameras()
+        end
+
         function init(obj, cameras)
             arguments
                 obj
@@ -36,6 +39,27 @@ classdef Cameras < handle
 
         function delete(obj)
             obj.close();
+        end
+
+        function s = struct(obj)
+            s = struct();
+            for field = properties(obj)'
+                s.(field{1}) = struct('Config', obj.(field{1}).Config);
+            end
+        end
+    end
+
+    methods (Static)
+        function s = getStaticConfig(config)
+            arguments
+                config.Andor19330 = AndorCameraConfig()
+                config.Andor19331 = AndorCameraConfig()
+                config.Zelux = ZeluxCameraConfig()
+            end
+            s = struct();
+            for field = fields(config)'
+                s.(field{1}) = struct('Config', config.(field{1}));
+            end
         end
     end
 

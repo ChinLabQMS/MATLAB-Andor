@@ -9,7 +9,6 @@ classdef BaseAnalyzer < BaseObject
         function process(obj)
             obj.runSequence(obj.Config.ProcessSequence);
         end
-
     end
 
     methods (Access = protected)
@@ -19,8 +18,7 @@ classdef BaseAnalyzer < BaseObject
                 params = obj.Config.Params.(step);
                 feval("run" + step, obj, params);
             end
-        end
-        
+        end        
     end
 
 end

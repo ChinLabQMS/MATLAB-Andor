@@ -1,7 +1,7 @@
 classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class
 
-    properties (SetAccess = protected)
+    properties (SetAccess = protected, Transient)
         CameraIndex = nan
         CameraHandle = nan
     end
@@ -32,8 +32,8 @@ classdef AndorCamera < Camera
                 [ret, camera_handle] = GetCameraHandle(i-1);
                 CheckWarning(ret)
                 [ret] = SetCurrentCamera(camera_handle);
-                CheckWarning(ret)
-                
+                CheckWarning(ret)     
+                           
                 % Try to get camera serial number
                 % Record the initial state of the camera
                 [ret, serial_number] = GetCameraSerialNumber();
@@ -281,7 +281,6 @@ classdef AndorCamera < Camera
                 pause(options.refresh)
             end
         end
-
     end
 
     methods (Access = protected, Hidden)        

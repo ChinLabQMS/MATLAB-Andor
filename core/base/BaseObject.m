@@ -13,7 +13,7 @@ classdef BaseObject < handle
     methods
         function obj = BaseObject(config)
             arguments
-                config = BaseConfig()
+                config (1, 1) BaseConfig = BaseConfig()
             end
             obj.Config = config;
         end
@@ -36,7 +36,7 @@ classdef BaseObject < handle
             disp(obj.Config)
         end
 
-        function label = getStatusLabel(obj)
+        function label = getStatusLabel(obj) %#ok<MANU>
             label = "";
         end
 
@@ -48,8 +48,7 @@ classdef BaseObject < handle
         
         function label = get.CurrentLabel(obj)
             label = obj.getCurrentLabel() + obj.getStatusLabel();
-        end
-        
+        end        
     end
 
 end

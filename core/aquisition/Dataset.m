@@ -1,7 +1,10 @@
 classdef Dataset < BaseConfig
 
+    properties (SetAccess = protected, Transient)
+        CurrentIndex (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
+    end
+
     properties (SetAccess = protected)
-        CurrentIndex
         Andor19330
         Andor19331
         Zelux
@@ -19,7 +22,7 @@ classdef Dataset < BaseConfig
         function obj = Dataset(config, cameras)
             arguments
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
-                cameras (1, 1) Cameras = Cameras()
+                cameras = Cameras.getStaticConfig()
             end
             obj.CurrentIndex = 0;
             obj.AcquisitionConfig = config;
@@ -28,13 +31,17 @@ classdef Dataset < BaseConfig
             active_cameras = config.ActiveCameras;
             for i = 1:length(active_cameras)
                 camera = active_cameras{i};
-                if isprop(cameras, camera)
+                if isfield(cameras, camera) || isprop(cameras, camera)
                     camera_config = cameras.(camera).Config;
                 else
                     error("%s: Camera %s not found.", obj.CurrentLabel, camera)
                 end
                 obj.(camera) = struct();
-                obj.(camera).Config = camera_config.struct();
+                if isstruct(camera_config)
+                    obj.(camera).Config = camera_config;
+                else
+                    obj.(camera).Config = camera_config.struct();
+                end
                 obj.(camera).Config.NumAcquisitions = config.NumAcquisitions;
                 obj.(camera).Config.Note = struct();
                 subsequence = sequence_table((sequence_table.Camera == camera), :);
@@ -52,7 +59,7 @@ classdef Dataset < BaseConfig
                 obj.CurrentLabel, length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
         end
 
-        function obj = add(obj, new_data)
+        function obj = add(obj, new_images)
             timer = tic;
             obj.CurrentIndex = obj.CurrentIndex + 1;
             sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
@@ -61,12 +68,12 @@ classdef Dataset < BaseConfig
                 label = sequence_table.Label(i);
                 if obj.CurrentIndex > obj.AcquisitionConfig.NumAcquisitions
                     obj.(camera).(label) = circshift(obj.(camera).(label), -1, 3);
-                    obj.(camera).(label)(:,:,end) = new_data{i};
+                    obj.(camera).(label)(:,:,end) = new_images{i};
                 else
-                    obj.(camera).(label)(:,:,obj.CurrentIndex) = new_data{i};
+                    obj.(camera).(label)(:,:,obj.CurrentIndex) = new_images{i};
                 end
             end
-            fprintf('%s: Data added for index %d, storage time %.3f s\n', obj.CurrentLabel, obj.CurrentIndex, toc(timer))
+            fprintf('%s: New images added to data in %.3f s\n', obj.CurrentLabel, toc(timer))
         end
 
         function s = struct(obj)
@@ -124,6 +131,14 @@ classdef Dataset < BaseConfig
         function label = getStatusLabel(obj)
             label = sprintf(" (CurrentIndex: %d)", obj.CurrentIndex);
         end
+    end
+
+    methods (Static)
+        function obj = struct2obj(s)
+            config = AcquisitionConfig.struct2obj(s.AcquisitionConfig);
+            obj = Dataset(config, s);
+            obj.CurrentIndex = config.NumAcquisitions;
+         end
     end
 
 end

@@ -1,6 +1,6 @@
 classdef Acquisitor < BaseObject
 
-    properties (SetAccess = protected)
+    properties (SetAccess = protected, Transient)
         Cameras
         Data
     end
@@ -13,12 +13,19 @@ classdef Acquisitor < BaseObject
             end
             obj@BaseObject(config);
             obj.Cameras = cameras;
+        end
+
+        function vargout = init(obj)
+            obj.initCameras();
             obj.Data = Dataset(obj.Config, obj.Cameras);
+            if nargout > 0
+                vargout{1} = obj.Data;
+            end
         end
 
         function config(obj, varargin)
             config@BaseObject(obj, varargin{:})
-            obj.Data = Dataset(obj.Config, obj.Cameras);
+            obj.init()
         end
 
         function initCameras(obj)
