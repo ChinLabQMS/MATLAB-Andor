@@ -1,7 +1,7 @@
 classdef ZeluxCamera < Camera
     %ZELUXCAMERA Zelux camera class
     
-    properties (SetAccess = protected, Transient)
+    properties (SetAccess = protected, Hidden)
         CameraSDK
         CameraHandle
     end
@@ -30,7 +30,6 @@ classdef ZeluxCamera < Camera
                 error('%s: Unable to load SDK, check if the camera is already initialized.', obj.CurrentLabel)
             end
             cd(old_path)
-
             % Get serial numbers of connected TLCameras.
             serialNumbers = obj.CameraSDK.DiscoverAvailableCameras;
             if serialNumbers.Count - 1 < obj.ID
@@ -101,6 +100,12 @@ classdef ZeluxCamera < Camera
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);
+        end
+
+        function [exposure_time, readout_time] = getTimings(obj)
+            obj.checkStatus()
+            exposure_time = double(obj.CameraHandle.ExposureTime_us) * 1e-6;
+            readout_time = double(obj.CameraHandle.FrameTime_us) * 1e-6;
         end
     end
     

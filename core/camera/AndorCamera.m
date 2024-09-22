@@ -1,7 +1,7 @@
 classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class
 
-    properties (SetAccess = protected, Transient)
+    properties (SetAccess = protected, Hidden)
         CameraIndex = nan
         CameraHandle = nan
     end
@@ -198,7 +198,6 @@ classdef AndorCamera < Camera
         end
 
         function [num_available, first, last] = getNumberNewImages(obj)
-            obj.setToCurrent()
             [ret, status] = GetStatus();
             CheckWarning(ret)
             if status == atmcd.DRV_ACQUIRING
@@ -232,6 +231,7 @@ classdef AndorCamera < Camera
         end
 
         function [exposure_time, readout_time, keep_clean_time] = getTimings(obj)
+            obj.checkStatus()
             obj.setToCurrent()
             if obj.Config.FastKinetic
                 [ret, exposure_time] = GetFKExposureTime();
@@ -253,6 +253,8 @@ classdef AndorCamera < Camera
             [ret, temperature] = GetTemperatureF();
             is_stable = ret == atmcd.DRV_TEMPERATURE_STABILIZED;
             switch ret
+                case atmcd.DRV_NOT_INITIALIZED
+                    status = 'Camera is not initialized.';
                 case atmcd.DRV_TEMPERATURE_STABILIZED
                     status = 'Temperature has stabilized at set point.';
                 case atmcd.DRV_TEMP_NOT_REACHED
@@ -285,12 +287,11 @@ classdef AndorCamera < Camera
 
     methods (Access = protected, Hidden)        
         function setToCurrent(obj)
-            obj.checkStatus()
             if ~isnan(obj.CameraHandle)
                 [ret] = SetCurrentCamera(obj.CameraHandle);
                 CheckWarning(ret)
             else
-                error('%s: Camera handle is not set, please initialize first.', obj.CurrentLabel)
+                error('%s: Camera handle is not set, please initialize first.', obj.getCurrentLabel())
             end
         end
     end

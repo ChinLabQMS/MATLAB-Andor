@@ -1,9 +1,9 @@
-classdef Cameras < handle
+classdef Cameras < BaseObject
 
-    properties
-        Andor19330 (1, 1) AndorCamera
-        Andor19331 (1, 1) AndorCamera
-        Zelux (1, 1) ZeluxCamera
+    properties (SetAccess = immutable)
+        Andor19330 (1, 1) Camera
+        Andor19331 (1, 1) Camera
+        Zelux (1, 1) Camera
     end
 
     methods
@@ -48,29 +48,13 @@ classdef Cameras < handle
         function delete(obj)
             obj.close();
         end
-
-        function s = struct(obj)
-            s = struct();
-            for field = properties(obj)'
-                s.(field{1}) = struct('Config', obj.(field{1}).Config.struct());
-            end
-        end
     end
 
     methods (Static)
-        function s = getStaticConfig(config)
+        function obj = struct2obj(data)
             arguments
-                config.Andor19330 = AndorCameraConfig().struct()
-                config.Andor19331 = AndorCameraConfig().struct()
-                config.Zelux = ZeluxCameraConfig().struct()
+                data (1, 1) struct
             end
-            s = struct();
-            for field = fields(config)'
-                s.(field{1}) = struct('Config', config.(field{1}));
-            end
-        end
-
-        function obj = fromData(data)
             args = {};
             if isfield(data, 'Andor19330')
                 args{end + 1} = 'Andor19330';
@@ -85,6 +69,18 @@ classdef Cameras < handle
                 args{end + 1} = ZeluxCameraConfig.struct2obj(data.Zelux.Config);
             end
             obj = Cameras(args{:});
+        end
+
+        function obj = file2obj(filename)
+            arguments
+                filename (1, 1) string
+            end
+            if isfile(filename)
+                s = load(filename);
+                obj = Cameras.struct2obj(s);
+            else
+                error("File %s does not exist.", filename)
+            end
         end
     end
 

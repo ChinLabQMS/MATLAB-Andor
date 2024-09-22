@@ -1,6 +1,6 @@
 classdef Preprocessor < BaseAnalyzer
 
-    properties
+    properties (SetAccess = protected, Transient)
         Background
     end
 
@@ -11,20 +11,18 @@ classdef Preprocessor < BaseAnalyzer
             end
             obj@BaseAnalyzer(config);
         end
-        
-    end
 
-    methods (Access = protected)
-        function runLoadBackground(obj, params)
+        function initLoadBackground(obj)
             % Load background image
-            obj.Background = load(params.file);
+            file = obj.Config.LoadBackgroundParams.file;
+            obj.Background = load(file);
         end
 
-        function runBackroundSubstraction(obj, params)
-
+        function data = runBackroundSubstraction(obj, data)
+            
         end
 
-        function runOffsetCorrection(obj, params)
+        function data = runOffsetCorrection(obj, data)
         end
     end
 end

@@ -1,11 +1,11 @@
-classdef Camera < BaseObject
+classdef Camera < BaseRunner
     %CAMERA Base class for camera objects.
     
-    properties (SetAccess = immutable)
+    properties (SetAccess = immutable, Hidden)
         ID
     end
 
-    properties (SetAccess = protected, Transient)
+    properties (SetAccess = protected, Hidden)
         Initialized (1, 1) logical = false
     end
 
@@ -15,7 +15,7 @@ classdef Camera < BaseObject
                 id = "Test"
                 config = AndorCameraConfig()
             end
-            obj@BaseObject(config)
+            obj@BaseRunner(config)
             obj.ID = id;
         end
 
@@ -36,7 +36,7 @@ classdef Camera < BaseObject
 
         function config(obj, varargin)
             obj.abortAcquisition()
-            config@BaseObject(obj, varargin{:})
+            config@BaseRunner(obj, varargin{:})
         end
 
         function startAcquisition(obj)

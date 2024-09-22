@@ -38,9 +38,9 @@ close all
 
 c = ZeluxCamera;
 c.init
-c.config('Exposure', 0.0001)
+c.config('ExternalTrigger', 0)
 c.startAcquisition
-image = c.acquire;
+image = c.acquire('timeout', 10);
 
 figure
 imagesc(image)
