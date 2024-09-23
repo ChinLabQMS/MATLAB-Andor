@@ -1,4 +1,4 @@
-classdef BaseAnalyzer < BaseObject
+classdef BaseAnalyzer < BaseRunner
 
     properties (SetAccess = protected)
         Initialized (1, 1) logical = false
@@ -7,25 +7,31 @@ classdef BaseAnalyzer < BaseObject
     methods
         function obj = BaseAnalyzer(config)
             arguments
-                config (1, 1) BaseConfig = BaseConfig();
+                config (1, 1) BaseObject = BaseObject();
             end
-            obj@BaseObject(config);
+            obj@BaseRunner(config)
         end
 
         function init(obj)
             for step = obj.Config.InitSequence
-                obj.(['init' + step])();
+                args = namedargs2cell(obj.Config.(step + "Params"));
+                obj.("init" + step)(args{:});
+                fprintf("%s: Finished step [%s].\n", obj.CurrentLabel, step)
             end
             obj.Initialized = true;
+            fprintf("%s: %s Initialized.\n", obj.CurrentLabel, class(obj))
         end
 
-        function data = process(obj, data)
+        function processed_image = process(obj, raw_image, camera_name, image_label)
             if ~obj.Initialized
                 obj.init();
             end
+            data = raw_image;
             for step = obj.Config.ProcessSequence
-                data = obj.(['run' + step])(data);
-            end        
+                args = namedargs2cell(obj.Config.(step + "Params"));
+                data = obj.("run" + step)(data, camera_name, image_label, args{:});
+            end
+            processed_image = data;
         end
     end
 

@@ -12,10 +12,17 @@ classdef Cameras < BaseObject
                 config.Andor19330 = AndorCameraConfig()
                 config.Andor19331 = AndorCameraConfig()
                 config.Zelux = ZeluxCameraConfig()
+                config.test_mode = false
             end
-            obj.Andor19330 = AndorCamera(19330, config.Andor19330);
-            obj.Andor19331 = AndorCamera(19331, config.Andor19331);
-            obj.Zelux = ZeluxCamera(0, config.Zelux);
+            if config.test_mode
+                obj.Andor19330 = Camera("Andor19330", AndorCameraConfig());
+                obj.Andor19331 = Camera("Andor19331", AndorCameraConfig());
+                obj.Zelux = Camera("Zelux", ZeluxCameraConfig());
+            else
+                obj.Andor19330 = AndorCamera(19330, config.Andor19330);
+                obj.Andor19331 = AndorCamera(19331, config.Andor19331);
+                obj.Zelux = ZeluxCamera(0, config.Zelux);
+            end
         end
 
         function init(obj, cameras)
