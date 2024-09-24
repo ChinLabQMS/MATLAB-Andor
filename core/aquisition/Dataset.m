@@ -129,24 +129,28 @@ classdef Dataset < BaseObject
     end
 
     methods (Static)
-        function obj = struct2obj(data, options)
+        function [data, config, cameras] = struct2obj(data_struct, options)
             arguments
-                data (1, 1) struct
+                data_struct (1, 1) struct
                 options.test_mode (1, 1) logical = true
             end
-            config = AcquisitionConfig.struct2obj(data.AcquisitionConfig);
-            cameras = Cameras.struct2obj(data, "test_mode", options.test_mode);
-            obj = Dataset(config, cameras);
+            config = AcquisitionConfig.struct2obj(data_struct.AcquisitionConfig);
+            cameras = Cameras.struct2obj(data_struct, "test_mode", options.test_mode);
+            data = Dataset(config, cameras);
             for camera = config.ActiveCameras
-                obj.(camera) = data.(camera);
+                data.(camera) = data_struct.(camera);
             end
-            obj.CurrentIndex = config.NumAcquisitions;
-            fprintf("%s: Dataset loaded from structure.\n", obj.CurrentLabel)
-         end
+            data.CurrentIndex = config.NumAcquisitions;
+            fprintf("%s: %s loaded from structure.\n", obj.CurrentLabel, class(obj))
+        end
 
-         function obj = file2obj(filename, vargin)
-            data = load(filename, 'Data');
-            obj = Dataset.struct2obj(data, vargin{:});
+        function obj = file2obj(filename, varargin)
+            if isfile(filename)
+                s = load(filename, 'Data');
+                obj = Dataset.struct2obj(s, varargin{:});
+            else
+                error("File %s does not exist.", filename)
+            end
         end
     end
 

@@ -11,14 +11,14 @@ classdef BaseObject < handle
         function s = struct(obj, fields)
             arguments
                 obj
-                fields (1, :) string = properties(obj)'
+                fields (1, :) string = string(properties(obj)')
             end
             s = struct();
             for field = fields
-                if isa(obj.(field{1}), "BaseObject")
-                    s.(field{1}) = obj.(field{1}).struct();
+                if isa(obj.(field), "BaseObject")
+                    s.(field) = obj.(field).struct();
                 else
-                    s.(field{1}) = obj.(field{1});
+                    s.(field) = obj.(field);
                 end
             end
         end

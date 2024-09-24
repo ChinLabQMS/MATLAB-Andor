@@ -6,6 +6,10 @@ classdef Cameras < BaseObject
         Zelux (1, 1) Camera
     end
 
+    properties (Dependent, Hidden)
+        CameraList
+    end
+
     methods
         function obj = Cameras(config)
             arguments
@@ -28,7 +32,7 @@ classdef Cameras < BaseObject
         function init(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = properties(obj)
+                cameras (1, :) string = obj.CameraList
             end
             for camera = cameras
                 obj.(camera).init();
@@ -36,19 +40,19 @@ classdef Cameras < BaseObject
         end
 
         function close(obj)
-            cameras = properties(obj);
-            for i = 1:length(cameras)
-                camera = obj.(cameras{i});
-                camera.close();
+            for camera = obj.CameraList
+                obj.(camera).close();
             end
         end
 
         function config(obj, varargin)
-            cameras = properties(obj);
-            for i = 1:length(cameras)
-                camera = obj.(cameras{i});
-                camera.config(varargin{:});
+            for camera = obj.CameraList
+                obj.(camera).config(varargin{:});
             end
+        end
+
+        function cameras = get.CameraList(obj)
+            cameras = string(properties(obj)');
         end
     end
 
@@ -72,6 +76,7 @@ classdef Cameras < BaseObject
                 args = [args, {'test_mode', true}];
             end
             obj = Cameras(args{:});
+            fprintf("%s:  %s loaded from structure.\n", obj.CurrentLabel, class(obj))
         end
 
         function obj = file2obj(filename)

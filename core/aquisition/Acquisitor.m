@@ -9,8 +9,7 @@ classdef Acquisitor < BaseRunner
     end
 
     properties (SetAccess = protected)
-        NewData (1, 1) struct
-        NewStat (1, 1) struct
+        Live (1, 1) struct
     end
 
     methods
@@ -47,6 +46,7 @@ classdef Acquisitor < BaseRunner
             sequence_table = obj.Config.ActiveSequence;
             new_images = struct();
             processed_images = struct();
+            analysis = struct();
             for i = 1:height(sequence_table)
                 camera = string(sequence_table.Camera(i));
                 label = string(sequence_table.Label(i));
@@ -66,13 +66,14 @@ classdef Acquisitor < BaseRunner
                 end
                 if type == "Analysis"
                     % TODO: Implement analysis
-                    step_timer = tic;
-                    data = processed_images.(camera).(label);
+                    % step_timer = tic;
+                    % data = processed_images.(camera).(label);
                     % fprintf("%s: %s %s Analysis elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
                 end
             end
             obj.Data.add(new_images);
-            obj.NewData = struct('RawImage', new_images, 'ProcessedImage', processed_images);
+            % obj.Stat.add(analysis);
+            obj.Live = struct('RawImage', new_images, 'ProcessedImage', processed_images, 'Analysis', analysis);
             fprintf("%s: Sequence completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
         end
 
@@ -80,6 +81,27 @@ classdef Acquisitor < BaseRunner
             obj.init()
             for i = 1:obj.Config.NumAcquisitions
                 obj.acquire();
+            end
+        end
+    end
+
+    methods (Static)
+        function obj = struct2obj(data_struct, options)
+            arguments
+                data_struct (1, 1) struct
+                options.test_mode (1, 1) logical = false
+            end
+            [data, config, cameras] = Dataset.struct2obj(data_struct, "test_mode", options.test_mode);
+            obj = Acquisitor(config, cameras, data);
+            fprintf("%s: %s loaded from structure.\n", obj.CurrentLabel, class(obj))
+        end
+
+        function obj = file2obj(filename, varargin)
+            if isfile(filename)
+                s = load(filename, 'Data');
+                obj = Acquisitor.struct2obj(s, varargin{:});
+            else
+                error("File %s does not exist.", filename)
             end
         end
     end
