@@ -2,39 +2,43 @@ classdef Acquisitor < BaseRunner
 
     properties (SetAccess = immutable, Hidden)
         Cameras
-        Preprocessor
         Data
+        Stat
+        Preprocessor
+        Analyzer
     end
 
-    properties (SetAccess = protected, Hidden)
-        NewImages (1, 1) struct
+    properties (SetAccess = protected)
+        NewData (1, 1) struct
+        NewStat (1, 1) struct
     end
 
     methods
-        function obj = Acquisitor(config, cameras, preprocessor, data)
+        function obj = Acquisitor(config, cameras, data, stat, preprocessor, analyzer)
             arguments
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
                 cameras (1, 1) Cameras = Cameras()
-                preprocessor (1, 1) Preprocessor = Preprocessor()
                 data (1, 1) Dataset = Dataset(config, cameras)
+                stat (1, 1) StatResult = StatResult()
+                preprocessor (1, 1) Preprocessor = Preprocessor()
+                analyzer (1, 1) Analyzer = Analyzer()                
             end
             obj@BaseRunner(config);
             obj.Cameras = cameras;
-            obj.Preprocessor = preprocessor;
             obj.Data = data;
+            obj.Stat = stat;
+            obj.Preprocessor = preprocessor;
+            obj.Analyzer = analyzer;
         end
 
         function init(obj)
-            obj.initCameras()
-            obj.Data.init()
-        end
-
-        function initCameras(obj)
             obj.Cameras.init(obj.Config.ActiveCameras);
+            obj.Data.init()
+            obj.Preprocessor.init()
         end
 
         function config(obj, varargin)
-            config@BaseObject(obj, varargin{:})
+            config@BaseRunner(obj, varargin{:})
             obj.Data.init()
         end
 
@@ -58,19 +62,17 @@ classdef Acquisitor < BaseRunner
                     step_timer = tic;
                     new_images.(camera).(label) = obj.Cameras.(camera).acquire('refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout);
                     fprintf("%s: %s %s Aquisition elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
-                    % TODO: Implement preprocessing
-                    processed_images.(camera).(label) = new_images.(camera).(label);
+                    processed_images.(camera).(label) = obj.Preprocessor.process(new_images.(camera).(label), label, obj.Data.(camera).Config);
                 end
                 if type == "Analysis"
                     % TODO: Implement analysis
                     step_timer = tic;
-                    analysis_note = sequence_table.Note(i);
                     data = processed_images.(camera).(label);
                     % fprintf("%s: %s %s Analysis elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
                 end
             end
             obj.Data.add(new_images);
-            obj.NewImages = new_images;
+            obj.NewData = struct('RawImage', new_images, 'ProcessedImage', processed_images);
             fprintf("%s: Sequence completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
         end
 

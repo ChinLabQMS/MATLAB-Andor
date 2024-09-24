@@ -23,20 +23,25 @@ classdef Camera < BaseRunner
             if obj.Initialized
                 return
             end
+            obj.initCamera()
+            obj.applyConfig()
             obj.Initialized = true;
             fprintf("%s: %s initialized.\n", obj.CurrentLabel, class(obj))
         end
 
         function close(obj)
             if obj.Initialized
+                obj.abortAcquisition()
+                obj.closeCamera()
                 obj.Initialized = false;
                 fprintf('%s: %s closed.\n', obj.CurrentLabel, class(obj))
             end
         end
 
         function config(obj, varargin)
-            obj.abortAcquisition()
             config@BaseRunner(obj, varargin{:})
+            obj.abortAcquisition()
+            obj.applyConfig()
         end
 
         function startAcquisition(obj)
@@ -44,6 +49,7 @@ classdef Camera < BaseRunner
         end
         
         function abortAcquisition(obj)
+            obj.checkStatus()
         end
 
         function num_available = getNumberNewImages(obj)
@@ -54,7 +60,7 @@ classdef Camera < BaseRunner
         function [image, num_frames, is_saturated] = acquireImage(obj)
             obj.checkStatus()
             num_frames = obj.getNumberNewImages();
-            image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
+            image = randi(obj.Config.MaxPixelValue, obj.Config.XPixels, obj.Config.YPixels, "uint16");
             is_saturated = false;
         end
 
@@ -71,6 +77,10 @@ classdef Camera < BaseRunner
             if toc(timer) >= options.timeout
                 warning('%s: Acquisition timeout.', obj.CurrentLabel)
                 obj.abortAcquisition()
+                image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
+                num_frames = 0;
+                is_saturated = false;
+                return
             end
             [image, num_frames, is_saturated] = obj.acquireImage();
         end
@@ -85,6 +95,18 @@ classdef Camera < BaseRunner
     end
 
     methods (Access = protected, Hidden)
+        function initCamera(obj)
+            % Implement for each subclass
+        end
+
+        function closeCamera(obj)
+            % Implement for each subclass
+        end
+
+        function applyConfig(obj)
+            % Implement for each subclass
+        end
+
         function checkStatus(obj)
             if ~obj.Initialized
                 error('%s: %s not initialized.', obj.CurrentLabel, class(obj))

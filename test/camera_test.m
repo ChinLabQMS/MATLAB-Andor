@@ -20,7 +20,7 @@ close all
 
 c = AndorCamera(19330);
 c.init
-c.config('FastKinetic', 1)
+c.config('FastKinetic', 1, 'ExternalTrigger', 0)
 c.startAcquisition
 image = c.acquire;
 

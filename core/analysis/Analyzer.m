@@ -1,11 +1,9 @@
-classdef Analyzer
+classdef Analyzer < BaseRunner
     
     properties
-        Preprocessor
-        Data
     end
     
     methods
-        
     end
+
 end

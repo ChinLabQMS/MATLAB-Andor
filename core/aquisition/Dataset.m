@@ -1,10 +1,11 @@
-classdef Dataset < BaseRunner
+classdef Dataset < BaseObject
 
     properties (SetAccess = protected, Hidden)
         CurrentIndex (1, 1) double {mustBeInteger, mustBeNonnegative} = 0
     end
 
     properties (SetAccess = protected)
+        AcquisitionConfig
         Andor19330
         Andor19331
         Zelux
@@ -24,20 +25,18 @@ classdef Dataset < BaseRunner
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
                 cameras (1, 1) Cameras = Cameras()
             end
-            obj@BaseRunner(config);
+            obj.AcquisitionConfig = config;
             obj.Cameras = cameras;
         end
         
         function init(obj)
             obj.CurrentIndex = 0;
-            sequence_table = obj.Config.ActiveAcquisition;
-            active_cameras = obj.Config.ActiveCameras;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             data = obj.Cameras.struct();
-            for i = 1:length(active_cameras)
-                camera = active_cameras{i};
+            for camera = obj.AcquisitionConfig.ActiveCameras
                 obj.(camera) = data.(camera);
                 obj.(camera).Config.CameraName = camera;
-                obj.(camera).Config.NumAcquisitions = obj.Config.NumAcquisitions;
+                obj.(camera).Config.NumAcquisitions = obj.AcquisitionConfig.NumAcquisitions;
                 obj.(camera).Config.Note = struct();
                 camera_seq = sequence_table((sequence_table.Camera == camera), :);
                 for j = 1:height(camera_seq)
@@ -51,26 +50,17 @@ classdef Dataset < BaseRunner
                 end
             end
             fprintf("%s: Data storage initialized for %d cameras, total memory is %g MB\n", ...
-                obj.CurrentLabel, length(obj.Config.ActiveCameras), obj.MemoryUsage)
-        end
-
-        function config(obj, varargin)
-            config@BaseRunner(obj, varargin{:})
-            obj.init()
-        end
-
-        function initCameras(obj)
-            obj.Cameras.init(obj.Config.ActiveCameras)
+                obj.CurrentLabel, length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
         end
 
         function add(obj, new_images)
             timer = tic;
             obj.CurrentIndex = obj.CurrentIndex + 1;
-            sequence_table = obj.Config.ActiveAcquisition;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
-                if obj.CurrentIndex > obj.Config.NumAcquisitions
+                if obj.CurrentIndex > obj.AcquisitionConfig.NumAcquisitions
                     obj.(camera).(label) = circshift(obj.(camera).(label), -1, 3);
                     obj.(camera).(label)(:,:,end) = new_images.(camera).(label);
                 else
@@ -85,12 +75,12 @@ classdef Dataset < BaseRunner
                 obj
                 options.check = true
             end
-            if options.check && (obj.CurrentIndex < obj.Config.NumAcquisitions)
-                warning('%s: Incomplete data, only %d of %d acquisitions.', obj.CurrentLabel, obj.CurrentIndex, obj.Config.NumAcquisitions)
+            if options.check && (obj.CurrentIndex < obj.AcquisitionConfig.NumAcquisitions)
+                warning('%s: Incomplete data, only %d of %d acquisitions.', obj.CurrentLabel, obj.CurrentIndex, obj.AcquisitionConfig.NumAcquisitions)
             end
-            s = struct('AcquisitionConfig', obj.Config.struct());
-            for camera = obj.Config.ActiveCameras
-                s.(camera{1}) = obj.(camera{1});
+            s = struct('AcquisitionConfig', obj.AcquisitionConfig.struct());
+            for camera = obj.AcquisitionConfig.ActiveCameras
+                s.(camera) = obj.(camera);
             end
         end
 
@@ -107,7 +97,7 @@ classdef Dataset < BaseRunner
                 obj
                 options.sample_index = 1
             end
-            sequence_table = obj.Config.ActiveAcquisition;
+            sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence_table)
                 camera = char(sequence_table.Camera(i));
                 label = sequence_table.Label(i);
@@ -139,15 +129,24 @@ classdef Dataset < BaseRunner
     end
 
     methods (Static)
-        function obj = struct2obj(data)
-            config = AcquisitionConfig.struct2obj(data.Config);
-            obj = Dataset(config, data);
+        function obj = struct2obj(data, options)
+            arguments
+                data (1, 1) struct
+                options.test_mode (1, 1) logical = true
+            end
+            config = AcquisitionConfig.struct2obj(data.AcquisitionConfig);
+            cameras = Cameras.struct2obj(data, "test_mode", options.test_mode);
+            obj = Dataset(config, cameras);
+            for camera = config.ActiveCameras
+                obj.(camera) = data.(camera);
+            end
             obj.CurrentIndex = config.NumAcquisitions;
+            fprintf("%s: Dataset loaded from structure.\n", obj.CurrentLabel)
          end
 
-        function obj = file2obj(filename)
+         function obj = file2obj(filename, vargin)
             data = load(filename, 'Data');
-            obj = Dataset.struct2obj(data);
+            obj = Dataset.struct2obj(data, vargin{:});
         end
     end
 

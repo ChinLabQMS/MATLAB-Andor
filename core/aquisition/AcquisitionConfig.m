@@ -1,7 +1,7 @@
 classdef AcquisitionConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        SequenceTable {mustBeValidSequence} = SequenceExample.Default
+        SequenceTable {mustBeValidSequence} = SequenceExample.Sequence4Basic
         NumAcquisitions (1, 1) double = 20
         Refresh (1, 1) double = 0.01
         Timeout (1, 1) double = Inf
@@ -26,6 +26,11 @@ classdef AcquisitionConfig < BaseObject
         function active_acquisition = get.ActiveAcquisition(obj)
             active_sequence = obj.ActiveSequence;
             active_acquisition = active_sequence(active_sequence.Type == "Acquire" | active_sequence.Type == 'Start+Acquire', :);
+        end
+
+        function disp(obj)
+            disp@BaseObject(obj)
+            disp(obj.SequenceTable)
         end
     end
     

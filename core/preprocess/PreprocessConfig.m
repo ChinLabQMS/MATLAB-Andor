@@ -1,9 +1,6 @@
 classdef PreprocessConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        InitSequence = ["LoadBackground"]
-        ProcessSequence = ["BackgroundSubtraction"] %, "OffsetCorrection", "OutlierRemoval"]
-
         LoadBackgroundParams = struct("filename", "calibration/StatBackground_20240327_HSSpeed=2_VSSpeed=1.mat")
         BackgroundSubtractionParams = struct('var_name', 'SmoothMean')
         OffsetCorrectionParams = struct("method", "linear_plane", ...

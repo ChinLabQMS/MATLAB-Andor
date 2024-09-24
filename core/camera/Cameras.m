@@ -15,9 +15,9 @@ classdef Cameras < BaseObject
                 config.test_mode = false
             end
             if config.test_mode
-                obj.Andor19330 = Camera("Andor19330", AndorCameraConfig());
-                obj.Andor19331 = Camera("Andor19331", AndorCameraConfig());
-                obj.Zelux = Camera("Zelux", ZeluxCameraConfig());
+                obj.Andor19330 = Camera("Andor19330", config.Andor19330);
+                obj.Andor19331 = Camera("Andor19331", config.Andor19331);
+                obj.Zelux = Camera("Zelux", config.Zelux);
             else
                 obj.Andor19330 = AndorCamera(19330, config.Andor19330);
                 obj.Andor19331 = AndorCamera(19331, config.Andor19331);
@@ -30,9 +30,8 @@ classdef Cameras < BaseObject
                 obj
                 cameras (1, :) string = properties(obj)
             end
-            for i = 1:length(cameras)
-                camera = obj.(cameras{i});
-                camera.init();
+            for camera = cameras
+                obj.(camera).init();
             end
         end
 
@@ -51,29 +50,26 @@ classdef Cameras < BaseObject
                 camera.config(varargin{:});
             end
         end
-
-        function delete(obj)
-            obj.close();
-        end
     end
 
     methods (Static)
-        function obj = struct2obj(data)
+        function obj = struct2obj(data, options)
             arguments
                 data (1, 1) struct
+                options.test_mode = true
             end
             args = {};
             if isfield(data, 'Andor19330')
-                args{end + 1} = 'Andor19330';
-                args{end + 1} =  AndorCameraConfig.struct2obj(data.Andor19330.Config);
+                args = [args, {'Andor19330', AndorCameraConfig.struct2obj(data.Andor19330.Config)}];
             end
             if isfield(data, 'Andor19331')
-                args{end + 1} = 'Andor19331';
-                args{end + 1} =  AndorCameraConfig.struct2obj(data.Andor19331.Config);
+                args = [args, {'Andor19331', AndorCameraConfig.struct2obj(data.Andor19331.Config)}];
             end
             if isfield(data, 'Zelux')
-                args{end + 1} = 'Zelux';
-                args{end + 1} = ZeluxCameraConfig.struct2obj(data.Zelux.Config);
+                args = [args, {'Zelux', ZeluxCameraConfig.struct2obj(data.Zelux.Config)}];
+            end
+            if options.test_mode
+                args = [args, {'test_mode', true}];
             end
             obj = Cameras(args{:});
         end
