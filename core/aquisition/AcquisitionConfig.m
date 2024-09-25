@@ -11,6 +11,7 @@ classdef AcquisitionConfig < BaseObject
         ActiveCameras
         ActiveSequence
         ActiveAcquisition
+        ListOfImages
     end
 
     methods
@@ -26,6 +27,27 @@ classdef AcquisitionConfig < BaseObject
         function active_acquisition = get.ActiveAcquisition(obj)
             active_sequence = obj.ActiveSequence;
             active_acquisition = active_sequence(active_sequence.Type == "Acquire" | active_sequence.Type == 'Start+Acquire', :);
+        end
+
+        function label = findContent(obj, name)
+            active_acquisition = obj.ActiveAcquisition;
+            seq = active_acquisition(contains(active_acquisition.Note, name), :);
+            if height(seq) == 1
+                label = sprintf("%s: %s", seq.Camera(1), seq.Label(1));
+            else
+                label = string.empty;
+            end
+        end
+
+        function list = get.ListOfImages(obj)
+            active_acquisition = obj.ActiveAcquisition;
+            num_images = height(active_acquisition);
+            list = cell(num_images, 1);
+            for i = 1:num_images
+                camera = string(active_acquisition.Camera(i));
+                label = string(active_acquisition.Label(i));
+                list{i} = sprintf('%s: %s', camera, label);
+            end
         end
 
         function disp(obj)

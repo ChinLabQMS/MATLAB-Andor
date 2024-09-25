@@ -24,7 +24,10 @@ classdef BaseRunner < BaseObject
             end
             for i = 1:length(name)
                 obj.Config.(name{i}) = value{i};
-                fprintf('%s: %s set to %s.\n', obj.CurrentLabel, name{i}, string(value{i}))
+                % try
+                %     fprintf('%s: %s set to %s.\n', obj.CurrentLabel, name{i}, string(value{i}))
+                % catch
+                % end
             end
         end
 

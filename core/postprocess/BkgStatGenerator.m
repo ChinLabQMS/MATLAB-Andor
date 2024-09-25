@@ -1,3 +1,3 @@
-classdef BkgStatGenerator < BaseObject
+classdef BkgStatGenerator < BaseRunner
     
 end

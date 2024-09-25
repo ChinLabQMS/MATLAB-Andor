@@ -22,14 +22,15 @@ classdef Preprocessor < BaseRunner
             fprintf("%s: %s Initialized.\n", obj.CurrentLabel, class(obj))
         end
 
-        function processed_image = process(obj, raw_image, label, config)
+        function [processed, background] = process(obj, raw, label, config)
             arguments
                 obj
-                raw_image (:, :) uint16
+                raw (:, :) {mustBeNumeric}
                 label (1, 1) string
                 config (1, 1) struct
             end
-            processed_image = obj.runBackgroundSubtraction(double(raw_image), label, config);
+            processed = obj.runBackgroundSubtraction(double(raw), label, config);
+            [processed, background] = obj.runOffsetCorrection(processed, label, config);
         end
 
         function processed_data = processData(obj, raw_data)
@@ -45,22 +46,26 @@ classdef Preprocessor < BaseRunner
             obj.Background = load(obj.Config.LoadBackgroundParams.filename);
         end
 
-        function processed_image = runBackgroundSubtraction(obj, raw_image, ~, config)
+        function processed = runBackgroundSubtraction(obj, raw, ~, config)
             camera = config.CameraName;
             if isfield(obj.Background, camera)
-                processed_image = raw_image - obj.Background.(camera).(obj.Config.BackgroundSubtractionParams.var_name);
+                processed = raw - obj.Background.(camera).(obj.Config.BackgroundSubtractionParams.var_name);
             else
-                processed_image = raw_image;
+                processed = raw;
             end
         end
 
-        function processed_image = runOffsetCorrection(obj, raw_image, label, config)
+        function [processed, background] = runOffsetCorrection(obj, raw, label, config)
+            processed = raw;
+            background = zeros(size(raw));
+            if config.CameraName == "Zelux"
+                return
+            end
             if ~config.FastKinetic
                 num_frames = 1;
             else
                 num_frames = config.FastKineticSeriesLength;
             end
-            processed_image = raw_image;
         end
     end
 end

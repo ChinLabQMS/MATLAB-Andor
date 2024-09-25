@@ -5,13 +5,14 @@ classdef BaseObject < handle
 
     properties (Dependent, Hidden)
         CurrentLabel
+        PropList
     end
 
     methods
         function s = struct(obj, fields)
             arguments
                 obj
-                fields (1, :) string = string(properties(obj)')
+                fields (1, :) string = obj.PropList
             end
             s = struct();
             for field = fields
@@ -45,7 +46,10 @@ classdef BaseObject < handle
             end
             Data = obj.struct(); %#ok<NASGU>
             uisave('Data', filename);
-            fprintf('%s: %s saved to file %s.\n', obj.CurrentLabel, class(obj), filename)
+        end
+
+        function list = get.PropList(obj)
+            list = string(properties(obj)');
         end
 
         function label = getStatusLabel(obj) %#ok<MANU>

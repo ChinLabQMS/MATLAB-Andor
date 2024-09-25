@@ -12,7 +12,7 @@ classdef Dataset < BaseObject
     end
 
     properties (SetAccess = immutable, Hidden)
-        Cameras
+        CameraManager
     end
 
     properties (Dependent, Hidden)
@@ -23,16 +23,16 @@ classdef Dataset < BaseObject
         function obj = Dataset(config, cameras)
             arguments
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
-                cameras (1, 1) Cameras = Cameras()
+                cameras (1, 1) CameraManager = CameraManager()
             end
             obj.AcquisitionConfig = config;
-            obj.Cameras = cameras;
+            obj.CameraManager = cameras;
         end
         
         function init(obj)
             obj.CurrentIndex = 0;
             sequence_table = obj.AcquisitionConfig.ActiveAcquisition;
-            data = obj.Cameras.struct();
+            data = obj.CameraManager.struct();
             for camera = obj.AcquisitionConfig.ActiveCameras
                 obj.(camera) = data.(camera);
                 obj.(camera).Config.CameraName = camera;
@@ -135,7 +135,7 @@ classdef Dataset < BaseObject
                 options.test_mode (1, 1) logical = true
             end
             config = AcquisitionConfig.struct2obj(data_struct.AcquisitionConfig);
-            cameras = Cameras.struct2obj(data_struct, "test_mode", options.test_mode);
+            cameras = CameraManager.struct2obj(data_struct, "test_mode", options.test_mode);
             data = Dataset(config, cameras);
             for camera = config.ActiveCameras
                 data.(camera) = data_struct.(camera);

@@ -1,4 +1,4 @@
-classdef Cameras < BaseObject
+classdef CameraManager < BaseObject
 
     properties (SetAccess = immutable)
         Andor19330 (1, 1) Camera
@@ -6,12 +6,8 @@ classdef Cameras < BaseObject
         Zelux (1, 1) Camera
     end
 
-    properties (Dependent, Hidden)
-        CameraList
-    end
-
     methods
-        function obj = Cameras(config)
+        function obj = CameraManager(config)
             arguments
                 config.Andor19330 = AndorCameraConfig()
                 config.Andor19331 = AndorCameraConfig()
@@ -32,7 +28,7 @@ classdef Cameras < BaseObject
         function init(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.CameraList
+                cameras (1, :) string = obj.PropList
             end
             for camera = cameras
                 obj.(camera).init();
@@ -40,19 +36,15 @@ classdef Cameras < BaseObject
         end
 
         function close(obj)
-            for camera = obj.CameraList
+            for camera = obj.PropList
                 obj.(camera).close();
             end
         end
 
         function config(obj, varargin)
-            for camera = obj.CameraList
+            for camera = obj.PropList
                 obj.(camera).config(varargin{:});
             end
-        end
-
-        function cameras = get.CameraList(obj)
-            cameras = string(properties(obj)');
         end
     end
 
@@ -62,7 +54,7 @@ classdef Cameras < BaseObject
                 data (1, 1) struct
                 options.test_mode = true
             end
-            args = {};
+            args = {'test_mode', options.test_mode};
             if isfield(data, 'Andor19330')
                 args = [args, {'Andor19330', AndorCameraConfig.struct2obj(data.Andor19330.Config)}];
             end
@@ -72,10 +64,7 @@ classdef Cameras < BaseObject
             if isfield(data, 'Zelux')
                 args = [args, {'Zelux', ZeluxCameraConfig.struct2obj(data.Zelux.Config)}];
             end
-            if options.test_mode
-                args = [args, {'test_mode', true}];
-            end
-            obj = Cameras(args{:});
+            obj = CameraManager(args{:});
             fprintf("%s:  %s loaded from structure.\n", obj.CurrentLabel, class(obj))
         end
 
@@ -85,7 +74,7 @@ classdef Cameras < BaseObject
             end
             if isfile(filename)
                 s = load(filename);
-                obj = Cameras.struct2obj(s);
+                obj = CameraManager.struct2obj(s);
             else
                 error("File %s does not exist.", filename)
             end

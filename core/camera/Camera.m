@@ -9,6 +9,10 @@ classdef Camera < BaseRunner
         Initialized (1, 1) logical = false
     end
 
+    properties (Access = private)
+        AcquisitionStartTime
+    end
+
     methods
         function obj = Camera(id, config)
             arguments
@@ -46,6 +50,7 @@ classdef Camera < BaseRunner
 
         function startAcquisition(obj)
             obj.checkStatus()
+            obj.AcquisitionStartTime = datetime("now");
         end
         
         function abortAcquisition(obj)
@@ -54,7 +59,14 @@ classdef Camera < BaseRunner
 
         function num_available = getNumberNewImages(obj)
             obj.checkStatus()
-            num_available = 1;
+            if isempty(obj.AcquisitionStartTime)
+                error("%s: Acquisition hasn't started.", obj.CurrentLabel)
+            end
+            if datetime("now") > obj.AcquisitionStartTime + seconds(obj.Config.Exposure)
+                num_available = 1;
+            else
+                num_available = 0;
+            end
         end
         
         function [image, num_frames, is_saturated] = acquireImage(obj)
@@ -83,6 +95,17 @@ classdef Camera < BaseRunner
                 return
             end
             [image, num_frames, is_saturated] = obj.acquireImage();
+        end
+
+        function [exposure_time, readout_time] = getTimings(obj)
+            exposure_time = obj.Config.Exposure;
+            readout_time = 0;
+        end
+
+        function [is_stable, temp, status] = checkTemperature(obj)
+            is_stable = false;
+            temp = nan;
+            status = sprintf("Not implemented for this class %s", class(obj));
         end
 
         function label = getStatusLabel(obj)
