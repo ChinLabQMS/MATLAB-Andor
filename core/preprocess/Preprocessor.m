@@ -17,6 +17,9 @@ classdef Preprocessor < BaseRunner
         end
 
         function init(obj)
+            if obj.Initialized
+                return
+            end
             obj.initLoadBackground()
             obj.Initialized = true;
             fprintf("%s: %s Initialized.\n", obj.CurrentLabel, class(obj))

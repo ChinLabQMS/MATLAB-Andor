@@ -3,9 +3,9 @@ classdef Acquisitor < BaseRunner
     properties (SetAccess = immutable, Hidden)
         CameraManager
         Data
-        Stat
         Preprocessor
         Analyzer
+        Stat
     end
 
     properties (SetAccess = protected, Hidden)
@@ -13,14 +13,14 @@ classdef Acquisitor < BaseRunner
     end
 
     methods
-        function obj = Acquisitor(cameras, config, data, stat, preprocessor, analyzer)
+        function obj = Acquisitor(cameras, config, data, preprocessor, analyzer, stat)
             arguments
                 cameras (1, 1) CameraManager = CameraManager()
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
                 data (1, 1) Dataset = Dataset(config, cameras)
-                stat (1, 1) StatResult = StatResult()
                 preprocessor (1, 1) Preprocessor = Preprocessor()
-                analyzer (1, 1) Analyzer = Analyzer()                
+                analyzer (1, 1) Analyzer = Analyzer()
+                stat (1, 1) StatResult = StatResult()
             end
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
@@ -28,13 +28,13 @@ classdef Acquisitor < BaseRunner
             obj.Stat = stat;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
+            obj.Preprocessor.init()
+            obj.Analyzer.init()
         end
 
         function init(obj)
             obj.CameraManager.init(obj.Config.ActiveCameras);
             obj.Data.init()
-            obj.Preprocessor.init()
-            obj.Analyzer.init()
         end
 
         function config(obj, varargin)
@@ -57,9 +57,9 @@ classdef Acquisitor < BaseRunner
                     obj.CameraManager.(camera).startAcquisition()
                 end
                 if type == "Acquire" || type == "Start+Acquire"
-                    % step_timer = tic;
+                    step_timer = tic;
                     raw.(camera).(label) = obj.CameraManager.(camera).acquire('refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout);
-                    % fprintf("%s: %s %s Aquisition elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
+                    fprintf("%s: %s %s Aquisition elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
                     [processed.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process(raw.(camera).(label), label, obj.Data.(camera).Config);
                 end
                 if type == "Analysis"

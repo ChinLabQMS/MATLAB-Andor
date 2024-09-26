@@ -31,19 +31,29 @@ classdef CameraManager < BaseObject
                 cameras (1, :) string = obj.PropList
             end
             for camera = cameras
-                obj.(camera).init();
+                obj.(camera).init()
             end
         end
 
         function close(obj)
             for camera = obj.PropList
-                obj.(camera).close();
+                obj.(camera).close()
             end
         end
 
         function config(obj, varargin)
             for camera = obj.PropList
-                obj.(camera).config(varargin{:});
+                obj.(camera).config(varargin{:})
+            end
+        end
+
+        function abortAcquisition(obj, cameras)
+            arguments
+                obj
+                cameras (1, :) string = obj.PropList
+            end
+            for camera = cameras
+                obj.(camera).abortAcquisition
             end
         end
     end

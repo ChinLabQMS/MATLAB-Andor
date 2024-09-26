@@ -22,6 +22,7 @@ classdef AxesRunner < BaseRunner
             label = obj.Config.ImageLabel;
             content = obj.Config.Content;
             style = obj.Config.Style;
+            func = obj.Config.FuncName;
             switch style
                 case "Image"
                     data = Live.(content).(camera).(label);
@@ -35,7 +36,22 @@ classdef AxesRunner < BaseRunner
                         obj.GraphObj.CData = data;
                     end
                 case "Line"
-                    
+                    data = Live.Processed.(camera).(label);
+                    new = 0;
+                    switch func
+                        case "Mean"
+                            new = mean(data, "all");
+                        case "Max"
+                            new = max(data, [], "all");
+                        case "Gaussian X Center"
+                        case "Gaussian Y Center"
+                    end
+                    if isempty(obj.GraphObj)
+                        obj.GraphObj = plot(obj.AxesObj, new, "LineWidth", 3);
+                    else
+                        obj.GraphObj.XData = [obj.GraphObj.XData, obj.GraphObj.XData(end) + 1];
+                        obj.GraphObj.YData = [obj.GraphObj.YData, new];
+                    end
             end
         end
 

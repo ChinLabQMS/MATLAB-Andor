@@ -31,6 +31,7 @@ classdef LayoutManager < BaseObject
             for field = obj.PropList
                 obj.(field).update(Live)
             end
+            drawnow
         end
     
         function disp(obj)

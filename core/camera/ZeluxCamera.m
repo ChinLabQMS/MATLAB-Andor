@@ -39,7 +39,7 @@ classdef ZeluxCamera < Camera
             num_available = obj.CameraHandle.NumberOfQueuedFrames;
         end
 
-        function [image, num_frames, is_saturated] = acquireImage(obj)
+        function [image, num_frames, is_saturated, frame_index] = acquireImage(obj)
             num_frames = obj.getNumberNewImages();
             if num_frames == 0
                 image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
@@ -52,12 +52,16 @@ classdef ZeluxCamera < Camera
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);
+            frame_index = imageFrame.FrameNumber;
+            % fprintf("%s: Frame index = %d\n", obj.CurrentLabel, frame_index)
         end
 
         function [exposure_time, readout_time] = getTimings(obj)
             obj.checkStatus()
             exposure_time = double(obj.CameraHandle.ExposureTime_us) * 1e-6;
             readout_time = double(obj.CameraHandle.FrameTime_us) * 1e-6;
+            fprintf('%s: Readout time = %.3g s, Exposure time = %.2g s\n', ...
+                    obj.CurrentLabel, readout_time, exposure_time)
         end
     end
 
