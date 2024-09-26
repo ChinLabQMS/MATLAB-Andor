@@ -17,15 +17,17 @@ classdef AxesRunner < BaseRunner
             obj.AxesObj = ax;
         end
 
+        function config(obj, varargin)
+            config@BaseRunner(obj, varargin{:})
+            if obj.Config.Style ~= "Image"
+                obj.GraphObj = matlab.graphics.primitive.(obj.Config.Style).empty;
+            end
+        end
+
         function update(obj, Live)
-            camera = obj.Config.CameraName;
-            label = obj.Config.ImageLabel;
-            content = obj.Config.Content;
-            style = obj.Config.Style;
-            func = obj.Config.FuncName;
-            switch style
+            data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+            switch obj.Config.Style
                 case "Image"
-                    data = Live.(content).(camera).(label);
                     if isempty(obj.GraphObj)
                         obj.GraphObj = imagesc(obj.AxesObj, data);
                         colorbar(obj.AxesObj)
@@ -35,16 +37,14 @@ classdef AxesRunner < BaseRunner
                         obj.GraphObj.YData = [1, x_size];
                         obj.GraphObj.CData = data;
                     end
-                case "Line"
-                    data = Live.Processed.(camera).(label);
-                    new = 0;
-                    switch func
+                case "Line"                   
+                    switch obj.Config.FuncName
                         case "Mean"
                             new = mean(data, "all");
                         case "Max"
                             new = max(data, [], "all");
-                        case "Gaussian X Center"
-                        case "Gaussian Y Center"
+                        otherwise
+                            new = data.(obj.Config.FuncName);
                     end
                     if isempty(obj.GraphObj)
                         obj.GraphObj = plot(obj.AxesObj, new, "LineWidth", 3);

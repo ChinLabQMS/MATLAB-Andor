@@ -28,8 +28,6 @@ classdef Acquisitor < BaseRunner
             obj.Stat = stat;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
-            obj.Preprocessor.init()
-            obj.Analyzer.init()
         end
 
         function init(obj)
@@ -39,14 +37,13 @@ classdef Acquisitor < BaseRunner
 
         function config(obj, varargin)
             config@BaseRunner(obj, varargin{:})
-            obj.Data.init()
         end
 
         function acquire(obj)
             timer = tic;
             sequence_table = obj.Config.ActiveSequence;
             raw = struct();
-            processed = struct();
+            signal = struct();
             background = struct();
             analysis = struct();
             for i = 1:height(sequence_table)
@@ -59,8 +56,8 @@ classdef Acquisitor < BaseRunner
                 if type == "Acquire" || type == "Start+Acquire"
                     step_timer = tic;
                     raw.(camera).(label) = obj.CameraManager.(camera).acquire('refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout);
-                    fprintf("%s: %s %s Aquisition elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
-                    [processed.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process(raw.(camera).(label), label, obj.Data.(camera).Config);
+                    fprintf("%s: [%s %s] Aquisition completed in %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
+                    [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process(raw.(camera).(label), label, obj.Data.(camera).Config);
                 end
                 if type == "Analysis"
                     % TODO: Implement analysis
@@ -71,7 +68,7 @@ classdef Acquisitor < BaseRunner
             end
             obj.Data.add(raw);
             % obj.Stat.add(analysis);
-            obj.Live = struct('Raw', raw, 'Processed', processed, 'Background', background, 'Analysis', analysis);
+            obj.Live = struct('Raw', raw, 'Signal', signal, 'Background', background, 'Analysis', analysis);
             fprintf("%s: Sequence completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
         end
 

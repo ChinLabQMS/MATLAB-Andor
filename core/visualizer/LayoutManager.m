@@ -16,11 +16,11 @@ classdef LayoutManager < BaseObject
                              "SmallAxes1", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes2", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes3", matlab.graphics.axis.Axes.empty)
-                config.BigAxes1 = AxesConfig()
-                config.BigAxes2 = AxesConfig()
-                config.SmallAxes1 = AxesConfig("Line", "Andor19330", "Image", "MaxCount")
-                config.SmallAxes2 = AxesConfig("Line", "Andor19330", "Image", "MaxCount")
-                config.SmallAxes3 = AxesConfig("Line", "Andor19330", "Image", "MaxCount")
+                config.BigAxes1 = AxesConfig("style", "Image")
+                config.BigAxes2 = AxesConfig("style", "Image")
+                config.SmallAxes1 = AxesConfig("style", "Line")
+                config.SmallAxes2 = AxesConfig("style", "Line")
+                config.SmallAxes3 = AxesConfig("style", "Line")
             end
             for field = obj.PropList
                 obj.(field) = AxesRunner(app.(field), config.(field));

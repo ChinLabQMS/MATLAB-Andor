@@ -1,26 +1,30 @@
 classdef AxesConfig < BaseObject
+
+    properties (SetAccess = immutable)
+        Style
+    end
+
     properties (SetAccess = {?BaseObject})
         CameraName
         ImageLabel
-        Style
         Content
         FuncName
     end
 
     methods
-        function obj = AxesConfig(style, camera, label, content, func)
+        function obj = AxesConfig(config)
             arguments
-                style (1, 1) string = "Image"
-                camera (1, 1) string = "Andor19330"
-                label (1, 1) string = "Image"
-                content (1, 1) string = "Processed"
-                func (1, 1) string = "Max"
+                config.style (1, 1) string = "Image"
+                config.camera (1, 1) string = "Andor19330"
+                config.label (1, 1) string = "Image"
+                config.content (1, 1) string = "Signal"
+                config.func (1, 1) string = "Max"
             end
-            obj.Style = style;
-            obj.CameraName = camera;
-            obj.ImageLabel = label;
-            obj.Content = content;
-            obj.FuncName = func;
+            obj.Style = config.style;
+            obj.CameraName = config.camera;
+            obj.ImageLabel = config.label;
+            obj.Content = config.content;
+            obj.FuncName = config.func;
         end
     end
 

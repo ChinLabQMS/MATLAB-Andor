@@ -4,25 +4,13 @@ classdef Preprocessor < BaseRunner
         Background
     end
 
-    properties (SetAccess = protected)
-        Initialized (1, 1) logical = false
-    end
-
     methods
         function obj = Preprocessor(config)
             arguments
                 config (1, 1) PreprocessConfig = PreprocessConfig();
             end
             obj@BaseRunner(config);
-        end
-
-        function init(obj)
-            if obj.Initialized
-                return
-            end
             obj.initLoadBackground()
-            obj.Initialized = true;
-            fprintf("%s: %s Initialized.\n", obj.CurrentLabel, class(obj))
         end
 
         function [processed, background] = process(obj, raw, label, config)
@@ -61,10 +49,7 @@ classdef Preprocessor < BaseRunner
         function [processed, background] = runOffsetCorrection(obj, raw, label, config)
             processed = raw;
             background = zeros(size(raw));
-            if config.CameraName == "Zelux"
-                return
-            end
-            if ~config.FastKinetic
+            if ~isfield(config, "FastKinetic") || ~config.FastKinetic
                 num_frames = 1;
             else
                 num_frames = config.FastKineticSeriesLength;

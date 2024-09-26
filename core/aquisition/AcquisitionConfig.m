@@ -15,6 +15,16 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods
+        function label = findContent(obj, name)
+            active_acquisition = obj.ActiveAcquisition;
+            seq = active_acquisition(contains(active_acquisition.Note, name), :);
+            if height(seq) == 1
+                label = sprintf("%s: %s", seq.Camera(1), seq.Label(1));
+            else
+                label = string.empty;
+            end
+        end
+
         function active_cameras = get.ActiveCameras(obj)
             active_cameras = unique(obj.SequenceTable.Camera);
             active_cameras = string(active_cameras(active_cameras ~= "--inactive--"))';
@@ -27,16 +37,6 @@ classdef AcquisitionConfig < BaseObject
         function active_acquisition = get.ActiveAcquisition(obj)
             active_sequence = obj.ActiveSequence;
             active_acquisition = active_sequence(active_sequence.Type == "Acquire" | active_sequence.Type == 'Start+Acquire', :);
-        end
-
-        function label = findContent(obj, name)
-            active_acquisition = obj.ActiveAcquisition;
-            seq = active_acquisition(contains(active_acquisition.Note, name), :);
-            if height(seq) == 1
-                label = sprintf("%s: %s", seq.Camera(1), seq.Label(1));
-            else
-                label = string.empty;
-            end
         end
 
         function list = get.ListOfImages(obj)

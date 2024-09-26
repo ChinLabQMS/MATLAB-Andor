@@ -4,8 +4,6 @@ classdef Analyzer < BaseRunner
     end
     
     methods
-        function init(obj)
-        end
     end
 
 end
