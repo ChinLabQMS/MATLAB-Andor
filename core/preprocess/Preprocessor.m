@@ -13,15 +13,9 @@ classdef Preprocessor < BaseRunner
             obj.initLoadBackground()
         end
 
-        function [processed, background] = process(obj, raw, label, config)
-            arguments
-                obj
-                raw (:, :) {mustBeNumeric}
-                label (1, 1) string
-                config (1, 1) struct
-            end
-            processed = obj.runBackgroundSubtraction(double(raw), label, config);
-            [processed, background] = obj.runOffsetCorrection(processed, label, config);
+        function [signal, background] = process(obj, raw, label, config)
+            signal = obj.runBackgroundSubtraction(double(raw), label, config);
+            [signal, background] = obj.runOffsetCorrection(signal, label, config);
         end
 
         function processed_data = processData(obj, raw_data)
@@ -38,21 +32,35 @@ classdef Preprocessor < BaseRunner
         end
 
         function processed = runBackgroundSubtraction(obj, raw, ~, config)
-            camera = config.CameraName;
-            if isfield(obj.Background, camera)
-                processed = raw - obj.Background.(camera).(obj.Config.BackgroundSubtractionParams.var_name);
-            else
+            try
+                processed = raw - obj.Background.(config.CameraName).(obj.Config.BackgroundSubtractionParams.var_name);
+            catch
                 processed = raw;
             end
         end
 
-        function [processed, background] = runOffsetCorrection(obj, raw, label, config)
-            processed = raw;
-            background = zeros(size(raw));
-            if ~isfield(config, "FastKinetic") || ~config.FastKinetic
-                num_frames = 1;
-            else
-                num_frames = config.FastKineticSeriesLength;
+        function [signal, background] = runOffsetCorrection(obj, raw, label, config)            
+            switch obj.Config.OffsetCorrectionParams.method
+                case "linear_plane"
+                    if ~isfield(config, "FastKinetic") 
+                        signal = raw;
+                        background = zeros(size(raw));
+                        return
+                    end
+                    if config.FastKinetic
+                        num_frames = config.FastKineticSeriesLength;
+                    else
+                        num_frames = 1;
+                    end
+                    background = cancelOffsetLinearPlane(raw, num_frames, ...
+                        "region_width", obj.Config.OffsetCorrectionParams.region_width, ...
+                        "warning", obj.Config.OffsetCorrectionParams.warning, ...
+                        "warning_thres_offset", obj.Config.OffsetCorrectionParams.warning_thres_offset, ...
+                        "warning_thres_var", obj.Config.OffsetCorrectionParams.warning_thres_var, ...
+                        "note", obj.CurrentLabel + sprintf("[%s %s]", config.CameraName, label));
+                    signal = raw - background;
+                otherwise
+                    error("%s: %s method not implemented", obj.CurrentLabel, obj.Config.method)
             end
         end
     end

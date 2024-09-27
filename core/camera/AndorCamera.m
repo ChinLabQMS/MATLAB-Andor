@@ -37,6 +37,14 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
+        function [ret, status] = getStatus(obj)
+            obj.checkStatus()
+            obj.setToCurrent()
+            [ret, status] = GetStatus();
+            CheckWarning(ret)
+            CheckWarning(status)
+        end
+
         function [num_available, first, last] = getNumberNewImages(obj)
             obj.checkStatus()
             obj.setToCurrent()

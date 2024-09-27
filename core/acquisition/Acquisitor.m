@@ -62,7 +62,8 @@ classdef Acquisitor < BaseRunner
                 if type == "Analysis"
                     % TODO: Implement analysis
                     % step_timer = tic;
-                    % data = processed_images.(camera).(label);
+                    % data = signal.(camera).(label);
+                    % obj.Analyzer.analyze(signal.(camera).(label), obj.Data.(camera).Config)
                     % fprintf("%s: %s %s Analysis elapsed time is %.3f s.\n", obj.CurrentLabel, char(sequence_table.Camera(i)), label, toc(step_timer))
                 end
             end
