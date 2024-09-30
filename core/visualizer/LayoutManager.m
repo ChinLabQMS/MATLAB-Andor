@@ -27,11 +27,20 @@ classdef LayoutManager < BaseObject
             end
         end
     
-        function update(obj, Live)
+        function update(obj, Live, options)
+            arguments
+                obj
+                Live (1, 1) struct
+                options.verbose (1, 1) logical = false
+            end
+            timer = tic;
             for field = obj.PropList
                 obj.(field).update(Live)
             end
             drawnow
+            if options.verbose
+                fprintf("%s: Layout rendered in %.3f s.\n", obj.CurrentLabel, toc(timer))
+            end
         end
     
         function disp(obj)

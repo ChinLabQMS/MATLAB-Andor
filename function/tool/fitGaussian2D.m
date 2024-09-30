@@ -1,4 +1,4 @@
-function [fit_result, x, y, z, output] = fit2dGaussian(signal, options)
+function [fit_result, x, y, z, output] = fitGaussian2D(signal, options)
 %FIT2DGAUSSIAN Fit a 2D gaussian on the 2D signal data. It wraps up the
 % built-in fit function with properly-guessed initial parameters for the fit
 % to converge.
@@ -17,26 +17,26 @@ function [fit_result, x, y, z, output] = fit2dGaussian(signal, options)
 
     arguments
         signal double
-        options.xrange = 1: size(signal, 1)
-        options.yrange = 1: size(signal, 2)
+        options.x_range = 1: size(signal, 1)
+        options.y_range = 1: size(signal, 2)
         options.offset = 'c'
-        options.diagonal logical = true
+        options.cross_term logical = true
         options.verbose logical = true
     end
     
     tic
-    if length(options.xrange) == 1
-        options.xrange = 1:options.xrange;
+    if isscalar(options.x_range)
+        options.x_range = 1:options.x_range;
     end
-    if length(options.yrange) == 1
-        options.yrange = 1:options.yrange;
+    if isscalar(options.y_range)
+        options.y_range = 1:options.y_range;
     end
     
     [x_size, y_size] = size(signal);
-    x_diff = options.xrange(2) - options.xrange(1);
-    y_diff = options.yrange(2) - options.yrange(1);
+    x_diff = options.x_range(2) - options.x_range(1);
+    y_diff = options.y_range(2) - options.y_range(1);
 
-    [y, x, z] = prepareSurfaceData(options.yrange,options.xrange,signal);
+    [y, x, z] = prepareSurfaceData(options.y_range,options.x_range,signal);
     [max_signal, max_index] = max(signal(:));
     min_signal = min(signal(:));
     diff = max_signal - min_signal;
@@ -44,15 +44,15 @@ function [fit_result, x, y, z, output] = fit2dGaussian(signal, options)
     max_y = y(max_index);
 
     % Initial guess for the fit parameters
-    upper = [5*diff,x_size,y_size,options.xrange(end),options.yrange(end), ...
+    upper = [5*diff,x_size,y_size,options.x_range(end),options.y_range(end), ...
         max_signal, max_signal/x_size, max_signal/y_size, inf];
-    lower = [0,0.1*x_diff,0.1*y_diff,options.xrange(1),options.yrange(1), ...
+    lower = [0,0.1*x_diff,0.1*y_diff,options.x_range(1),options.y_range(1), ...
         min_signal-0.1*diff, -max_signal/x_size, -max_signal/y_size, -inf];    
     start = [diff, x_size/10, y_size/10, max_x, max_y, 0, ...
         min_signal, 0, 0, 0];
     
     % Define 2D Gaussian fit type
-    if options.diagonal
+    if options.cross_term
         switch options.offset
             case 'n'
                 fit_type = fittype('a*exp(-0.5*((u-u0)^2/b1^2+(v-v0)^2/b2^2))',...

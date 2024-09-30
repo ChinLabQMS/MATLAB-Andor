@@ -15,10 +15,17 @@ classdef AndorCamera < Camera
             obj@Camera(serial_number, config)
         end
 
-        function startAcquisition(obj)
+        function startAcquisition(obj, options)
+            arguments
+                obj 
+                options.verbose (1, 1) logical = false
+            end
             obj.abortAcquisition()
             [ret] = StartAcquisition();
             CheckWarning(ret)
+            if options.verbose
+                fprintf("%s: Acquisition started.\n", obj.CurrentLabel)
+            end
         end
 
         function abortAcquisition(obj)
@@ -67,7 +74,7 @@ classdef AndorCamera < Camera
             end
         end
         
-        function [image, num_available, is_saturated] = acquireImage(obj)
+        function [image, num_available, is_saturated] = acquireImage(obj, label)
             [num_available, first, last] = obj.getNumberNewImages();
             if num_available == 0
                 image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
@@ -77,7 +84,7 @@ classdef AndorCamera < Camera
             [ret, ImgData, ~, ~] = GetImages16(first, last, obj.Config.YPixels*obj.Config.XPixels);
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
-                error("%s: Unable to acquire image.", obj.CurrentLabel)
+                error("%s: Unable to acquire image %s.", obj.CurrentLabel, label)
             end
             image = uint16(flip(transpose(reshape(ImgData, obj.Config.YPixels, obj.Config.XPixels)), 1));
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);

@@ -11,6 +11,9 @@ classdef Camera < BaseRunner
 
     properties (Access = private)
         AcquisitionStartTime
+        ExampleLocation = "data/2024/09 September/20240926 camera readout noise/FK2_1MHz.mat"
+        ExampleImage
+        CurrentIndex = 0
     end
 
     methods
@@ -48,9 +51,16 @@ classdef Camera < BaseRunner
             obj.applyConfig()
         end
 
-        function startAcquisition(obj)
+        function startAcquisition(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = false
+            end
             obj.checkStatus()
             obj.AcquisitionStartTime = datetime("now");
+            if options.verbose
+                fprintf("%s: Acquisition started.\n", obj.CurrentLabel)
+            end
         end
         
         function abortAcquisition(obj)
@@ -69,10 +79,14 @@ classdef Camera < BaseRunner
             end
         end
         
-        function [image, num_frames, is_saturated] = acquireImage(obj)
-            obj.checkStatus()
+        function [image, num_frames, is_saturated] = acquireImage(obj, label)
             num_frames = obj.getNumberNewImages();
-            image = randi(obj.Config.MaxPixelValue, obj.Config.XPixels, obj.Config.YPixels, "uint16");
+            if isfield(obj.ExampleImage, label)
+                obj.CurrentIndex = mod(obj.CurrentIndex, size(obj.ExampleImage.(label), 3)) + 1;
+                image = obj.ExampleImage.(label)(:, :, obj.CurrentIndex);
+            else
+                image = randi(obj.Config.MaxPixelValue, obj.Config.XPixels, obj.Config.YPixels, "uint16");
+            end
             is_saturated = false;
         end
 
@@ -81,6 +95,8 @@ classdef Camera < BaseRunner
                 obj
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 1000
+                options.verbose (1, 1) logical = false
+                options.label (1, 1) string = ""
             end
             timer = tic;
             while toc(timer) < options.timeout && (obj.getNumberNewImages() == 0)
@@ -94,7 +110,10 @@ classdef Camera < BaseRunner
                 is_saturated = false;
                 return
             end
-            [image, num_frames, is_saturated] = obj.acquireImage();
+            [image, num_frames, is_saturated] = obj.acquireImage(options.label);
+            if options.verbose
+                fprintf("%s: Acquisition completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
+            end
         end
 
         function [exposure_time, readout_time] = getTimings(obj)
@@ -120,6 +139,11 @@ classdef Camera < BaseRunner
     methods (Access = protected, Hidden)
         function initCamera(obj)
             % Implement for each subclass
+            try
+                obj.ExampleImage = load(obj.ExampleLocation, "Data").Data.(obj.ID);
+            catch
+                obj.ExampleImage = struct.empty;
+            end
         end
 
         function closeCamera(obj)
@@ -128,6 +152,18 @@ classdef Camera < BaseRunner
 
         function applyConfig(obj)
             % Implement for each subclass
+            for label = string(fields(obj.ExampleImage)')
+                if label.endsWith("Config")
+                    continue
+                end
+                if ~isequal(size(obj.ExampleImage.(label), [1, 2]), [obj.Config.XPixels, obj.Config.YPixels])
+                    disp(label)
+                    disp(size(obj.ExampleImage.(label), [1, 2]))
+                    disp([obj.Config.XPixels, obj.Config.YPixels])
+                    obj.ExampleImage = struct.empty;
+                    break
+                end
+            end
         end
 
         function checkStatus(obj)

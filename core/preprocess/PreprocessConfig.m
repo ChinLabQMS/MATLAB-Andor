@@ -1,7 +1,8 @@
 classdef PreprocessConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        LoadBackgroundParams = struct("filename", "calibration/StatBackground_20240327_HSSpeed=2_VSSpeed=1.mat")
+        BackgroundFileLocation = "calibration/BkgStat_20240930.mat"
+        
         BackgroundSubtractionParams = struct('var_name', 'SmoothMean')
         OffsetCorrectionParams = struct("method", "linear_plane", ...
                                         "region_width", 100, ...

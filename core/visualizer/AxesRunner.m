@@ -28,11 +28,15 @@ classdef AxesRunner < BaseRunner
         end
 
         function clear(obj)
+            cla(obj.AxesObj)
             obj.GraphObj = matlab.graphics.primitive.(obj.Config.Style).empty;
             fprintf("%s: Axes content cleared.\n", obj.CurrentLabel)
         end
 
         function uisave(obj)
+            if isempty(obj.GraphObj)
+                return
+            end
             PlotData.XData = obj.GraphObj.XData; 
             PlotData.YData = obj.GraphObj.YData; 
             PlotData.Config = obj.Config.struct(); %#ok<STRNU>

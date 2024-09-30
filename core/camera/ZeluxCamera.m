@@ -15,15 +15,25 @@ classdef ZeluxCamera < Camera
             obj@Camera(index, config)
         end
 
-        function startAcquisition(obj)
+        function startAcquisition(obj, options)
+            arguments
+                obj
+                options.verbose (1, 1) logical = false
+            end
             obj.checkStatus()
             % Put the camera in armed state, ready to receive trigger.
             if ~obj.CameraHandle.IsArmed
                 obj.CameraHandle.Arm;
+                if options.verbose
+                    fprintf("%s: %s armed.\n", obj.CurrentLabel, class(obj))
+                end
             end
             % Issue a software trigger if triggered internally.
             if ~obj.Config.ExternalTrigger
                 obj.CameraHandle.IssueSoftwareTrigger;
+                if options.verbose
+                    fprintf("%s: SoftwareTrigger issued.\n", obj.CurrentLabel)
+                end
             end
         end
 
@@ -39,7 +49,7 @@ classdef ZeluxCamera < Camera
             num_available = obj.CameraHandle.NumberOfQueuedFrames;
         end
 
-        function [image, num_frames, is_saturated, frame_index] = acquireImage(obj)
+        function [image, num_frames, is_saturated, frame_index] = acquireImage(obj, label)
             num_frames = obj.getNumberNewImages();
             if num_frames == 0
                 image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
@@ -47,7 +57,7 @@ classdef ZeluxCamera < Camera
                 return
             end
             if num_frames > 1
-                warning('%s: Data processing falling behind acquisition. %d remains.', obj.CurrentLabel, obj.CameraHandle.NumberOfQueuedFrames)
+                warning('%s: %s Data processing falling behind acquisition. %d remains.', obj.CurrentLabel, label, obj.CameraHandle.NumberOfQueuedFrames)
             end
             imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);

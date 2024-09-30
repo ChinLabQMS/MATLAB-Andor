@@ -3,7 +3,7 @@
 %% Load the dataset
 clear; clc;
 %Data = load("data/calibration_test_40shots.mat").Data;
-Data = load('C:\Users\qmspc\Desktop\NewLabData\2024\05 May\2024-05-22\calibration_test_40shots.mat').Data;
+Data = load('data\2024\05 May\2024-05-22\calibration_test_40shots.mat').Data;
 Background = load("calibration\StatBackground_20240327_HSSpeed=2_VSSpeed=1.mat");
 Lattice = struct('Config', Data.Andor19330.Config, ...
                  'Andor19330', struct(), ...
@@ -44,7 +44,7 @@ Lattice.Andor19330.V = (inv(Lattice.Andor19330.K(1:2,:)))';
 Lattice.Andor19330.R = [315, 545];
 
 %%
-[Y, X] = meshgrid(-10:10, -10:10);
+[Y, X] = meshgrid(-50:50, -50:50);
 Y = Y(:);
 X = X(:);
 

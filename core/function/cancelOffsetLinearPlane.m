@@ -6,9 +6,9 @@ function [offset, variance, residuals] = cancelOffsetLinearPlane(signal, num_fra
         options.warning (1,1) logical = true
         options.warning_thres_offset (1,1) double = 10
         options.warning_thres_var (1,1) double = 50
-        options.note (1, 1) string = ""
+        options.warning_note (1, 1) string = ""
     end
-
+    signal = mean(signal, 3);
     [x_pixels, y_pixels] = size(signal);
     x_size = x_pixels/num_frames;
     if y_pixels < 2*options.region_width + 200
@@ -45,12 +45,12 @@ function [offset, variance, residuals] = cancelOffsetLinearPlane(signal, num_fra
     if options.warning
         warning('off','backtrace')
         if any(variance>options.warning_thres_var)
-            warning('%s: Noticable background variance, max = %4.2f, min = %4.2f.', ...
-                options.note,max(variance(:)),min(variance(:)))
+            warning('%sNoticable background variance, max = %4.2f, min = %4.2f.', ...
+                options.warning_note,max(variance(:)),min(variance(:)))
         end
         if any(abs(offset)>options.warning_thres_offset)
-            warning('%s: Noticable background offset, max = %4.2f, min = %4.2f.', ...
-                options.note,max(offset(:)),min(offset(:)))
+            warning('%sNoticable background offset, max = %4.2f, min = %4.2f.', ...
+                options.warning_note,max(offset(:)),min(offset(:)))
         end
         warning('on','backtrace')
     end
