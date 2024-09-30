@@ -1,4 +1,7 @@
 classdef Analyzer < BaseRunner
+
+    properties
+    end
     
     methods
         function obj = Analyzer(config)
@@ -25,7 +28,7 @@ classdef Analyzer < BaseRunner
             processes = parseAnalysisOutput(config.AnalysisNote.(label));
             for p = processes
                 res = feval(AnalysisRegistry.(p).FuncName, ...
-                            res, signal, label, config);
+                            obj, res, signal, label, config);
             end
             if options.verbose
                 fprintf("%s: [%s %s] Analysis completed in %.3f s.\n", obj.CurrentLabel, config.CameraName, label, toc(timer))
@@ -37,20 +40,18 @@ classdef Analyzer < BaseRunner
     end
 
     methods (Access = protected)
-
+        function res = fitCenter(~, res, signal, ~, config)
+            [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D( ...
+                getSignalSum(signal, getNumFrames(config)));
+        end
+        
+        function res = fitGauss(~, res, signal, ~, ~)
+            f = fitGauss2D(signal);
+            res.GaussX = f.x0;
+            res.GaussY = f.y0;
+            res.GaussXWid = f.s1;
+            res.GaussYWid = f.s2;
+        end
     end
 
-end
-
-function res = fitCenter(res, signal, ~, config)
-    [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D( ...
-        getSignalSum(signal, getNumFrames(config)));
-end
-
-function res = fitGauss(res, signal, ~, ~)
-    f = fitGauss2D(signal);
-    res.GaussX = f.x0;
-    res.GaussY = f.y0;
-    res.GaussXWid = f.s1;
-    res.GaussYWid = f.s2;
 end

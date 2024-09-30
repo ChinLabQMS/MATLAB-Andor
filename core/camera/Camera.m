@@ -142,6 +142,7 @@ classdef Camera < BaseRunner
             try
                 obj.ExampleImage = load(obj.ExampleLocation, "Data").Data.(obj.ID);
             catch
+                warning("%s: Unable to load example images.", obj.CurrentLabel)
                 obj.ExampleImage = struct.empty;
             end
         end
