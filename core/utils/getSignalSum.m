@@ -1,4 +1,4 @@
-function signal_sum = getSignalSum(signal, num_frames)
+function [signal_sum, x_frame, y_size] = getSignalSum(signal, num_frames)
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal, [1, 2]);
     x_frame = x_size / num_frames;
