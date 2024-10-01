@@ -30,14 +30,8 @@ classdef Acquisitor < BaseRunner
             obj.Analyzer = analyzer;
         end
 
-        function init(obj, options)
-            arguments
-                obj
-                options.include_camera (1, 1) logical = true
-            end
-            if options.include_camera
-                obj.CameraManager.init(obj.Config.ActiveCameras);
-            end
+        function init(obj)
+            obj.CameraManager.init(obj.Config.ActiveCameras)
             obj.Data.init()
             obj.Stat.init()
             obj.Preprocessor.init()
@@ -60,7 +54,7 @@ classdef Acquisitor < BaseRunner
                 label = string(sequence_table.Label(i));
                 note = string(sequence_table.Note(i));
                 type = string(sequence_table.Type(i));
-                cam_config = obj.Data.(camera).Config;
+                config = obj.Data.(camera).Config;
                 if type == "Start" || type == "Start+Acquire"
                     obj.CameraManager.(camera).startAcquisition( ...
                         "verbose", options.verbose_level > 2)
@@ -71,12 +65,12 @@ classdef Acquisitor < BaseRunner
                         'label', label, 'verbose', options.verbose_level > 1);
 
                     [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process( ...
-                        raw.(camera).(label), label, cam_config, ...
+                        raw.(camera).(label), label, config, ...
                         "verbose", options.verbose_level > 1);
                 end
                 if type == "Analysis" && note ~= ""
                     analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                        signal.(camera).(label), label, cam_config, ...
+                        signal.(camera).(label), label, config, ...
                         "verbose", options.verbose_level > 1);
                 end
             end

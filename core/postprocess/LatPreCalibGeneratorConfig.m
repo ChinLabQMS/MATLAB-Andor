@@ -1,7 +1,7 @@
 classdef LatPreCalibGeneratorConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        DataPath = "data\2024\05 May\2024-05-22\calibration_test_40shots.mat"
+        DataPath = "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat"
         CameraList = ["Andor19330", "Andor19331"]
         ImageLabel = ["Image", "Image"]
 

@@ -46,6 +46,7 @@ classdef Preprocessor < BaseRunner
                 [signal.(label), leakage.(label)] = obj.process( ...
                     data.(label), label, data.Config, varargin{:});
             end
+            fprintf("%s: Data from single camera is processed.\n", obj.CurrentLabel)
         end
 
         function [signal, leakage] = processData(obj, data, varargin)
@@ -93,6 +94,9 @@ classdef Preprocessor < BaseRunner
                 signal = raw - obj.Background.(str1 + str2).(config.CameraName).(obj.Config.BackgroundSubtractionParams.var_name);
             catch
                 signal = raw;
+                warning("backtrace", "off")
+                warning("%s: Unable to subtract background.", obj.CurrentLabel)
+                warning("backtrace", "on")
             end
         end
 
@@ -112,7 +116,7 @@ classdef Preprocessor < BaseRunner
                     else
                         num_frames = 1;
                     end
-                    leakage = cancelOffsetLinearPlane(raw, num_frames, ...
+                    leakage = cancelOffset(raw, num_frames, ...
                         "region_width", obj.Config.OffsetCorrectionParams.region_width, ...
                         "warning", obj.Config.OffsetCorrectionParams.warning, ...
                         "warning_thres_offset", obj.Config.OffsetCorrectionParams.warning_thres_offset, ...

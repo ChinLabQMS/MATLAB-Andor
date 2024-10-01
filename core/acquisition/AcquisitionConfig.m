@@ -24,30 +24,20 @@ classdef AcquisitionConfig < BaseObject
             seq = active_analysis(active_analysis.Camera == camera & active_analysis.Label == label, :);
             if height(seq) == 1
                 [~, out_vars] = parseAnalysisOutput(seq.Note);
-                contents = arrayfun(@(x) "Analysis: " + x, out_vars);
+                contents = ("Analysis: " + out_vars')';
             else
                 contents = string.empty;
             end
         end
 
-        function index_str = findIndex(obj, ax_name)
-            active_acquisition = obj.ActiveAcquisition;
-            seq = active_acquisition(contains(active_acquisition.Note, ax_name), :);
-            if height(seq) == 1
-                index_str = sprintf("%s: %s", seq.Camera, seq.Label);
-            else
-                index_str = string.empty;
-            end
-        end
-
-        function list = get.ListOfImages(obj)
+        function list_str = get.ListOfImages(obj)
             active_acquisition = obj.ActiveAcquisition;
             num_images = height(active_acquisition);
-            list = cell(num_images, 1);
+            list_str = cell(num_images, 1);
             for i = 1:num_images
                 camera = string(active_acquisition.Camera(i));
                 label = string(active_acquisition.Label(i));
-                list{i} = sprintf('%s: %s', camera, label);
+                list_str{i} = sprintf('%s: %s', camera, label);
             end
         end
 

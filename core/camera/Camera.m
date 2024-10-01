@@ -11,7 +11,7 @@ classdef Camera < BaseRunner
 
     properties (Access = private)
         AcquisitionStartTime
-        ExampleLocation = "data/2024/09 September/20240926 camera readout noise/FK2_1MHz.mat"
+        ExampleLocation = "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat"
         ExampleImage
         CurrentIndex = 0
     end
@@ -142,7 +142,7 @@ classdef Camera < BaseRunner
             try
                 obj.ExampleImage = load(obj.ExampleLocation, "Data").Data.(obj.ID);
             catch
-                warning("%s: Unable to load example images.", obj.CurrentLabel)
+                warning("%s: Unable to load example images from %s.", obj.CurrentLabel, obj.ExampleLocation)
                 obj.ExampleImage = struct.empty;
             end
         end

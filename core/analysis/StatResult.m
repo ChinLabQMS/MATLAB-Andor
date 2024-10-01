@@ -30,25 +30,22 @@ classdef StatResult < BaseStorage
             fprintf("%s: %s initialized, total memory is %g MB.\n", obj.CurrentLabel, class(obj), obj.MemoryUsage)
         end
 
-        function add(obj, new_analysis, options)
+        function add(obj, new, options)
             arguments
                 obj 
-                new_analysis (1, 1) struct
+                new (1, 1) struct
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
             obj.CurrentIndex = obj.CurrentIndex + 1;
-            for field = obj.PropList
-                if isempty(obj.(field))
-                    continue
-                end
-                for label = string(fields(obj.(field))')
-                    new = struct2table(new_analysis.(field).(label));
-                    if obj.CurrentIndex > size(obj.(field).(label), 1)
-                        obj.(field).(label) = circshift(obj.(field).(label), -1, 1);
-                        obj.(field).(label)(end, :) = new;
+            for camera = string(fields(new))'
+                for label = string(fields(new.(camera)))'
+                    new_table = struct2table(new.(camera).(label));
+                    if obj.CurrentIndex > size(obj.(camera).(label), 1)
+                        obj.(camera).(label) = circshift(obj.(camera).(label), -1, 1);
+                        obj.(camera).(label)(end, :) = new_table;
                     else
-                        obj.(field).(label)(obj.CurrentIndex, :) = new;
+                        obj.(camera).(label)(obj.CurrentIndex, :) = new_table;
                     end
                 end
             end

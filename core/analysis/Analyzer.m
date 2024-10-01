@@ -1,6 +1,7 @@
 classdef Analyzer < BaseRunner
 
     properties
+        
     end
     
     methods

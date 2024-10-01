@@ -1,4 +1,4 @@
-function [offset, variance, residuals] = cancelOffsetLinearPlane(signal, num_frames, options)
+function [offset, variance, residuals] = cancelOffset(signal, num_frames, options)
     arguments
         signal
         num_frames (1,1) double = 1
