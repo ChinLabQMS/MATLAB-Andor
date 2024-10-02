@@ -25,9 +25,7 @@ classdef LatPreCalibGenerator < BaseRunner
             data = load(obj.Config.DataPath).Data;
             obj.Signal = obj.Preprocessor.processData(data);
             fprintf("%s: Processed Signal loaded for lattice calibration.\n", obj.CurrentLabel)
-        end
 
-        function process(obj)
             for i = 1: length(obj.Config.CameraList)
                 camera = obj.Config.CameraList(i);
                 label = obj.Config.ImageLabel(i);
@@ -42,6 +40,11 @@ classdef LatPreCalibGenerator < BaseRunner
                 s.Width = [xw, yw];
 
                 obj.Stat.(camera) = s;
+                obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
+                obj.Lattice.(camera).config("RFFT", round(2 * obj.Stat.(camera).Width))
+                if camera == "Zelux"
+                    obj.Lattice.(camera).config("RFFT", 700)
+                end
             end
             fprintf("%s: Finish processing images.\n", obj.CurrentLabel)
         end
@@ -60,8 +63,6 @@ classdef LatPreCalibGenerator < BaseRunner
                 hold on
                 viscircles([s.PeakInit(:, 2), s.PeakInit(:, 1)], 7, ...
                     'Color', 'red', 'LineWidth', 1, 'EnhanceVisibility', false);
-            end
-            if isfield(s, "PeakFinal")
                 viscircles([s.PeakFinal(:, 2), s.PeakFinal(:, 1)], 2, ...
                     'Color', 'white', 'LineWidth', 1, 'EnhanceVisibility', false);
             end
@@ -71,22 +72,28 @@ classdef LatPreCalibGenerator < BaseRunner
             xy_size = size(obj.Stat.(camera).FFT);
             xy_center = (xy_size+1) / 2;
 
-            obj.Stat.(camera).PeakInit = peak_init;
-            obj.Lattice.(camera).K = (peak_init-xy_center)./xy_size;
-            obj.Lattice.(camera).V = (inv(obj.Lattice.(camera).K(1:2,:)))';
-            obj.Lattice.(camera).R = obj.Stat.(camera).Center;           
-            printLatCalibration(obj.Lattice.(camera))
+            K = (peak_init-xy_center)./xy_size;
+            V = (inv(K(1:2,:)))';
+            R = obj.Stat.(camera).Center;
 
-            obj.Lattice.(camera) = calibLatV(obj.Stat.(camera).MeanImage, ...
-                obj.Lattice.(camera), ...
-                "R_crop", 2*obj.Stat.(camera).Width, ...
-                "R_fit", 7);
+            obj.Stat.(camera).PeakInit = peak_init;
+            obj.Lattice.(camera).init(K, V, R)
+            disp(obj.Lattice.(camera))
+
+            obj.Lattice.(camera).calibrateV( ...
+                obj.Stat.(camera).MeanImage, "plot_diagnostic", true, "plot_fftpeaks", true);
             obj.Stat.(camera).PeakFinal = xy_size .* obj.Lattice.(camera).K + xy_center;
-            printLatCalibration(obj.Lattice.(camera))
+            disp(obj.Lattice.(camera))
         end
 
         function save(obj)
-            
+            for camera = obj.Config.CameraList
+                if ~isfield(obj.Lattice, camera)
+                    warning("%s: Camera %s is not calibrated.", obj.CurrentLabel, camera)
+                end
+            end
+            Lat = obj.Lattice;
+            save(sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd")), "-struct", "Lat")
         end
     end
 

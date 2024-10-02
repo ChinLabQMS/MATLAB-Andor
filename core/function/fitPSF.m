@@ -1,4 +1,4 @@
-function [average_psf, centroids] = fitPSF(image, thresh_percent, crop_size)
+function [average_psf, final_centroids_1] = fitPSF(image, thresh_percent, crop_size)
     arguments
         image (:, :, :) double
         thresh_percent (1, 1) double = 0.5
@@ -34,6 +34,13 @@ function [average_psf, centroids] = fitPSF(image, thresh_percent, crop_size)
         cluster_points = centroids(clusters ==i,:);
         final_centroids = [final_centroids; mean(cluster_points,1)];
     end
+
+  final_centroid_intensity = zeros(size(final_centroids,1),1);
+    for i = 1:size(final_centroids,1)
+           final_centroid_intensity(i) = image(round(final_centroids(i,2)),round(final_centroids(i,1)));
+    end
+    [sorted,sortindex]=sort(final_centroid_intensity,'descend');
+    final_centroids_1 = final_centroids(sortindex, :);
 
     % % Display original image overlaid with the centroids after clustering
     % figure;

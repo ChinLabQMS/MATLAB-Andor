@@ -1,7 +1,7 @@
 classdef Analyzer < BaseRunner
 
     properties
-        
+        Lattice
     end
     
     methods
