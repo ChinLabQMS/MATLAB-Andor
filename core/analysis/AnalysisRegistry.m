@@ -9,8 +9,9 @@ classdef AnalysisRegistry
                           "FuncName", "fitGauss")
         FitPSF = struct("OutputVars", [], ... 
                         "OutputData", []) % "PSFImage"
-        CalibLat = struct("OutputVars", [], ... % ["LatX", "LatY"]
-                          "OutputData", []) % ["LatK", "LatV"]
+        CalibLatR = struct("OutputVars", ["LatX", "LatY"], ... % ["LatX", "LatY"]
+                           "OutputData", [], ...
+                           "FuncName", "calibLatR")
         CalibDMD = struct("OutputVars", [], ... % ["DmdXC", "DmdYC"]
                           "OutputData", []) % "DmdV"
     end

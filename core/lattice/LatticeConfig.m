@@ -1,7 +1,6 @@
 classdef LatticeConfig < BaseObject
 
     properties (SetAccess = {?BaseObject})
-        RFFT = 100
         CalibR_BinarizeThres = 20
         CalibR_OutlierThres = 1000
         CalibV_RFit = 7

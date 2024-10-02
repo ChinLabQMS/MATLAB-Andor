@@ -13,7 +13,8 @@ classdef Analyzer < BaseRunner
         end
 
         function init(obj)
-            fprintf("%s: Analyzer initialized.\n", obj.CurrentLabel)
+            obj.Lattice = load(obj.Config.LatCalibPath);
+            fprintf("%s: Lattice calibration loaded.\n", obj.CurrentLabel)
         end
 
         function res = analyze(obj, signal, label, config, options)
@@ -42,8 +43,8 @@ classdef Analyzer < BaseRunner
 
     methods (Access = protected)
         function res = fitCenter(~, res, signal, ~, config)
-            [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D( ...
-                getSignalSum(signal, getNumFrames(config)));
+            signal = getSignalSum(signal, getNumFrames(config));
+            [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
         end
         
         function res = fitGauss(~, res, signal, ~, ~)
@@ -52,6 +53,14 @@ classdef Analyzer < BaseRunner
             res.GaussY = f.y0;
             res.GaussXWid = f.s1;
             res.GaussYWid = f.s2;
+        end
+
+        function res = calibLatR(obj, res, signal, ~, config)
+            camera = config.CameraName;
+            signal = getSignalSum(signal, getNumFrames(config));
+            obj.Lattice.(camera).calibrateR(signal)
+            res.LatX = obj.Lattice.(camera).R(1);
+            res.LatY = obj.Lattice.(camera).R(2);
         end
     end
 

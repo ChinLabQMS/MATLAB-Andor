@@ -20,26 +20,27 @@ classdef Lattice < BaseRunner
             Lat.ID = ID;            
         end
 
-        function init(Lat, K, V, R)
-            Lat.K = K;
-            Lat.V = V;
-            Lat.R = R;
+        function init(Lat, xy_size, peak_pos, center)
+            [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
+            Lat.R = center;
         end
 
-        function calibrateR(Lat, signal, options)
+        function corr = convert(Lat, lat_corr)
+            corr = lat_corr * Lat.V + Lat.R;
+        end
+
+        function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
-                options.R_crop (1, :) double = Lat.Config.RFFT
+                x_range (1, :) double = 1:size(signal, 1)
+                y_range (1, :) double = 1:size(signal, 2)
                 options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
                 options.outlier_thres (1, 1) double = Lat.Config.CalibR_OutlierThres
-            end
-
+            end            
+            signal_modified = signal;
+            signal_modified((signal_modified < options.binarize_thres) | (signal_modified > options.outlier_thres)) = 0;        
             % Extract lattice center coordinates from phase at FFT peak
-            [signal_box, x_range, y_range] = prepareBox(signal, Lat.R, options.R_crop);
-            signal_modified = signal_box;
-            signal_modified((signal_modified < options.binarize_thres) | (signal_modified > options.outlier_thres)) = 0;
-        
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
             for i = 1:2
@@ -49,11 +50,12 @@ classdef Lattice < BaseRunner
             Lat.R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
         end
 
-        function calibrateV(Lat, signal, options)
+        function vargout = calibrateV(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
-                options.R_crop = Lat.Config.RFFT
+                x_range (1, :) double = 1:size(signal, 1)
+                y_range (1, :) double = 1:size(signal, 2)
                 options.R_fit = Lat.Config.CalibV_RFit
                 options.warning_latnorm_thres = Lat.Config.CalibV_WarnLatNormThres
                 options.warning_rsquared = Lat.Config.CalibV_WarnRSquared
@@ -61,20 +63,17 @@ classdef Lattice < BaseRunner
                 options.plot_fftpeaks (1, 1) logical = Lat.Config.CalibV_PlotFFTPeaks 
             end
             LatInit = Lat.struct();
-
-            [signal_box, x_range, y_range] = prepareBox(signal, Lat.R, options.R_crop);
-            signal_fft = abs(fftshift(fft2(signal_box)));
-            xy_size = size(signal_box);
-            xy_center = (xy_size + 1) / 2;
-            PeakPosInit = xy_size .* LatInit.K + xy_center;
-            
-            PeakPos = fitFFTPeaks(signal_fft, PeakPosInit, ...
+            signal_fft = abs(fftshift(fft2(signal)));
+            xy_size = size(signal);
+            peak_init = convertK2FFTPeak(xy_size, Lat.K);
+            peak_pos = fitFFTPeaks(signal_fft, peak_init, ...
                 "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared, ...
-                "plot_fftpeaks", options.plot_fftpeaks);
-         
-            Lat.K = (PeakPos - xy_center)./xy_size;
-            Lat.V = (inv(Lat.K(1:2,:)))';
-            Lat.calibrateR(signal, "R_crop", options.R_crop);
+                "plot_fftpeaks", options.plot_fftpeaks);         
+            [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
+            Lat.calibrateR(signal, x_range, y_range)
+            if nargout == 1
+                vargout{1} = peak_pos;
+            end
         
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
@@ -86,14 +85,17 @@ classdef Lattice < BaseRunner
         
             if options.plot_diagnostic
                 figure
-                Lat.plot(signal_box, "x_range", x_range, "y_range", y_range)
-        
+                Lat.plot(signal, "x_range", x_range, "y_range", y_range)
+                title(sprintf("%s: signal", Lat.ID))
+                
                 figure
                 imagesc(log(signal_fft))
+                title(sprintf("%s: log(FFT)", Lat.ID))
                 axis image
+                colorbar
                 hold on
-                viscircles(PeakPosInit(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
-                viscircles(PeakPos(:, 2:-1:1), 2, "EnhanceVisibility", false, "Color", "red", "LineWidth", 1);
+                viscircles(peak_init(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
+                viscircles(peak_pos(:, 2:-1:1), 2, "EnhanceVisibility", false, "Color", "red", "LineWidth", 1);
             end
         end
 
@@ -106,56 +108,70 @@ classdef Lattice < BaseRunner
                 options.y_range = 1:size(signal, 2)
                 options.latx_range = []
                 options.laty_range = []
+                options.lat_corr = []
             end
-            if isempty(options.latx_range) || isempty(options.laty_range)
-                xmin = options.x_range(1);
-                xmax = options.x_range(end);
-                ymin = options.y_range(1);
-                ymax = options.y_range(end);
-                corners = [xmin, ymin; xmax, ymin; xmin, ymax; xmax, ymax];
-                lat_corners = (corners - Lat.R)/Lat.V;
-                lat_xmin = ceil(min(lat_corners(:, 1)));
-                lat_xmax = floor(max(lat_corners(:, 1)));
-                lat_ymin = ceil(min(lat_corners(:, 2)));
-                lat_ymax = floor(max(lat_corners(:, 2)));
-                [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
-                lat_corr = [X(:), Y(:)];
-                corr = lat_corr * Lat.V + Lat.R;
-                corr = corr((corr(:, 1) < xmax) & (corr(:, 1) > xmin) & (corr(:, 2) < ymax) & (corr(:, 2) > ymin), :);
+            if isempty(options.lat_corr)
+                if isempty(options.latx_range) || isempty(options.laty_range)
+                    xmin = options.x_range(1);
+                    xmax = options.x_range(end);
+                    ymin = options.y_range(1);
+                    ymax = options.y_range(end);
+                    corners = [xmin, ymin; xmax, ymin; xmin, ymax; xmax, ymax];
+                    lat_corners = (corners - Lat.R)/Lat.V;
+                    lat_xmin = ceil(min(lat_corners(:, 1)));
+                    lat_xmax = floor(max(lat_corners(:, 1)));
+                    lat_ymin = ceil(min(lat_corners(:, 2)));
+                    lat_ymax = floor(max(lat_corners(:, 2)));
+                    [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
+                    corr = Lat.convert([X(:), Y(:)]);
+                    corr = corr((corr(:, 1) < xmax) & (corr(:, 1) > xmin) & (corr(:, 2) < ymax) & (corr(:, 2) > ymin), :);
+                else
+                    [Y, X] = meshgrid(options.lat_yrange, options.lat_xrange);
+                    corr = Lat.convert([X(:), Y(:)]);
+                end
             else
-                [Y, X] = meshgrid(options.lat_yrange, options.lat_xrange);
-                lat_corr = [X(:), Y(:)];
-                corr = lat_corr * Lat.V + Lat.R;
+                corr = Lat.convert(options.lat_corr);
             end
-            
+
             imagesc(options.ax, options.y_range, options.x_range, signal)
             axis image
             colorbar
             hold on
-            scatter(corr(:, 2), corr(:, 1), 2, 'filled', 'o','MarkerEdgeColor','none', 'MarkerFaceColor','red')
+            scatter(corr(:, 2), corr(:, 1), 5, 'o', 'MarkerEdgeColor', 'none', 'MarkerFaceColor', 'red')
             hold off
         end
 
         function disp(Lat)
             V1 = Lat.V(1,:);
             V2 = Lat.V(2,:);
-            V3 = V1+V2;
-            fprintf('%s:\n', Lat.CurrentLabel)
-            fprintf('\tV1=(%4.2f, %4.2f),\t|V1|=%4.2fpx\n',V1(1),V1(2),norm(V1))
-            fprintf('\tV2=(%4.2f, %4.2f),\t|V2|=%4.2fpx\n',V2(1),V2(2),norm(V2))
-            fprintf('\tV3=(%4.2f, %4.2f),\t|V3|=%4.2fpx\n',V3(1),V3(2),norm(V3))
-            fprintf('\tAngle<V1,V2>=%4.2f deg\n',acosd(V1*V2'/(norm(V1)*norm(V2))))
-            fprintf('\tAngle<V1,V3>=%4.2f deg\n',acosd(V1*V3'/(norm(V1)*norm(V3))))
+            if acosd(V1*V2'/(norm(V1)*norm(V2))) > 90
+                V3 = V1 + V2;
+            else
+                V3 = V1 - V2;
+            end
+            fprintf('%s: \n\tR = (%5.2f, %5.2f)\n', Lat.CurrentLabel, Lat.R(1), Lat.R(2))
+            fprintf('\tV1 = (%5.2f, %5.2f),\t|V1| = %5.2f px\n', V1(1), V1(2), norm(V1))
+            fprintf('\tV2 = (%5.2f, %5.2f),\t|V2| = %5.2f px\n', V2(1), V2(2), norm(V2))
+            fprintf('\tV3 = (%5.2f, %5.2f),\t|V3| = %5.2f px\n', V3(1), V3(2), norm(V3))
+            fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(V1*V2'/(norm(V1)*norm(V2))))
+            fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
         end
 
         function label = getStatusLabel(Lat)
-            if Lat.ID ~= ""
-                label = sprintf(" (%s)", Lat.ID);
-            else
-                label = "";
-            end
+            label = sprintf(" (%s)", Lat.ID);
         end
     end
+end
+
+function [K, V] = convertFFTPeak2K(xy_size, peak_pos)
+    xy_center = floor(xy_size / 2) + 1;
+    K = (peak_pos - xy_center)./xy_size;
+    V = (inv(K(1:2,:)))';
+end
+
+function peak_pos = convertK2FFTPeak(xy_size, K)
+    xy_center = floor(xy_size / 2) + 1;
+    peak_pos = K.*xy_size + xy_center;
 end
 
 function [PeakPos, FFTPeakFit] = fitFFTPeaks(FFT, PeakPosInit, options)

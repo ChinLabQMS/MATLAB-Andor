@@ -1,7 +1,7 @@
 classdef AnalysisConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        LatCalibrationLocation = "calibration/"
+        LatCalibPath = "calibration/LatCalib_20241002.mat"
     end
 
 end

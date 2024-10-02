@@ -1,31 +1,31 @@
-%%
+%% Create a generator object
 clear; clc;
 p = LatPreCalibGenerator;
 
-%%
+%% Config data path
 p.config("DataPath", "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat")
 p.init()
 
-%%
+%% Plot FFT of a small box
 close all
 p.plot("Andor19330")
 
-%%
-p.calibrate("Andor19330", [105, 188; 156, 223; 212, 196])
+%% Input initial peak positions, [x1, y1; x2, y2]
+p.calibrate("Andor19330", [105, 204; 156, 241; 212, 210])
 
-%%
+%% Andor19331
 close all
 p.plot("Andor19331")
 
 %%
-p.calibrate("Andor19331", [92, 165; 123, 216; 178, 212])
+p.calibrate("Andor19331", [116, 165; 155, 216; 227, 212])
 
 %%
 close all
 p.plot("Zelux")
 
 %%
-p.calibrate("Zelux", [547, 566; 598, 595; 651, 571])
+p.calibrate("Zelux", [656, 566; 716, 595; 779, 571])
 
-%%
+%% Save calibration
 p.save()

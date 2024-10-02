@@ -34,56 +34,40 @@ classdef LatPreCalibGenerator < BaseRunner
                 s.MeanImage = getSignalSum(obj.Signal.(camera).(label), getNumFrames(obj.Signal.(camera).Config));
                 [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);
                 
-                s.FFTImage = prepareBox(s.MeanImage, [xc, yc], 2*min(xw, yw));
-                s.FFT = abs(fftshift(fft2(s.FFTImage)));
+                [s.FFTImage, s.FFTX, s.FFTY] = prepareBox(s.MeanImage, [xc, yc], 2*[xw, yw]);
+                s.FFTPattern = abs(fftshift(fft2(s.FFTImage)));
                 s.Center = [xc, yc];
                 s.Width = [xw, yw];
 
                 obj.Stat.(camera) = s;
                 obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
-                obj.Lattice.(camera).config("RFFT", round(2 * obj.Stat.(camera).Width))
-                if camera == "Zelux"
-                    obj.Lattice.(camera).config("RFFT", 700)
-                end
             end
             fprintf("%s: Finish processing images.\n", obj.CurrentLabel)
         end
 
         function plot(obj, camera)
             s = obj.Stat.(camera);
-            if ~isfield(s, "FFT")
+            if ~isfield(s, "FFTPattern")
                 error("%s: Please process images first.", obj.CurrentLabel)
             end
             figure
-            imagesc(log(s.FFT))
+            imagesc(log(s.FFTPattern))
             axis image
             title(camera)
             colorbar
-            if isfield(s, "PeakInit")
-                hold on
-                viscircles([s.PeakInit(:, 2), s.PeakInit(:, 1)], 7, ...
-                    'Color', 'red', 'LineWidth', 1, 'EnhanceVisibility', false);
-                viscircles([s.PeakFinal(:, 2), s.PeakFinal(:, 1)], 2, ...
-                    'Color', 'white', 'LineWidth', 1, 'EnhanceVisibility', false);
-            end
         end
 
         function calibrate(obj, camera, peak_init)
-            xy_size = size(obj.Stat.(camera).FFT);
-            xy_center = (xy_size+1) / 2;
-
-            K = (peak_init-xy_center)./xy_size;
-            V = (inv(K(1:2,:)))';
-            R = obj.Stat.(camera).Center;
-
+            Lat = obj.Lattice.(camera);
+            FFT = obj.Stat.(camera).FFTPattern;
             obj.Stat.(camera).PeakInit = peak_init;
-            obj.Lattice.(camera).init(K, V, R)
-            disp(obj.Lattice.(camera))
+            Lat.init(size(FFT), peak_init, obj.Stat.(camera).Center)
+            disp(Lat)
 
-            obj.Lattice.(camera).calibrateV( ...
-                obj.Stat.(camera).MeanImage, "plot_diagnostic", true, "plot_fftpeaks", true);
-            obj.Stat.(camera).PeakFinal = xy_size .* obj.Lattice.(camera).K + xy_center;
-            disp(obj.Lattice.(camera))
+            obj.Stat.(camera).PeakFinal = Lat.calibrateV( ...
+                obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
+                "plot_diagnostic", true, "plot_fftpeaks", true);
+            disp(Lat)
         end
 
         function save(obj)
