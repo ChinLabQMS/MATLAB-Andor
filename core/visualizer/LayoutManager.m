@@ -6,6 +6,8 @@ classdef LayoutManager < BaseObject
         SmallAxes1 (1, 1) AxesRunner
         SmallAxes2 (1, 1) AxesRunner
         SmallAxes3 (1, 1) AxesRunner
+        SmallAxes4 (1, 1) AxesRunner
+        SmallAxes5 (1, 1) AxesRunner
     end
 
     methods
@@ -15,12 +17,16 @@ classdef LayoutManager < BaseObject
                              "BigAxes2", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes1", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes2", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes3", matlab.graphics.axis.Axes.empty)
+                             "SmallAxes3", matlab.graphics.axis.Axes.empty, ...
+                             "SmallAxes4", matlab.graphics.axis.Axes.empty, ...
+                             "SmallAxes5", matlab.graphics.axis.Axes.empty)
                 config.BigAxes1 = AxesConfig("style", "Image")
                 config.BigAxes2 = AxesConfig("style", "Image")
                 config.SmallAxes1 = AxesConfig("style", "Line")
                 config.SmallAxes2 = AxesConfig("style", "Line")
                 config.SmallAxes3 = AxesConfig("style", "Line")
+                config.SmallAxes4 = AxesConfig("style", "Line")
+                config.SmallAxes5 = AxesConfig("style", "Line")
             end
             for field = obj.PropList
                 obj.(field) = AxesRunner(app.(field), config.(field));

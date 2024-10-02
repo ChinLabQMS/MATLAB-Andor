@@ -7,6 +7,8 @@ classdef AppConfig < BaseObject
         SmallAxes1Index = "Andor19330: Image"
         SmallAxes2Index = "Andor19330: Image"
         SmallAxes3Index = "Andor19330: Image"
+        SmallAxes4Index = "Andor19331: Image"
+        SmallAxes5Index = "Zelux: Lattice"
 
         ScreenOffset = [10, 35, -20, -70]
         SequenceTable = SequenceRegistry.Sequence4Basic
