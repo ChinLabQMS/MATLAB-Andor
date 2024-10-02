@@ -104,21 +104,29 @@ classdef Lattice < BaseRunner
                 options.ax = gca()
                 options.x_range = 1:size(signal, 1)
                 options.y_range = 1:size(signal, 2)
+                options.latx_range = []
+                options.laty_range = []
             end
-            xmin = options.x_range(1);
-            xmax = options.x_range(end);
-            ymin = options.y_range(1);
-            ymax = options.y_range(end);
-            corners = [xmin, ymin; xmax, ymin; xmin, ymax; xmax, ymax];
-            lat_corners = (corners - Lat.R)/Lat.V;
-            lat_xmin = ceil(min(lat_corners(:, 1)));
-            lat_xmax = floor(max(lat_corners(:, 1)));
-            lat_ymin = ceil(min(lat_corners(:, 2)));
-            lat_ymax = floor(max(lat_corners(:, 2)));
-            [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
-            lat_corr = [X(:), Y(:)];
-            corr = lat_corr * Lat.V + Lat.R;
-            corr = corr((corr(:, 1) < xmax) & (corr(:, 1) > xmin) & (corr(:, 2) < ymax) & (corr(:, 2) > ymin), :);
+            if isempty(options.latx_range) || isempty(options.laty_range)
+                xmin = options.x_range(1);
+                xmax = options.x_range(end);
+                ymin = options.y_range(1);
+                ymax = options.y_range(end);
+                corners = [xmin, ymin; xmax, ymin; xmin, ymax; xmax, ymax];
+                lat_corners = (corners - Lat.R)/Lat.V;
+                lat_xmin = ceil(min(lat_corners(:, 1)));
+                lat_xmax = floor(max(lat_corners(:, 1)));
+                lat_ymin = ceil(min(lat_corners(:, 2)));
+                lat_ymax = floor(max(lat_corners(:, 2)));
+                [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
+                lat_corr = [X(:), Y(:)];
+                corr = lat_corr * Lat.V + Lat.R;
+                corr = corr((corr(:, 1) < xmax) & (corr(:, 1) > xmin) & (corr(:, 2) < ymax) & (corr(:, 2) > ymin), :);
+            else
+                [Y, X] = meshgrid(options.lat_yrange, options.lat_xrange);
+                lat_corr = [X(:), Y(:)];
+                corr = lat_corr * Lat.V + Lat.R;
+            end
             
             imagesc(options.ax, options.y_range, options.x_range, signal)
             axis image
