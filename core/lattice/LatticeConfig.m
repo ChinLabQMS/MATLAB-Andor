@@ -9,15 +9,5 @@ classdef LatticeConfig < BaseObject
         CalibV_PlotDiagnostic = false
         CalibV_PlotFFTPeaks = false
     end
-
-    methods (Static)
-        function obj = struct2obj(s)
-            obj = BaseObject.struct2obj(s, LatticeConfig());
-        end
-
-        function obj = file2obj(filename)
-            obj = BaseObject.file2obj(filename, LatticeConfig());
-        end
-    end
-
+    
 end

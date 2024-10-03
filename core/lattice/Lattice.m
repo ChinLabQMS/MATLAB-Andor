@@ -45,7 +45,7 @@ classdef Lattice < BaseRunner
             phase_vec = zeros(1,2);
             for i = 1:2
                 phase_mask = exp(-1i*2*pi*(Lat.K(i,1)*X + Lat.K(i,2)*Y));
-                phase_vec(i) = angle(sum(phase_mask.*signal_modified,'all'));
+                phase_vec(i) = angle(sum(phase_mask.*signal_modified, 'all'));
             end
             Lat.R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
         end
