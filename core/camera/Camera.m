@@ -96,7 +96,7 @@ classdef Camera < BaseRunner
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 1000
                 options.verbose (1, 1) logical = false
-                options.label (1, 1) string = ""
+                options.label (1, 1) string = "Image"
             end
             timer = tic;
             while toc(timer) < options.timeout && (obj.getNumberNewImages() == 0)
@@ -112,7 +112,12 @@ classdef Camera < BaseRunner
             end
             [image, num_frames, is_saturated] = obj.acquireImage(options.label);
             if options.verbose
-                fprintf("%s: Acquisition completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
+                fprintf("%s: [%s] Acquisition completed in %.3f s.\n", obj.CurrentLabel, options.label, toc(timer))
+            end
+            if is_saturated
+                warning('backtrace', 'off')
+                warning("%s: [%s] Image is saturated.", obj.CurrentLabel, options.label)
+                warning('backtrace', 'on')
             end
         end
 
@@ -128,7 +133,7 @@ classdef Camera < BaseRunner
         end
 
         function label = getStatusLabel(obj)
-            label = sprintf("%s (Initialized: %d)", string(obj.ID), obj.Initialized);
+            label = sprintf("%s", string(obj.ID));
         end
 
         function delete(obj)

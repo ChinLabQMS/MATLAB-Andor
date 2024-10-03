@@ -1,6 +1,6 @@
 classdef Analyzer < BaseRunner
 
-    properties
+    properties (SetAccess = protected)
         Lattice
     end
     

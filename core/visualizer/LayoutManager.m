@@ -20,8 +20,8 @@ classdef LayoutManager < BaseObject
                              "SmallAxes3", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes4", matlab.graphics.axis.Axes.empty, ...
                              "SmallAxes5", matlab.graphics.axis.Axes.empty)
-                config.BigAxes1 = AxesConfig("style", "Image")
-                config.BigAxes2 = AxesConfig("style", "Image")
+                config.BigAxes1 = AxesConfig("style", "Image", "func", "None")
+                config.BigAxes2 = AxesConfig("style", "Image", "func", "None")
                 config.SmallAxes1 = AxesConfig("style", "Line")
                 config.SmallAxes2 = AxesConfig("style", "Line")
                 config.SmallAxes3 = AxesConfig("style", "Line")
@@ -46,6 +46,19 @@ classdef LayoutManager < BaseObject
             drawnow
             if options.verbose
                 fprintf("%s: Layout rendered in %.3f s.\n", obj.CurrentLabel, toc(timer))
+            end
+        end
+
+        function clear(obj, names, options)
+            arguments
+                obj
+                names = obj.PropList
+                options.line_ax_only = true
+            end
+            for field = names
+                if (~options.line_ax_only) || (options.line_ax_only && obj.(field).Config.Style == "Line")
+                    obj.(field).clear()
+                end
             end
         end
     

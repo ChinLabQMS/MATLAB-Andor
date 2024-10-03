@@ -5,7 +5,17 @@ classdef ZeluxCameraConfig < BaseObject
         ExternalTrigger (1, 1) logical = true
         XPixels = 1440
         YPixels = 1080
-        MaxPixelValue = 1023
+        MaxPixelValue = 1022
+    end
+
+    properties (Dependent)
+        NumPixels
+    end
+
+    methods
+        function num = get.NumPixels(obj)
+            num = obj.XPixels * obj.YPixels;
+        end
     end
 
     methods (Static)

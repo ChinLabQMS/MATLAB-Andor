@@ -19,18 +19,18 @@ classdef AxesRunner < BaseRunner
 
         function update(obj, Live)
             data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+            info = Live.Info;
             switch obj.Config.Style
                 case "Image"
-                    obj.updateImage(data)
+                    obj.updateImage(data, info)
                 case "Line"                   
-                    obj.updateLine(data)
+                    obj.updateLine(data, info)
             end
         end
 
         function clear(obj)
             cla(obj.AxesObj)
             obj.GraphObj = matlab.graphics.primitive.(obj.Config.Style).empty;
-            fprintf("%s: Axes content cleared.\n", obj.CurrentLabel)
         end
 
         function uisave(obj)
@@ -49,7 +49,7 @@ classdef AxesRunner < BaseRunner
     end
 
     methods (Access = protected)
-        function updateImage(obj, data)
+        function updateImage(obj, data, info)
             if isempty(obj.GraphObj)
                 obj.GraphObj = imagesc(obj.AxesObj, data);
                 colorbar(obj.AxesObj)
@@ -59,23 +59,29 @@ classdef AxesRunner < BaseRunner
                 obj.GraphObj.YData = [1, x_size];
                 obj.GraphObj.CData = data;
             end
+            switch obj.Config.FuncName
+                case "None"
+                case "Lattice"
+                    
+                case "PSF"
+            end
         end
 
-        function updateLine(obj, data)
+        function updateLine(obj, data, info)
             switch obj.Config.FuncName
                 case "Mean"
                     new = mean(data, "all");
                 case "Max"
                     new = max(data, [], "all");
                 case "Variance"
-                    new = var(data(:), "omitmissing");
+                    new = var(data(:));
                 otherwise
-                    new = data.(obj.Config.FuncName);
+                    new = reshape(data.(obj.Config.FuncName), [], 1);
             end
             if isempty(obj.GraphObj)
-                obj.GraphObj = plot(obj.AxesObj, new, "LineWidth", 3);
+                obj.GraphObj = plot(obj.AxesObj, info.RunNumber, new, "LineWidth", 2);
             else
-                obj.GraphObj.XData = [obj.GraphObj.XData, obj.GraphObj.XData(end) + 1];
+                obj.GraphObj.XData = [obj.GraphObj.XData, info.RunNumber];
                 obj.GraphObj.YData = [obj.GraphObj.YData, new];
             end
         end

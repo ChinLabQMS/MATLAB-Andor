@@ -10,6 +10,7 @@ classdef Acquisitor < BaseRunner
 
     properties (SetAccess = protected, Hidden)
         Live (1, 1) struct
+        Timer (1, 1) uint64
     end
 
     methods
@@ -36,6 +37,7 @@ classdef Acquisitor < BaseRunner
             obj.Stat.init()
             obj.Preprocessor.init()
             obj.Analyzer.init()
+            obj.Timer = tic;
         end
 
         function acquire(obj, options)
@@ -45,10 +47,6 @@ classdef Acquisitor < BaseRunner
             end
             timer = tic;
             sequence_table = obj.Config.ActiveSequence;
-            raw = struct();
-            signal = struct();
-            background = struct();
-            analysis = struct();
             for i = 1:height(sequence_table)
                 camera = string(sequence_table.Camera(i));
                 label = string(sequence_table.Label(i));
@@ -76,7 +74,9 @@ classdef Acquisitor < BaseRunner
             end
             obj.Data.add(raw, "verbose", options.verbose_level > 1);
             obj.Stat.add(analysis, "verbose", options.verbose_level > 2);
-            obj.Live = struct('Raw', raw, 'Signal', signal, 'Background', background, 'Analysis', analysis);
+            obj.Live = struct('Raw', raw, 'Signal', signal, 'Background', background, ...
+                'Analysis', analysis, 'Info', struct('RunNumber', obj.Data.CurrentIndex, ...
+                                                     'Lattice', obj.Analyzer.Lattice));
             if options.verbose_level > 0
                 fprintf("%s: Sequence completed in %.3f s.\n\n", obj.CurrentLabel, toc(timer))
             end

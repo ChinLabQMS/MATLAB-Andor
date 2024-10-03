@@ -17,7 +17,7 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods
-        function contents = parseAnalysis(obj, index_str)
+        function contents = parseAnalysis2Content(obj, index_str)
             res = split(index_str, ": ");
             [camera, label] = res{:};
             active_analysis = obj.ActiveAnalysis;

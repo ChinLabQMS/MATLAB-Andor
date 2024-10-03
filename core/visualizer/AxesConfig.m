@@ -14,7 +14,7 @@ classdef AxesConfig < BaseObject
     methods
         function obj = AxesConfig(config)
             arguments
-                config.style (1, 1) string = "Image"
+                config.style (1, 1) string = "Line"
                 config.camera (1, 1) string = "Andor19330"
                 config.label (1, 1) string = "Image"
                 config.content (1, 1) string = "Signal"
