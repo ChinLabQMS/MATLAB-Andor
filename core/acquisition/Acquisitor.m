@@ -3,9 +3,9 @@ classdef Acquisitor < BaseRunner
     properties (SetAccess = immutable, Hidden)
         CameraManager
         Data
+        Stat
         Preprocessor
         Analyzer
-        Stat
     end
 
     properties (SetAccess = protected, Hidden)
@@ -14,7 +14,8 @@ classdef Acquisitor < BaseRunner
     end
 
     methods
-        function obj = Acquisitor(cameras, config, data, stat, preprocessor, analyzer)
+        function obj = Acquisitor(cameras, config, data, stat, ...
+                                  preprocessor, analyzer)
             arguments
                 cameras (1, 1) CameraManager = CameraManager()
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
@@ -78,7 +79,7 @@ classdef Acquisitor < BaseRunner
                 'Analysis', analysis, 'Info', struct('RunNumber', obj.Data.CurrentIndex, ...
                                                      'Lattice', obj.Analyzer.Lattice));
             if options.verbose_level > 0
-                fprintf("%s: Sequence completed in %.3f s.\n\n", obj.CurrentLabel, toc(timer))
+                fprintf("%s: Sequence completed in %.3f s.\n", obj.CurrentLabel, toc(timer))
             end
         end
 

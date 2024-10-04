@@ -49,16 +49,13 @@ classdef LayoutManager < BaseObject
             end
         end
 
-        function clear(obj, names, options)
+        function clear(obj, names)
             arguments
                 obj
                 names = obj.PropList
-                options.line_ax_only = true
             end
             for field = names
-                if (~options.line_ax_only) || (options.line_ax_only && obj.(field).Config.Style == "Line")
-                    obj.(field).clear()
-                end
+                obj.(field).clear()
             end
         end
     

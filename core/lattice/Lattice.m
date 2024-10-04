@@ -52,6 +52,11 @@ classdef Lattice < BaseRunner
             lat_corr = lat_corr(idx, :);
         end
 
+        function calibrateR2(Lat, signal, r, varargin)
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, r);
+            Lat.calibrateR(signal, x_range, y_range, varargin{:})
+        end
+
         function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat

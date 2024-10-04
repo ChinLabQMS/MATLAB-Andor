@@ -13,7 +13,7 @@ classdef Analyzer < BaseRunner
         end
 
         function init(obj)
-            obj.Lattice = load(obj.Config.LatCalibPath);
+            obj.Lattice = load(obj.Config.LatCalibFilePath);
             fprintf("%s: Lattice calibration loaded.\n", obj.CurrentLabel)
         end
 
@@ -55,10 +55,11 @@ classdef Analyzer < BaseRunner
             res.GaussYWid = f.s2;
         end
 
-        function res = calibLatR(obj, res, signal, ~, config)
+        function res = calibLatR(obj, res, signal, label, config)
             camera = config.CameraName;
             signal = getSignalSum(signal, getNumFrames(config));
-            obj.Lattice.(camera).calibrateR(signal)
+
+            obj.Lattice.(camera).calibrateR2(signal, 80)
             res.LatX = obj.Lattice.(camera).R(1);
             res.LatY = obj.Lattice.(camera).R(2);
         end
