@@ -8,8 +8,8 @@ classdef PreprocessConfig < BaseObject
         OffsetCorrection_Warning = true
         OffsetCorrection_WarnOffsetThres = 10
         OffsetCorrection_WarnVarThres = 50
-        OutlierRemoval_NumMaxPixels = 50
-        OutlierRemoval_NumMinPixels = 50
+        OutlierRemoval_NumMaxPixels = 20
+        OutlierRemoval_NumMinPixels = 0
         OutlierRemoval_DiffThres = 50
         OutlierRemoval_Warning = true
     end

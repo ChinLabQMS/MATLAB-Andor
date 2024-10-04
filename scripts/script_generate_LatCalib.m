@@ -11,6 +11,7 @@ close all
 p.plot("Andor19330")
 
 %% Input initial peak positions, [x1, y1; x2, y2]
+close all
 p.calibrate("Andor19330", [105, 204; 156, 241; 212, 210])
 
 %% Andor19331
@@ -18,6 +19,7 @@ close all
 p.plot("Andor19331")
 
 %%
+close all
 p.calibrate("Andor19331", [116, 165; 155, 216; 227, 212])
 
 %%
@@ -25,6 +27,7 @@ close all
 p.plot("Zelux")
 
 %%
+close all
 p.calibrate("Zelux", [656, 566; 716, 595; 779, 571])
 
 %% Save calibration

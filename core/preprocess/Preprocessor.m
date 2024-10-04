@@ -73,25 +73,25 @@ classdef Preprocessor < BaseRunner
 
         function signal = removeOutlier(obj, raw, label, config)
             signal = raw;
-            [max_val, max_idx] = maxk(raw(:), obj.Config.OutlierRemoval_NumMaxPixels + 1);
-            [min_val, min_idx] = mink(raw(:), obj.Config.OutlierRemoval_NumMinPixels + 1);
+            num_acq = size(signal, 3);
+            [max_val, max_idx] = maxk(raw(:), (obj.Config.OutlierRemoval_NumMaxPixels + 1) * num_acq);
+            [min_val, min_idx] = mink(raw(:), (obj.Config.OutlierRemoval_NumMinPixels + 1) * num_acq);
             diff1 = (-diff(max_val)) > obj.Config.OutlierRemoval_DiffThres;
             diff2 = diff(min_val) > obj.Config.OutlierRemoval_DiffThres;
-            num_detected = 0;
             if any(diff1)
                 index = find(diff1, 1, 'last');
-                num_detected = num_detected + index;
                 signal(max_idx(1:index)) = max_val(index + 1);
+                warning('backtrace', 'off')
+                warning("%s: [%s %s] [%d] outliers detected, max = %g, min = %g.", ...
+                    obj.CurrentLabel, config.CameraName, label, index, max_val(1), max_val(index))
+                warning('backtrace', 'on')
             end
             if any(diff2)
                 index = find(diff2, 1, 'last');
-                num_detected = num_detected + index;
                 signal(min_idx(1:index)) = min_val(index + 1);
-            end
-            if num_detected > 0
                 warning('backtrace', 'off')
                 warning("%s: [%s %s] [%d] outliers detected, max = %g, min = %g.", ...
-                    obj.CurrentLabel, config.CameraName, label, num_detected, max_val(1), min_val(1))
+                    obj.CurrentLabel, config.CameraName, label, index, min_val(index), min_val(1))
                 warning('backtrace', 'on')
             end
         end

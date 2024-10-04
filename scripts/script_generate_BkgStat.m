@@ -1,5 +1,5 @@
 %% Create a BkgStatGenerator
-
+clear; clc
 p = BkgStatGenerator;
 
 %% Configure the file paths

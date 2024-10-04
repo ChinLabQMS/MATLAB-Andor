@@ -1,9 +1,12 @@
 % script to look at the different readout noises
-
+% load the data
 data1Mhz = load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_1MHz.mat');
 data3Mhz= load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_3MHz.mat');
 data5Mhz = load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_5MHz.mat');
-
+%% load the cropped data
+data1Mhz = load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_1MHz_cropped.mat');
+data3Mhz= load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_3MHz_cropped.mat');
+data5Mhz = load('C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2024\09 September\20240926 camera readout noise\clean_bg_5MHz_cropped.mat');
 % cropped1 = 
 % cropped3 = 
 % cropped5=

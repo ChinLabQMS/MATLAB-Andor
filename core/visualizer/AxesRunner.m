@@ -60,9 +60,14 @@ classdef AxesRunner < BaseRunner
                 obj.GraphObj.CData = data;
             end
             switch obj.Config.FuncName
-                case "None"
+                case "None"                    
                 case "Lattice"
-                    
+                    Lat = info.Lattice.(obj.Config.CameraName);
+                    lat_corr = prepareSite("hex", "latr", 20);
+                    corr = Lat.convert(lat_corr);
+                    hold(obj.AxesObj)
+                    radius = 0.1 * norm(Lat.V1);
+                    viscircles(obj.AxesObj, corr(:, 2:-1:1), radius, 'EnhanceVisibility', false, 'LineWidth', 0.5);
                 case "PSF"
             end
         end
