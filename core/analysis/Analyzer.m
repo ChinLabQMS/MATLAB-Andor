@@ -55,11 +55,12 @@ classdef Analyzer < BaseRunner
             res.GaussYWid = f.s2;
         end
 
-        function res = calibLatR(obj, res, signal, label, config)
+        function res = calibLatR(obj, res, signal, ~, config)
             camera = config.CameraName;
             signal = getSignalSum(signal, getNumFrames(config));
-
-            obj.Lattice.(camera).calibrateR2(signal, 80)
+            Lat = obj.Lattice.(camera);
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, obj.Config.LatCalibCroppedR);
+            Lat.calibrateR(signal, x_range, y_range)
             res.LatX = obj.Lattice.(camera).R(1);
             res.LatY = obj.Lattice.(camera).R(2);
         end

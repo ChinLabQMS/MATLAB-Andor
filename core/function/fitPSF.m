@@ -12,14 +12,14 @@ function [average_psf, final_centroids_1] = fitPSF(image, thresh_percent, crop_s
     % label connected components
     labeled_image = logical(binary_image);
     % find centroids
-    stats = regionprops(labeled_image, 'Centroid');
+    stats = regionprops(labeled_image, ["Centroid", "Area"]);
     centroids = cat(1,stats.Centroid);
 
     % % Display original image overlaid with the centroids
     % figure;
     % imshow(image,[],'InitialMagnification','fit')
     % title('Detected Bright Spots- centroids')
-    % hold on
+    % hold
     % plot(centroids(:,1),centroids(:,2),'r+','MarkerSize',10','LineWidth',2);
     % hold off
 
