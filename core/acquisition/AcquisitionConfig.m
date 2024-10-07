@@ -47,12 +47,13 @@ classdef AcquisitionConfig < BaseObject
         end
 
         function active_sequence = get.ActiveSequence(obj)
-            active_sequence = obj.SequenceTable(obj.SequenceTable.Camera ~= "--inactive--", :);
+            active_sequence = obj.SequenceTable( ...
+                obj.SequenceTable.Camera ~= "--inactive--" & ~(obj.SequenceTable.Type == "Analysis" & obj.SequenceTable.Note == ""), :);
         end
 
         function active_acquisition = get.ActiveAcquisition(obj)
             active_sequence = obj.ActiveSequence;
-            active_acquisition = active_sequence(active_sequence.Type == "Acquire" | active_sequence.Type == 'Start+Acquire', :);
+            active_acquisition = active_sequence(active_sequence.Type == "Acquire" | active_sequence.Type == "Start+Acquire", :);
         end
 
         function active_analysis = get.ActiveAnalysis(obj)
@@ -69,10 +70,6 @@ classdef AcquisitionConfig < BaseObject
     methods (Static)
         function obj = struct2obj(s)
             obj = BaseObject.struct2obj(s, AcquisitionConfig());
-        end
-
-        function obj = file2obj(filename)
-            obj = BaseObject.file2obj(filename, AcquisitionConfig());
         end
     end
 

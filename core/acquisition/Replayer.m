@@ -22,8 +22,7 @@ classdef Replayer < BaseRunner
 
         function init(obj)
             try
-                data = load(obj.Config.Filepath, "Data");
-                obj.Data = data;
+                obj.Data = load(obj.Config.Filepath, "Data").Data;
             catch
                 
             end

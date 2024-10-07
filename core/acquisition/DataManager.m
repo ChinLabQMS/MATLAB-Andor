@@ -1,4 +1,5 @@
-classdef Dataset < BaseStorage
+classdef DataManager < BaseStorage
+    % DATAMANAGER Class for storing acquired data.
 
     properties (SetAccess = protected)
         Andor19330
@@ -11,20 +12,24 @@ classdef Dataset < BaseStorage
     end
 
     methods
-        function obj = Dataset(config, cameras)
+        function obj = DataManager(config, cameras)
             arguments
                 config = AcquisitionConfig()
-                cameras (1, 1) CameraManager = CameraManager()
+                cameras (1, 1) CameraManager = CameraManager('test_mode', 1)
             end
             obj@BaseStorage(config)
             obj.CameraManager = cameras;
         end
         
+        % Initialize the storage
         function init(obj)
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveSequence;
+            num_acq = obj.AcquisitionConfig.NumAcquisitions;
             for camera = obj.AcquisitionConfig.ActiveCameras
+                % Record camera config
                 obj.(camera).Config = obj.CameraManager.(camera).Config.struct();
+                % Record some additional information to the camera config
                 obj.(camera).Config.CameraName = camera;
                 obj.(camera).Config.NumAcquisitions = obj.AcquisitionConfig.NumAcquisitions;
                 camera_seq = sequence((sequence.Camera == camera), :);
@@ -32,24 +37,25 @@ classdef Dataset < BaseStorage
                     label = camera_seq.Label(j);
                     if camera_seq.Type(j) == "Analysis"
                         obj.(camera).Config.AnalysisNote.(label) = camera_seq.Note(j);
-                    else
+                    elseif camera_seq.Type(j) == "Acquire" || camera_seq.Type(j) == "Start+Acquire"
                         obj.(camera).Config.AcquisitionNote.(label) = camera_seq.Note(j);
                         if obj.(camera).Config.MaxPixelValue <= 65535
-                            obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, obj.(camera).Config.YPixels, obj.(camera).Config.NumAcquisitions, "uint16");
+                            obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, obj.(camera).Config.YPixels, num_acq, "uint16");
                         else
-                            error("%s: Unsupported pixel value range for camera %s.", obj.CurrentLabel, camera)
+                            obj.error("Unsupported pixel value range for camera %s.", camera)
                         end
                     end
                 end
             end
-            fprintf("%s: %s storage initialized for %d cameras, total memory is %g MB.\n", ...
-                obj.CurrentLabel, class(obj), length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
+            obj.info("Storage initialized for %d cameras, total memory is %g MB.", ...
+                     length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
         end
 
-        function add(obj, new_images, options)
+        % Add new images to the storage
+        function add(obj, raw_images, options)
             arguments
                 obj
-                new_images (1, 1) struct
+                raw_images (1, 1) struct
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
@@ -60,39 +66,13 @@ classdef Dataset < BaseStorage
                 label = sequence.Label(i);
                 if obj.CurrentIndex > size(obj.(camera).(label), 3)
                     obj.(camera).(label) = circshift(obj.(camera).(label), -1, 3);
-                    obj.(camera).(label)(:,:,end) = new_images.(camera).(label);
+                    obj.(camera).(label)(:,:,end) = raw_images.(camera).(label);
                 else
-                    obj.(camera).(label)(:,:,obj.CurrentIndex) = new_images.(camera).(label);
+                    obj.(camera).(label)(:,:,obj.CurrentIndex) = raw_images.(camera).(label);
                 end
             end
             if options.verbose
-                fprintf('%s: New images added to %s in %.3f s\n', obj.CurrentLabel, class(obj), toc(timer))
-            end
-        end
-
-        function plot(obj, options)
-            arguments
-                obj
-                options.sample_index = 1
-            end
-            sequence = obj.AcquisitionConfig.ActiveAcquisition;
-            for i = 1:height(sequence)
-                camera = char(sequence.Camera(i));
-                label = sequence.Label(i);
-                figure()
-                imagesc(obj.(camera).(label)(:,:,options.sample_index))
-                axis image
-                colorbar eastoutside
-                title(sprintf('Sample %d (%s: %s)', options.sample_index, camera, label))
-            end
-            for i = 1:height(sequence)
-                camera = char(sequence.Camera(i));
-                label = sequence.Label(i);
-                figure()
-                imagesc(mean(obj.(camera).(label), 3))
-                axis image
-                colorbar eastoutside
-                title(sprintf('Mean (%s: %s)', camera, label))
+                obj.info('Raw images added in %.3f s', toc(timer))
             end
         end
     end
@@ -110,16 +90,7 @@ classdef Dataset < BaseStorage
                 data.(camera) = data_struct.(camera);
             end
             data.CurrentIndex = config.NumAcquisitions;
-            fprintf("%s: %s loaded from structure.\n", obj.CurrentLabel, class(obj))
-        end
-
-        function obj = file2obj(filename, varargin)
-            if isfile(filename)
-                s = load(filename, 'Data');
-                obj = Dataset.struct2obj(s, varargin{:});
-            else
-                error("File %s does not exist.", filename)
-            end
+            data.info("Loaded from structure.")
         end
     end
 

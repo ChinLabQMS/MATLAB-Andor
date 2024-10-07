@@ -98,10 +98,8 @@ classdef Lattice < BaseRunner
         
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
-                warning('off','backtrace')
-                warning('Lattice vector length changed significantly by %.2f%%.',...
-                    100*(max(VDis)))
-                warning('on','backtrace')
+                obj.warn("Lattice vector length changed significantly by %.2f%%.",...
+                         100*(max(VDis)))
             end
             if options.plot_diagnostic
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
@@ -162,14 +160,16 @@ classdef Lattice < BaseRunner
             v1 = Lat.V1;
             v2 = Lat.V2;
             v3 = Lat.V3;
-            fprintf('%s: \n\tR = (%5.2f, %5.2f)\n', Lat.CurrentLabel, Lat.R(1), Lat.R(2))
+            fprintf('%s: \n\tR = (%5.2f, %5.2f)\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%5.2f, %5.2f),\t|V1| = %5.2f px\n', v1(1), v1(2), norm(v1))
             fprintf('\tV2 = (%5.2f, %5.2f),\t|V2| = %5.2f px\n', v2(1), v2(2), norm(v2))
             fprintf('\tV3 = (%5.2f, %5.2f),\t|V3| = %5.2f px\n', v3(1), v3(2), norm(v3))
             fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(v1*v2'/(norm(v1)*norm(v2))))
             fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(v1*v3'/(norm(v1)*norm(v3))))
         end
-
+    end
+    
+    methods (Access = protected)
         function label = getStatusLabel(Lat)
             label = sprintf(" (%s)", Lat.ID);
         end

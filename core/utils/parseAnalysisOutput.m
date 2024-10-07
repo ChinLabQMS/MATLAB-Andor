@@ -1,9 +1,6 @@
 function [processes, out_vars, out_data, num_out] = parseAnalysisOutput(note)
     processes = split(note, ", ")';
-    if any(processes == "")
-        warning("Empty string in analysis note")
-        processes = processes(processes ~= "");
-    end
+    processes = processes(processes ~= "");
     if nargout == 1
         return
     end

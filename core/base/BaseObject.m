@@ -3,16 +3,12 @@ classdef BaseObject < handle
     % Provides basic functionality of converting to and from structures and logging
     % through a CurrentLabel property.
 
-    properties (Dependent, Hidden)
-        CurrentLabel
-        PropList
-    end
-
     methods
+        % Converts the object to a structure, iterating over the fields of the object
         function s = struct(obj, fields)
             arguments
                 obj
-                fields (1, :) string = obj.PropList
+                fields (1, :) string = obj.getPropList()
             end
             s = struct();
             for field = fields
@@ -23,79 +19,65 @@ classdef BaseObject < handle
                 end
             end
         end
-
-        function save(obj, filename, options)
+    end
+   
+    methods (Access = protected)
+        % Returns a list of properties of the object as a row vector of string
+        function list = getPropList(obj, options)
             arguments
                 obj
-                filename (1, 1) string = class(obj) + ".mat"
-                options.struct_export (1, 1) logical = false
+                options.excluded = string.empty
             end
-            Data = obj.struct();
-            if ~options.struct_export
-                save(filename, '-struct', 'Data');
-            else
-                save(filename, 'Data');
-            end
-            fprintf('%s: %s saved to file %s.\n', obj.CurrentLabel, class(obj), filename)
+            list = string(properties(obj))';
+            list = list(~ismember(list, options.excluded));
         end
 
-        function uisave(obj, filename)
-            arguments
-                obj
-                filename (1, 1) string = class(obj) + ".mat"
-            end
-            Data = obj.struct(); %#ok<NASGU>
-            uisave('Data', filename);
+        % Returns the current status label of the object, will be used in
+        % info, warning and error logging
+        function label = getStatusLabel(obj)
+            label = string(class(obj));
+        end
+    end
+
+    methods (Access = protected, Sealed)
+        % Logs a message with the current time and the class name
+        function info(obj, info, varargin)
+            fprintf("[%s] %s: %s\n", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+                obj.getStatusLabel(), sprintf(info, varargin{:}))
         end
 
-        function list = get.PropList(obj)
-            list = string(properties(obj)');
+        % Logs a warning with the current time and the class name
+        function warn(obj, info, varargin)
+            warning('backtrace', 'off')
+            warning("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+                obj.getStatusLabel(), sprintf(info, varargin{:}))
+            warning('backtrace', 'on')
         end
 
-        function label = getStatusLabel(obj) %#ok<MANU>
-            label = "";
+        % Logs an error with the current time and the class name
+        function error(obj, info, varargin)
+            error("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+                obj.getStatusLabel(), sprintf(info, varargin{:}))
         end
-
-        function label = getCurrentLabel(obj)
-            label = sprintf("[%s] %s", ...
-                            datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
-                            class(obj));
-        end
-        
-        function label = get.CurrentLabel(obj)
-            label = obj.getCurrentLabel() + obj.getStatusLabel();
-        end        
     end
 
     methods (Static)
+        % Converts a structure to an object, iterating over the fields of the structure
         function obj = struct2obj(s, obj)
             arguments
                 s (1, 1) struct
                 obj (1, 1) BaseObject = BaseObject()
             end
-            for field = fieldnames(s)'
-                if isprop(obj, field{1})
+            for field = string(fields(s))'
+                if isprop(obj, field)
                     try
-                        obj.(field{1}) = s.(field{1});
+                        obj.(field) = s.(field);
                     catch
-                        warning("%s: Unable to copy field %s.", obj.CurrentLabel, field{1})
+                        obj.warn("Invalid field [%s]", field)
                     end
                 end
             end
-            fprintf('%s: %s loaded from structure.\n', obj.CurrentLabel, class(obj))
-        end
-
-        function obj = file2obj(filename, obj)
-            arguments
-                filename (1, 1) string
-                obj (1, 1) BaseObject = BaseObject()
-            end
-            if isfile(filename)
-                s = load(filename);
-                obj = BaseObject.struct2obj(s, obj);
-            else
-                error("%s: File %s does not exist.", obj.CurrentLabel, filename)
-            end
+            obj.info("Object loaded from structure.")
         end
     end
 

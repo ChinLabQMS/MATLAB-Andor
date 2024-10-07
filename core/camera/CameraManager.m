@@ -28,7 +28,7 @@ classdef CameraManager < BaseObject
         function init(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.PropList
+                cameras (1, :) string = obj.getPropList()
             end
             for camera = cameras
                 obj.(camera).init()
@@ -36,13 +36,13 @@ classdef CameraManager < BaseObject
         end
 
         function close(obj)
-            for camera = obj.PropList
+            for camera = obj.getPropList()
                 obj.(camera).close()
             end
         end
 
         function config(obj, varargin)
-            for camera = obj.PropList
+            for camera = obj.getPropList()
                 obj.(camera).config(varargin{:})
             end
         end
@@ -50,10 +50,10 @@ classdef CameraManager < BaseObject
         function abortAcquisition(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.PropList
+                cameras (1, :) string = obj.getPropList()
             end
             for camera = cameras
-                obj.(camera).abortAcquisition
+                obj.(camera).abortAcquisition()
             end
         end
     end
@@ -75,19 +75,7 @@ classdef CameraManager < BaseObject
                 args = [args, {'Zelux', ZeluxCameraConfig.struct2obj(data.Zelux.Config)}];
             end
             obj = CameraManager(args{:});
-            fprintf("%s:  %s loaded from structure.\n", obj.CurrentLabel, class(obj))
-        end
-
-        function obj = file2obj(filename)
-            arguments
-                filename (1, 1) string
-            end
-            if isfile(filename)
-                s = load(filename);
-                obj = CameraManager.struct2obj(s);
-            else
-                error("File %s does not exist.", filename)
-            end
+            obj.info("Loaded from struct.")
         end
     end
 

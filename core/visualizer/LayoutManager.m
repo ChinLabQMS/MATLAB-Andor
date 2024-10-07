@@ -13,13 +13,7 @@ classdef LayoutManager < BaseObject
     methods
         function obj = LayoutManager(app, config)
             arguments
-                app = struct("BigAxes1", matlab.graphics.axis.Axes.empty, ...
-                             "BigAxes2", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes1", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes2", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes3", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes4", matlab.graphics.axis.Axes.empty, ...
-                             "SmallAxes5", matlab.graphics.axis.Axes.empty)
+                app = []
                 config.BigAxes1 = AxesConfig("style", "Image", "func", "None")
                 config.BigAxes2 = AxesConfig("style", "Image", "func", "None")
                 config.SmallAxes1 = AxesConfig("style", "Line")
@@ -28,41 +22,39 @@ classdef LayoutManager < BaseObject
                 config.SmallAxes4 = AxesConfig("style", "Line")
                 config.SmallAxes5 = AxesConfig("style", "Line")
             end
-            for field = obj.PropList
-                obj.(field) = AxesRunner(app.(field), config.(field));
+            for field = obj.getPropList()
+                if isprop(app, field)
+                    obj.(field) = AxesRunner(app.(field), config.(field));
+                else
+                    obj.warn("Field %s is not a valid field of app.", field)
+                end
             end
         end
     
-        function update(obj, Live, options)
+        function update(obj, Live, names, options)
             arguments
                 obj
                 Live (1, 1) struct
+                names = obj.getPropList()
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
-            for field = obj.PropList
+            for field = names
                 obj.(field).update(Live)
             end
             drawnow
             if options.verbose
-                fprintf("%s: Layout rendered in %.3f s.\n", obj.CurrentLabel, toc(timer))
+                obj.info("Layout rendered in %.3f s.", toc(timer))
             end
         end
 
         function clear(obj, names)
             arguments
                 obj
-                names = obj.PropList
+                names = obj.getPropList()
             end
             for field = names
                 obj.(field).clear()
-            end
-        end
-    
-        function disp(obj)
-            fprintf("  %s with properties:\n", class(obj))
-            for field = obj.PropList
-                fprintf("%12s: AxesRunner%s\n", field,  obj.(field).getStatusLabel())
             end
         end
     end

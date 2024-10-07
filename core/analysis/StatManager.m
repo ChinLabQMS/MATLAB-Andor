@@ -1,4 +1,4 @@
-classdef StatResult < BaseStorage
+classdef StatManager < BaseStorage
 
     properties (SetAccess = protected)
         Andor19330
@@ -7,10 +7,11 @@ classdef StatResult < BaseStorage
     end
 
     methods
-        function obj = StatResult(config)
+        function obj = StatManager(config)
             obj@BaseStorage(config)
         end
 
+        % Initialize the storage
         function init(obj)
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveAnalysis;
@@ -19,17 +20,18 @@ classdef StatResult < BaseStorage
                 label = sequence.Label(i);
                 note = sequence.Note(i);
                 num_stat = obj.AcquisitionConfig.NumStatistics;
-                [processes, out_vars, out_data, num_out] = parseAnalysisOutput(note);
-                if ~isempty(processes) && num_out > 0
+                [~, out_vars, out_data, num_out] = parseAnalysisOutput(note);
+                if num_out > 0
                     obj.(camera).(label) = table('Size', [num_stat, length(out_vars) + length(out_data)], ...
                                                  'VariableTypes', [repmat("doublenan", 1, length(out_vars)), ...
                                                                    repmat("cell", 1, length(out_data))], ...
                                                  'VariableNames', [out_vars, out_data]);
                 end
             end
-            fprintf("%s: %s initialized, total memory is %g MB.\n", obj.CurrentLabel, class(obj), obj.MemoryUsage)
+            obj.info("Storage initialized, total memory is %g MB.", obj.MemoryUsage)
         end
 
+        % Add new data to the storage
         function add(obj, new, options)
             arguments
                 obj 
@@ -50,7 +52,7 @@ classdef StatResult < BaseStorage
                 end
             end
             if options.verbose
-                fprintf("%s: New analysis added to %s in %.3f s.\n", obj.CurrentLabel, class(obj), toc(timer))
+                obj.info("New analysis added in %.3f s.", toc(timer))
             end
         end
 

@@ -23,11 +23,11 @@ classdef BaseRunner < BaseObject
                 value
             end
             for i = 1:length(name)
-                obj.Config.(name{i}) = value{i};
-                % try
-                %     fprintf('%s: %s set to %s.\n', obj.CurrentLabel, name{i}, string(value{i}))
-                % catch
-                % end
+                try
+                    obj.Config.(name{i}) = value{i};
+                catch
+                    obj.warn("Invalid configuration option [%s]", name{i})
+                end
             end
         end
 

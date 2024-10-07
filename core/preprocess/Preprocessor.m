@@ -14,7 +14,7 @@ classdef Preprocessor < BaseRunner
 
         function init(obj)
             obj.Background = load(obj.Config.BackgroundDataPath);
-            fprintf("%s: Background loaded.\n", obj.CurrentLabel)
+            obj.info("Background loaded.")
         end
 
         function [signal, leakage] = process(obj, raw, label, config, options)
@@ -36,7 +36,7 @@ classdef Preprocessor < BaseRunner
             signal = obj.removeOutlier(signal, label, config);
             [signal, leakage] = obj.correctOffset(signal, label, config);
             if options.verbose
-                fprintf("%s: [%s %s] Preprocessing completed in %.3f s.\n", obj.CurrentLabel, config.CameraName, label, toc(timer))
+                obj.info("[%s %s] Preprocessing completed in %.3f s.", config.CameraName, label, toc(timer))
             end
         end
 
@@ -47,7 +47,7 @@ classdef Preprocessor < BaseRunner
                 [signal.(label), leakage.(label)] = obj.process( ...
                     data.(label), label, data.Config, varargin{:});
             end
-            fprintf("%s: Data from camera %s is processed.\n", obj.CurrentLabel, data.Config.CameraName)
+            obj.info("Data from camera %s is processed.", data.Config.CameraName)
         end
 
         function [signal, leakage] = processData(obj, data, varargin)
@@ -81,18 +81,14 @@ classdef Preprocessor < BaseRunner
             if any(diff1)
                 index = find(diff1, 1, 'last');
                 signal(max_idx(1:index)) = max_val(index + 1);
-                warning('backtrace', 'off')
-                warning("%s: [%s %s] [%d] outliers detected, max = %g, min = %g.", ...
-                    obj.CurrentLabel, config.CameraName, label, index, max_val(1), max_val(index))
-                warning('backtrace', 'on')
+                obj.warn("[%s %s] [%d] outliers detected, max = %g, min = %g.", ...
+                         config.CameraName, label, index, max_val(1), max_val(index))
             end
             if any(diff2)
                 index = find(diff2, 1, 'last');
                 signal(min_idx(1:index)) = min_val(index + 1);
-                warning('backtrace', 'off')
-                warning("%s: [%s %s] [%d] outliers detected, max = %g, min = %g.", ...
-                    obj.CurrentLabel, config.CameraName, label, index, min_val(index), min_val(1))
-                warning('backtrace', 'on')
+                obj.warn("[%s %s] [%d] outliers detected, max = %g, min = %g.", ...
+                         config.CameraName, label, index, min_val(index), min_val(1))
             end
         end
 
@@ -101,16 +97,14 @@ classdef Preprocessor < BaseRunner
                 getNumFrames(config),  obj.Config.OffsetCorrection_RegionWidth); 
             signal = raw - leakage;
             if obj.Config.OffsetCorrection_Warning
-                warning('off','backtrace')
                 if any(abs(leakage) > obj.Config.OffsetCorrection_WarnOffsetThres)
-                    warning('%s: [%s %s] Noticeable background offset, max = %4.2f, min = %4.2f.', ...
-                            obj.CurrentLabel, config.CameraName, label, max(leakage(:)),min(leakage(:)))
+                    obj.warn("[%s %s] Noticeable background offset, max = %4.2f, min = %4.2f.", ...
+                             config.CameraName, label, max(leakage(:)),min(leakage(:)))
                 end
                 if any(variance > obj.Config.OffsetCorrection_WarnVarThres)
-                    warning('%s: [%s %s] Noticeable background variance, max = %4.2f, min = %4.2f.', ...
-                            obj.CurrentLabel, config.CameraName, label, max(variance(:)), min(variance(:)))
+                    obj.warn("[%s %s] Noticeable background variance, max = %4.2f, min = %4.2f.", ...
+                             config.CameraName, label, max(variance(:)), min(variance(:)))
                 end
-                warning('on','backtrace')
             end
         end
     end

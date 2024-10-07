@@ -14,7 +14,7 @@ classdef Analyzer < BaseRunner
 
         function init(obj)
             obj.Lattice = load(obj.Config.LatCalibFilePath);
-            fprintf("%s: Lattice calibration loaded.\n", obj.CurrentLabel)
+            obj.info("Lattice calibration loaded.")
         end
 
         function res = analyze(obj, signal, label, config, options)
@@ -33,7 +33,7 @@ classdef Analyzer < BaseRunner
                             obj, res, signal, label, config);
             end
             if options.verbose
-                fprintf("%s: [%s %s] Analysis completed in %.3f s.\n", obj.CurrentLabel, config.CameraName, label, toc(timer))
+                obj.info("[%s %s] Analysis completed in %.3f s.", config.CameraName, label, toc(timer))
             end
         end
 

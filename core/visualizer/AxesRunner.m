@@ -43,10 +43,6 @@ classdef AxesRunner < BaseRunner
             PlotData.Config = obj.Config.struct(); %#ok<STRNU>
             uisave("PlotData", "PlotData.mat")
         end
-
-        function label = getStatusLabel(obj)
-            label = sprintf(" AxesConfig(Image=[%s,%s], Style=%s, Content=%s)", obj.Config.CameraName, obj.Config.ImageLabel, obj.Config.Style, obj.Config.Content);
-        end
     end
 
     methods (Access = protected)
@@ -67,7 +63,6 @@ classdef AxesRunner < BaseRunner
                     Lat = info.Lattice.(obj.Config.CameraName);
                     lat_corr = prepareSite("hex", "latr", 20);
                     corr = Lat.convert(lat_corr, [1, size(data, 1)], [1, size(data, 2)]);
-                    hold(obj.AxesObj, 'on')
                     radius = 0.1 * norm(Lat.V1);
                     obj.AddonObj = viscircles(obj.AxesObj, corr(:, 2:-1:1), radius, 'EnhanceVisibility', false, 'LineWidth', 0.5);
                 case "PSF"

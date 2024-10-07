@@ -1,6 +1,6 @@
 classdef AndorCameraConfig < BaseObject
     
-    properties (SetAccess = {?BaseObject})
+    properties (SetAccess = {?BaseRunner})
         Exposure (1, 1) double = 0.2
         ExternalTrigger (1, 1) logical = true
         XPixels (1, 1) double {mustBePositive, mustBeInteger} = 1024
@@ -13,10 +13,9 @@ classdef AndorCameraConfig < BaseObject
         MaxPixelValue = 65535
     end
 
-    properties (Dependent)
+    properties (Dependent, Hidden)
         FastKineticExposedRows (1, 1) double {mustBePositive, mustBeInteger}
         FastKineticOffset (1, 1) double {mustBePositive, mustBeInteger}
-        NumPixels
     end
 
     methods
@@ -27,19 +26,11 @@ classdef AndorCameraConfig < BaseObject
         function offset = get.FastKineticOffset(obj)
            offset = obj.XPixels - obj.FastKineticExposedRows;
         end
-
-        function num = get.NumPixels(obj)
-            num = obj.XPixels * obj.YPixels;
-        end
     end
 
     methods (Static)
         function obj = struct2obj(s)
             obj = BaseObject.struct2obj(s, AndorCameraConfig());
-        end
-
-        function obj = file2obj(filename)
-            obj = BaseObject.file2obj(filename, AndorCameraConfig());
         end
     end
     
