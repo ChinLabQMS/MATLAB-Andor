@@ -60,24 +60,27 @@ classdef Acquisitor < BaseRunner
                 config = obj.Data.(camera).Config;
                 if type == "Start" || type == "Start+Acquire"
                     obj.CameraManager.(camera).startAcquisition( ...
-                        "verbose", options.verbose_level > 2)
+                        "verbose", options.verbose_level > 3)
                 end
                 if type == "Acquire" || type == "Start+Acquire"
+                    % Acquire raw images
                     raw.(camera).(label) = obj.CameraManager.(camera).acquire( ...
                         'refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout, ...
                         'label', label, 'verbose', options.verbose_level > 1);
+                    % Preprocess raw images
                     [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process( ...
                         raw.(camera).(label), label, config, ...
-                        "verbose", options.verbose_level > 1);
+                        "verbose", options.verbose_level > 2);
                 end
                 if type == "Analysis"
+                    % Generate analysis statistics
                     analysis.(camera).(label) = obj.Analyzer.analyze( ...
                         signal.(camera).(label), label, config, ...
-                        "verbose", options.verbose_level > 1);
+                        "verbose", options.verbose_level > 2);
                 end
             end
-            obj.Data.add(raw, "verbose", options.verbose_level > 1);
-            obj.Stat.add(analysis, "verbose", options.verbose_level > 2);
+            obj.Data.add(raw, "verbose", options.verbose_level > 2);
+            obj.Stat.add(analysis, "verbose", options.verbose_level > 3);
             Live = struct('Raw', raw, 'Signal', signal, 'Background', background, ...
                           'Analysis', analysis, ...
                           'Info', struct('RunNumber', obj.Data.CurrentIndex, ...
@@ -85,9 +88,6 @@ classdef Acquisitor < BaseRunner
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_level > 1)
             end
-            % Abort acquisition at the end, to make sure the Zelux camera
-            % timings is mostly right
-            obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
             if options.verbose_level > 0
                 obj.info("Sequence completed in %.3f s.\n", toc(timer))
             end

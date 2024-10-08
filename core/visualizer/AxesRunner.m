@@ -1,4 +1,5 @@
 classdef AxesRunner < BaseRunner
+    
     properties (SetAccess = immutable)
         AxesObj
     end
@@ -26,6 +27,13 @@ classdef AxesRunner < BaseRunner
                     obj.updateImage(data, info)
                 case "Line"                   
                     obj.updateLine(data, info)
+            end
+        end
+
+        function config(obj, varargin)
+            config@BaseRunner(obj, varargin{:})
+            if obj.Config.Style == "Line"
+                obj.clear()
             end
         end
 

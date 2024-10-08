@@ -83,6 +83,8 @@ classdef Lattice < BaseRunner
                 options.warning_latnorm_thres = Lat.Config.CalibV_WarnLatNormThres
                 options.warning_rsquared = Lat.Config.CalibV_WarnRSquared
                 options.plot_diagnostic (1, 1) logical = Lat.Config.CalibV_PlotDiagnostic
+                options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
+                options.outlier_thres (1, 1) double = Lat.Config.CalibR_OutlierThres
             end
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
@@ -91,14 +93,15 @@ classdef Lattice < BaseRunner
             [peak_pos, all_peak_fit] = fitFFTPeaks(signal_fft, peak_init, ...
                 "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);         
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
-            Lat.calibrateR(signal, x_range, y_range)
+            Lat.calibrateR(signal, x_range, y_range, ...
+                "binarize_thres", options.binarize_thres, "outlier_thres", options.outlier_thres)
             if nargout == 1
                 vargout{1} = peak_pos;
             end
         
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
-                obj.warn("Lattice vector length changed significantly by %.2f%%.",...
+                Lat.warn("Lattice vector length changed significantly by %.2f%%.",...
                          100*(max(VDis)))
             end
             if options.plot_diagnostic
@@ -138,6 +141,14 @@ classdef Lattice < BaseRunner
             hold off
         end
 
+        function peak_pos = convert2FFTPeak(Lat, xy_size)
+            if ~isempty(Lat.K)
+                peak_pos = convertK2FFTPeak(xy_size, Lat.K);
+            else
+                peak_pos = [];
+            end
+        end
+
         function val = get.V1(Lat)
             val = Lat.V(1,:);
         end
@@ -160,7 +171,7 @@ classdef Lattice < BaseRunner
             v1 = Lat.V1;
             v2 = Lat.V2;
             v3 = Lat.V3;
-            fprintf('%s: \n\tR = (%5.2f, %5.2f)\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
+            fprintf('%s%s: \n\tR = (%5.2f, %5.2f)\n', class(Lat), Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%5.2f, %5.2f),\t|V1| = %5.2f px\n', v1(1), v1(2), norm(v1))
             fprintf('\tV2 = (%5.2f, %5.2f),\t|V2| = %5.2f px\n', v2(1), v2(2), norm(v2))
             fprintf('\tV3 = (%5.2f, %5.2f),\t|V3| = %5.2f px\n', v3(1), v3(2), norm(v3))

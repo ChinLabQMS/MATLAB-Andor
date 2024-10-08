@@ -1,9 +1,12 @@
 %% Create a generator object
 clear; clc;
-p = LatPreCalibGenerator;
+p = LatCaliber;
 
 %% Config data path
-p.config("DataPath", "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat")
+% If calibrating initially, set LatCalibFilePath to []
+p.config( ...
+    "LatCalibFilePath", [], ... 
+    "DataPath", "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat")
 p.init()
 
 %% Plot FFT of a small box
@@ -31,4 +34,16 @@ close all
 p.calibrate("Zelux", [656, 566; 716, 595; 779, 571])
 
 %% Save calibration
+p.save()
+
+%% Recalibrate
+% Set an initial calibration and new data for re-calibration
+p.config( ...
+    "LatCalibFilePath", "calibration/LatCalib_20241002.mat", ... 
+    "DataPath", "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat")
+p.init()
+p.recalibrate()
+
+%%
+close all
 p.save()

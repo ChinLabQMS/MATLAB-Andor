@@ -2,14 +2,6 @@ classdef AppConfig < BaseObject
    
     properties
         Analysis = ["Signal: Max", "Background: Max"]
-        BigAxes1Index = "Andor19330: Image"
-        BigAxes2Index = "Andor19331: Image"
-        SmallAxes1Index = "Andor19330: Image"
-        SmallAxes2Index = "Andor19330: Image"
-        SmallAxes3Index = "Andor19330: Image"
-        SmallAxes4Index = "Andor19331: Image"
-        SmallAxes5Index = "Zelux: Lattice"
-
         ScreenOffset = [10, 35, -20, -70]
         SequenceTable = SequenceRegistry.Sequence4Analysis
     end

@@ -22,15 +22,16 @@ classdef LayoutManager < BaseObject
                 config.SmallAxes4 = AxesConfig("style", "Line")
                 config.SmallAxes5 = AxesConfig("style", "Line")
             end
+            % Bound the fields to axes
             for field = obj.getPropList()
                 if isprop(app, field)
                     obj.(field) = AxesRunner(app.(field), config.(field));
                 else
-                    obj.warn("Field %s is not a valid field of app.", field)
+                    obj.warn("Field %s is not a valid property of app.", field)
                 end
             end
         end
-    
+
         function update(obj, Live, names, options)
             arguments
                 obj
@@ -45,16 +46,6 @@ classdef LayoutManager < BaseObject
             drawnow
             if options.verbose
                 obj.info("Layout rendered in %.3f s.", toc(timer))
-            end
-        end
-
-        function clear(obj, names)
-            arguments
-                obj
-                names = obj.getPropList()
-            end
-            for field = names
-                obj.(field).clear()
             end
         end
     end
