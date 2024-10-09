@@ -68,6 +68,9 @@ classdef Preprocessor < BaseRunner
 
     methods (Access = protected)
         function signal = subtractBackground(obj, raw, ~, config)
+            if isempty(obj.Background)
+                obj.error("Please initialize first!")
+            end
             signal = raw - obj.Background.(parseConfig(config)).(config.CameraName).(obj.Config.BackgroundSubtraction_VarName);
         end
 

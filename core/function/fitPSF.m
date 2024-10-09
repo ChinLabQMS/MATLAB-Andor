@@ -2,15 +2,14 @@ function [average_psf, final_centroids_1] = fitPSF(image, thresh_percent, crop_s
     arguments
         image (:, :, :) double
         thresh_percent (1, 1) double = 0.5
-        crop_size (1,1) double = 50
+        crop_size (1,1) double = 10
     end
 
     % set a threshold
     threshold_value = thresh_percent*max(image, [], "all");
-    binary_image = image > threshold_value;
 
     % label connected components
-    labeled_image = logical(binary_image);
+    labeled_image = image > threshold_value;
     % find centroids
     stats = regionprops(labeled_image, ["Centroid", "Area"]);
     centroids = cat(1,stats.Centroid);
@@ -73,8 +72,8 @@ function [average_psf, final_centroids_1] = fitPSF(image, thresh_percent, crop_s
     %% Display average psf
     average_psf = mean(cropped_spots,3);
     
-    % figure;
-    % imshow(average_psf,[],'InitialMagnification','fit');
-    % title('Average PSF')
+    figure;
+    imshow(average_psf,[],'InitialMagnification','fit');
+    title('Average PSF')
 end
 

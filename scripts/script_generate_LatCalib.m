@@ -44,6 +44,6 @@ p.config( ...
 p.init()
 p.recalibrate()
 
-%%
+%% Save recalibration (default is with today's date)
 close all
 p.save()
