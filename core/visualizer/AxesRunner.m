@@ -66,13 +66,11 @@ classdef AxesRunner < BaseRunner
             end
             delete(obj.AddonObj)
             switch obj.Config.FuncName
-                case "None"                    
+                case "None"
                 case "Lattice"
                     Lat = info.Lattice.(obj.Config.CameraName);
-                    lat_corr = prepareSite("hex", "latr", 20);
-                    corr = Lat.convert(lat_corr, [1, size(data, 1)], [1, size(data, 2)]);
-                    radius = 0.1 * norm(Lat.V1);
-                    obj.AddonObj = viscircles(obj.AxesObj, corr(:, 2:-1:1), radius, 'EnhanceVisibility', false, 'LineWidth', 0.5);
+                    obj.AddonObj = Lat.plot(prepareSite("hex", "latr", 20), ...
+                        'ax', obj.AxesObj, 'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
                 case "PSF"
             end
         end

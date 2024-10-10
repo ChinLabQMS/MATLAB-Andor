@@ -1,4 +1,4 @@
-classdef Lattice < BaseRunner
+ classdef Lattice < BaseRunner
     
     properties (SetAccess = protected)
         K
@@ -39,17 +39,72 @@ classdef Lattice < BaseRunner
             Lat.R = center;
         end
 
-        function [corr, lat_corr] = convert(Lat, lat_corr, x_lim, y_lim)
+        function [corr, lat_corr] = convert(Lat, lat_corr, options)
             arguments
                 Lat
-                lat_corr
-                x_lim = [1, 1024]
-                y_lim = [1, 1024]
+                lat_corr (:, 2) double = []
+                options.x_lim (1, 2) double = [1, 1024]
+                options.y_lim (1, 2) double = [1, 1024]
+                options.full (1, 1) logical = false
+                options.remove_origin (1, 1) logical = false
+            end
+            if options.full
+                if ~isempty(lat_corr)
+                    Lat.warn("Input lat_corr will be ignored.")
+                end
+                corners = [options.x_lim(1), options.y_lim(1); 
+                           options.x_lim(2), options.y_lim(1); 
+                           options.x_lim(1), options.y_lim(2); 
+                           options.x_lim(2), options.y_lim(2)];
+                lat_corners = (corners - Lat.R)/Lat.V;
+                lat_xmin = ceil(min(lat_corners(:, 1)));
+                lat_xmax = floor(max(lat_corners(:, 1)));
+                lat_ymin = ceil(min(lat_corners(:, 2)));
+                lat_ymax = floor(max(lat_corners(:, 2)));
+                [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
+                lat_corr = [X(:), Y(:)];
+            end
+            if options.remove_origin
+                idx = lat_corr(:, 1) == 0 & lat_corr(:, 2) == 0;
+                lat_corr = lat_corr(~idx, :);
             end
             corr = lat_corr * Lat.V + Lat.R;
-            idx = (corr(:, 1) >= x_lim(1)) & (corr(:, 1) <= x_lim(2) & (corr(:, 2) >= y_lim(1)) & (corr(:, 2) <= y_lim(2)));
+            idx = (corr(:, 1) >= options.x_lim(1)) & ...
+                  (corr(:, 1) <= options.x_lim(2) & ...
+                  (corr(:, 2) >= options.y_lim(1)) & ...
+                  (corr(:, 2) <= options.y_lim(2)));
             corr = corr(idx, :);
             lat_corr = lat_corr(idx, :);
+        end
+
+        function varargout = plot(Lat, lat_corr, options)
+            arguments
+                Lat
+                lat_corr (:, 2) double = []
+                options.x_lim (1, 2) double = [1, 1024]
+                options.y_lim (1, 2) double = [1, 1024]
+                options.full (1, 1) logical = false
+                options.ax = gca()
+                options.color (1, 1) string = "r"
+                options.norm_radius (1, 1) double = 0.1
+                options.add_origin (1, 1) logical = true
+                options.origin_radius (1, 1) double = 0.5
+                options.line_width (1, 1) double = 0.5
+            end
+            corr = Lat.convert(lat_corr, "full", options.full, ...
+                "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
+            if options.add_origin
+                radius = [repmat(options.norm_radius * norm(Lat.V1), size(corr, 1), 1);
+                    options.origin_radius * norm(Lat.V1)];
+                corr = [corr; Lat.convert([0, 0])];
+            else
+                radius = options.norm_radius * norm(Lat.V1);
+            end
+            h = viscircles(options.ax, corr(:, 2:-1:1), radius, ...
+                'Color', options.color, 'EnhanceVisibility', false, 'LineWidth', options.line_width);
+            if nargout == 1  % Output the handle to the added circles
+                varargout{1} = h;
+            end
         end
 
         function calibrateR(Lat, signal, x_range, y_range, options)
@@ -106,39 +161,12 @@ classdef Lattice < BaseRunner
             end
             if options.plot_diagnostic
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
-                Lat.plot(signal, x_range, y_range)
+                figure
+                imagesc(y_range, x_range, signal)
+                title(sprintf("%s: Signal", Lat.ID))
+                axis image
+                Lat.plot('full', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
             end
-        end
-
-        function plot(Lat, signal, x_range, y_range)
-            arguments
-                Lat
-                signal (:, :) double
-                x_range = 1:size(signal, 1)
-                y_range = 1:size(signal, 2)
-            end
-            xmin = x_range(1);
-            xmax = x_range(end);
-            ymin = y_range(1);
-            ymax = y_range(end);
-            corners = [xmin, ymin; xmax, ymin; xmin, ymax; xmax, ymax];
-            lat_corners = (corners - Lat.R)/Lat.V;
-            lat_xmin = ceil(min(lat_corners(:, 1)));
-            lat_xmax = floor(max(lat_corners(:, 1)));
-            lat_ymin = ceil(min(lat_corners(:, 2)));
-            lat_ymax = floor(max(lat_corners(:, 2)));
-            [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
-            corr = Lat.convert([X(:), Y(:)], [x_range(1), x_range(end)], [y_range(1), y_range(end)]);
-            
-            figure
-            imagesc(y_range, x_range, signal)
-            axis image
-            colorbar
-            hold on
-            radius = 0.1 * norm(Lat.V1);
-            viscircles(corr(:, 2:-1:1), radius, 'EnhanceVisibility', false, 'LineWidth', 0.5);
-            title(sprintf("%s: Signal", Lat.ID))
-            hold off
         end
 
         function peak_pos = convert2FFTPeak(Lat, xy_size)

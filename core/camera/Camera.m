@@ -171,6 +171,10 @@ classdef Camera < BaseRunner
             end
             is_saturated = false;
         end
+
+        function label = getStatusLabel(obj)
+            label = string(class(obj)) + string(obj.ID);
+        end
     end
 
     methods (Access = protected, Sealed, Hidden)
@@ -178,10 +182,6 @@ classdef Camera < BaseRunner
             if ~obj.Initialized
                 obj.error("Camera not initialized.")
             end
-        end
-
-        function label = getStatusLabel(obj)
-            label = string(class(obj)) + string(obj.ID);
         end
     end
 

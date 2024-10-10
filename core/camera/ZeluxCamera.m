@@ -79,6 +79,7 @@ classdef ZeluxCamera < Camera
             obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.ID), false);
             obj.Config.XPixels = obj.CameraHandle.ImageWidth_pixels;
             obj.Config.YPixels = obj.CameraHandle.ImageHeight_pixels;
+            obj.FrameIndex = 0;
         end
 
         function closeCamera(obj)
@@ -110,6 +111,10 @@ classdef ZeluxCamera < Camera
             image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);
             obj.FrameIndex = imageFrame.FrameNumber;
+        end
+
+        function label = getStatusLabel(obj)
+            label = sprintf("%s%d(Index: %d)", class(obj), obj.ID, obj.FrameIndex);
         end
     end
     

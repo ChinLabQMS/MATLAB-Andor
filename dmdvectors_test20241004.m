@@ -46,7 +46,7 @@ hold on
 scatter(linelat1,xvals);
 hold on
 scatter(linelat2,xvals);
-legend;
+legend('dmd1','dmd2','lat1','lat2');
 %%
 % find the angle between DMD vec 1 and lat vec 2
 angle = acosd(latvec2*vec1/norm(latvec2)/norm(vec1));
