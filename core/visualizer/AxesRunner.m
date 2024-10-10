@@ -7,6 +7,7 @@ classdef AxesRunner < BaseRunner
     properties (SetAccess = protected)
         GraphObj
         AddonObj
+        Live = struct.empty
     end
 
     methods
@@ -20,6 +21,7 @@ classdef AxesRunner < BaseRunner
         end
 
         function update(obj, Live)
+            obj.Live = Live;
             data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
             info = Live.Info;
             switch obj.Config.Style
@@ -34,6 +36,9 @@ classdef AxesRunner < BaseRunner
             config@BaseRunner(obj, varargin{:})
             if obj.Config.Style == "Line"
                 obj.clear()
+            end
+            if ~isempty(obj.Live)
+                obj.update(obj.Live)
             end
         end
 

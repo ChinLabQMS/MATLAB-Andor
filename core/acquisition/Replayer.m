@@ -1,9 +1,10 @@
 classdef Replayer < BaseRunner
 
     properties (SetAccess = immutable, Hidden)
+        LayoutManager
+        Stat
         Preprocessor
         Analyzer
-        Stat
     end
 
     properties (SetAccess = protected, Hidden)
@@ -21,11 +22,9 @@ classdef Replayer < BaseRunner
         end
 
         function init(obj)
-            try
-                obj.Data = load(obj.Config.Filepath, "Data").Data;
-            catch
-                
-            end
+            obj.Data = load(obj.Config.DataPath, "Data").Data;
+            obj.Preprocessor.init()
+            obj.Analyzer.init()
         end
     end
 

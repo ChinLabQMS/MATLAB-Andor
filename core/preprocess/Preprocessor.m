@@ -1,4 +1,4 @@
-classdef Preprocessor < BaseRunner
+classdef Preprocessor < BaseAnalyzer
 
     properties (SetAccess = protected)
         Background
@@ -9,12 +9,7 @@ classdef Preprocessor < BaseRunner
             arguments
                 config (1, 1) PreprocessConfig = PreprocessConfig();
             end
-            obj@BaseRunner(config);
-        end
-
-        function init(obj)
-            obj.Background = load(obj.Config.BackgroundDataPath);
-            obj.info("Background loaded.")
+            obj@BaseAnalyzer(config);
         end
 
         function [signal, leakage] = process(obj, raw, label, config, options)
@@ -57,7 +52,7 @@ classdef Preprocessor < BaseRunner
             end
             signal = data;
             leakage = data;
-            for camera = string(fields(data)')
+            for camera = string(fields(data))'
                 if camera == "AcquisitionConfig"
                     continue
                 end
@@ -66,11 +61,15 @@ classdef Preprocessor < BaseRunner
         end
     end
 
+    methods (Access = protected, Hidden)
+        function init(obj)
+            obj.Background = load(obj.Config.BackgroundDataPath);
+            obj.info("Background loaded.")
+        end
+    end
+
     methods (Access = protected)
         function signal = subtractBackground(obj, raw, ~, config)
-            if isempty(obj.Background)
-                obj.error("Please initialize first!")
-            end
             signal = raw - obj.Background.(parseConfig(config)).(config.CameraName).(obj.Config.BackgroundSubtraction_VarName);
         end
 

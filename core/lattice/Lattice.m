@@ -50,7 +50,7 @@
             end
             if options.full
                 if ~isempty(lat_corr)
-                    Lat.warn("Input lat_corr will be ignored.")
+                    Lat.warn("Input lat_corr will be ignored to generate all sites within image frame.")
                 end
                 corners = [options.x_lim(1), options.y_lim(1); 
                            options.x_lim(2), options.y_lim(1); 
@@ -137,9 +137,9 @@
                 options.R_fit = Lat.Config.CalibV_RFit
                 options.warning_latnorm_thres = Lat.Config.CalibV_WarnLatNormThres
                 options.warning_rsquared = Lat.Config.CalibV_WarnRSquared
-                options.plot_diagnostic (1, 1) logical = Lat.Config.CalibV_PlotDiagnostic
                 options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
                 options.outlier_thres (1, 1) double = Lat.Config.CalibR_OutlierThres
+                options.plot_diagnostic (1, 1) logical = Lat.Config.CalibV_PlotDiagnostic
             end
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
@@ -173,7 +173,7 @@
             if ~isempty(Lat.K)
                 peak_pos = convertK2FFTPeak(xy_size, Lat.K);
             else
-                peak_pos = [];
+                obj.error("Lattice vector is not initialized.")
             end
         end
 

@@ -59,9 +59,10 @@ classdef LatCaliber < BaseRunner
             axis image
             title(camera)
             colorbar
-            peak_pos = obj.Lattice.(camera).convert2FFTPeak(size(s.FFTPattern));
-            if ~isempty(peak_pos)
-                viscircles(peak_pos(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
+            if ~isempty(obj.Lattice.(camera).K)
+                peak_pos = obj.Lattice.(camera).convert2FFTPeak(size(s.FFTPattern));
+                viscircles(peak_pos(:, 2:-1:1), 7, ...
+                    "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
             end
         end
 

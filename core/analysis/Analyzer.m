@@ -1,4 +1,4 @@
-classdef Analyzer < BaseRunner
+classdef Analyzer < BaseAnalyzer
 
     properties (SetAccess = protected)
         Lattice
@@ -9,12 +9,7 @@ classdef Analyzer < BaseRunner
             arguments
                 config (1, 1) AnalysisConfig = AnalysisConfig()
             end
-            obj@BaseRunner(config)
-        end
-
-        function init(obj)
-            obj.Lattice = load(obj.Config.LatCalibFilePath);
-            obj.info("Lattice calibration loaded.")
+            obj@BaseAnalyzer(config)
         end
 
         function res = analyze(obj, signal, label, config, options)
@@ -38,6 +33,13 @@ classdef Analyzer < BaseRunner
         end
 
         function analysis = analyzeData(obj, data)
+        end
+    end
+
+    methods (Access = protected, Hidden)
+        function init(obj)
+            obj.Lattice = load(obj.Config.LatCalibFilePath);
+            obj.info("Lattice calibration loaded.")
         end
     end
 

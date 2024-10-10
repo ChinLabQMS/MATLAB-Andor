@@ -3,8 +3,8 @@ classdef Acquisitor < BaseRunner
     properties (SetAccess = immutable)
         CameraManager
         LayoutManager
-        Data
-        Stat
+        DataManager
+        StatManager
         Preprocessor
         Analyzer
     end
@@ -28,8 +28,8 @@ classdef Acquisitor < BaseRunner
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
             obj.LayoutManager = layouts;
-            obj.Data = data;
-            obj.Stat = stat;
+            obj.DataManager = data;
+            obj.StatManager = stat;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
         end
@@ -37,10 +37,8 @@ classdef Acquisitor < BaseRunner
         % Initialize acquisition
         function init(obj)
             obj.CameraManager.init(obj.Config.ActiveCameras)
-            obj.Data.init()
-            obj.Stat.init()
-            obj.Preprocessor.init()
-            obj.Analyzer.init()
+            obj.DataManager.init()
+            obj.StatManager.init()
             obj.Timer = tic;
             obj.info("Acquisition initialized.\n")
         end
@@ -57,7 +55,7 @@ classdef Acquisitor < BaseRunner
                 camera = string(sequence_table.Camera(i));
                 label = string(sequence_table.Label(i));
                 type = string(sequence_table.Type(i));
-                config = obj.Data.(camera).Config;
+                config = obj.DataManager.(camera).Config;
                 if type == "Start" || type == "Start+Acquire"
                     obj.CameraManager.(camera).startAcquisition( ...
                         "verbose", options.verbose_level > 3)
@@ -79,11 +77,11 @@ classdef Acquisitor < BaseRunner
                         "verbose", options.verbose_level > 2);
                 end
             end
-            obj.Data.add(raw, "verbose", options.verbose_level > 2);
-            obj.Stat.add(analysis, "verbose", options.verbose_level > 3);
+            obj.DataManager.add(raw, "verbose", options.verbose_level > 2);
+            obj.StatManager.add(analysis, "verbose", options.verbose_level > 3);
             Live = struct('Raw', raw, 'Signal', signal, 'Background', background, ...
                           'Analysis', analysis, ...
-                          'Info', struct('RunNumber', obj.Data.CurrentIndex, ...
+                          'Info', struct('RunNumber', obj.DataManager.CurrentIndex, ...
                                          'Lattice', obj.Analyzer.Lattice));
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_level > 1)
