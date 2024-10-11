@@ -1,7 +1,7 @@
 classdef AcquisitionConfig < BaseObject
     
-    properties (SetAccess = {?BaseObject})
-        SequenceTable {mustBeValidSequence} = SequenceRegistry.Sequence4Basic
+    properties (SetAccess = {?BaseRunner})
+        SequenceTable {mustBeValidSequence} = SequenceRegistry.Full4Analysis
         NumAcquisitions (1, 1) double = 20
         NumStatistics (1, 1) double = 2000
         Refresh (1, 1) double = 0.01
@@ -13,7 +13,7 @@ classdef AcquisitionConfig < BaseObject
         ActiveSequence
         ActiveAcquisition
         ActiveAnalysis
-        ListOfImages
+        ImageList
     end
 
     methods
@@ -30,7 +30,7 @@ classdef AcquisitionConfig < BaseObject
             end
         end
 
-        function list_str = get.ListOfImages(obj)
+        function list_str = get.ImageList(obj)
             active_acquisition = obj.ActiveAcquisition;
             num_images = height(active_acquisition);
             list_str = cell(num_images, 1);
@@ -69,7 +69,7 @@ classdef AcquisitionConfig < BaseObject
     
     methods (Static)
         function obj = struct2obj(s)
-            obj = BaseObject.struct2obj(s, AcquisitionConfig());
+            obj = BaseRunner.struct2obj(s, AcquisitionConfig());
         end
     end
 

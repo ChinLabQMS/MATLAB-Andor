@@ -80,11 +80,11 @@ classdef Acquisitor < BaseRunner
             end
             obj.DataManager.add(raw, "verbose", options.verbose_level > 2);
             obj.StatManager.add(analysis, "verbose", options.verbose_level > 3);
-            Live = struct('Raw', raw, 'Signal', signal, 'Background', background, ...
-                          'Analysis', analysis, ...
+            if ~isempty(obj.LayoutManager)
+                Live = struct('Raw', raw, 'Signal', signal, ...
+                          'Background', background, 'Analysis', analysis, ...
                           'Info', struct('RunNumber', obj.DataManager.CurrentIndex, ...
                                          'Lattice', obj.Analyzer.Lattice));
-            if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_level > 1)
             end
             if options.verbose_level > 0
@@ -100,15 +100,24 @@ classdef Acquisitor < BaseRunner
         end
     end
 
+    methods (Access = protected)
+        function label = getStatusLabel(obj)
+            label = sprintf("%s(Index: %d)", class(obj), obj.DataManager.CurrentIndex);
+        end
+    end
+
     methods (Static)
-        function obj = struct2obj(data_struct, options)
+        function [acquisitor, config, cameras] = struct2obj(data_struct, layout, preprocessor, analyzer, options)
             arguments
                 data_struct (1, 1) struct
+                layout = []
+                preprocessor (1, 1) Preprocessor = Preprocessor()
+                analyzer (1, 1) Analyzer = Analyzer()
                 options.test_mode (1, 1) logical = false
             end
             [data, config, cameras] = DataManager.struct2obj(data_struct, "test_mode", options.test_mode);
-            obj = Acquisitor(config, cameras, [], data);
-            obj.info("Loaded from structure.")
+            acquisitor = Acquisitor(config, cameras, layout, preprocessor, analyzer, data);
+            acquisitor.info("Loaded from structure.")
         end
     end
 

@@ -6,6 +6,10 @@ classdef CameraManager < BaseObject
         Zelux (1, 1) Camera
     end
 
+    properties (Dependent, Hidden)
+        CameraList
+    end
+
     methods
         function obj = CameraManager(config)
             arguments
@@ -55,6 +59,10 @@ classdef CameraManager < BaseObject
             for camera = cameras
                 obj.(camera).abortAcquisition()
             end
+        end
+
+        function list = get.CameraList(obj)
+            list = obj.getPropList();
         end
     end
 

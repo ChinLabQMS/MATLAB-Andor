@@ -11,7 +11,7 @@ classdef LayoutManager < BaseObject
     end
 
     properties (Dependent, Hidden)
-        ListOfAxes (1, :) string
+        AxesList (1, :) string
     end
 
     methods
@@ -63,7 +63,7 @@ classdef LayoutManager < BaseObject
             end
         end
 
-        function list = get.ListOfAxes(obj)
+        function list = get.AxesList(obj)
             list = obj.getPropList();
         end
     end

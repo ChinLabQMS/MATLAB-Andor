@@ -83,7 +83,7 @@
             end
         end
 
-        function lat_corr = convert2Lat(corr)
+        function lat_corr = convert2Lat(Lat, corr)
             lat_corr = (corr - Lat.R) / Lat.V;
         end
 
@@ -202,7 +202,7 @@
             if ~isempty(Lat.K)
                 peak_pos = convertK2FFTPeak(xy_size, Lat.K);
             else
-                obj.error("Lattice vector is not initialized.")
+                Lat.error("Lattice vector is not initialized.")
             end
         end
 

@@ -16,7 +16,7 @@ classdef BaseAnalyzer < BaseRunner
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
+        function init(~)
             % Implement for each subclass
         end
     end

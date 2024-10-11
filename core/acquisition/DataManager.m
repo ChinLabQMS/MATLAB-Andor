@@ -89,7 +89,7 @@ classdef DataManager < BaseStorage
             end
             config = AcquisitionConfig.struct2obj(data_struct.AcquisitionConfig);
             cameras = CameraManager.struct2obj(data_struct, "test_mode", options.test_mode);
-            data = Dataset(config, cameras);
+            data = DataManager(config, cameras);
             for camera = config.ActiveCameras
                 data.(camera) = data_struct.(camera);
             end
