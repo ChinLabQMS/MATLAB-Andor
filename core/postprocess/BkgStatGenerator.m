@@ -1,4 +1,4 @@
-classdef BkgStatGenerator < BaseRunner
+classdef BkgStatGenerator < BaseAnalyzer
 
     properties (SetAccess = protected)
         BkgData
@@ -10,21 +10,14 @@ classdef BkgStatGenerator < BaseRunner
             arguments
                 config (1, 1) BkgStatGeneratorConfig = BkgStatGeneratorConfig()
             end
-            obj@BaseRunner(config)
-        end
-
-        function init(obj)
-            for field = obj.Config.SettingList
-                obj.BkgData.(field) = load(fullfile(obj.Config.DataPath, obj.Config.(field))).Data;
-            end
-            fprintf("%s: All data loaded.\n", obj.CurrentLabel)
+            obj@BaseAnalyzer(config)
         end
 
         function process(obj)
             for field = obj.Config.SettingList
                 obj.BkgStat.(field) = obj.getBkgStat(obj.BkgData.(field));               
             end
-            fprintf("%s: BkgStat generated.\n", obj.CurrentLabel)
+            obj.info("BkgStat generated.")
         end
 
         function save(obj, filename)
@@ -33,20 +26,29 @@ classdef BkgStatGenerator < BaseRunner
                 filename (1, 1) string = sprintf("calibration/BkgStat_%s.mat", datetime("now", "Format","uuuuMMdd"))
             end
             if isempty(obj.BkgStat)
-                error("%s: No BkgStat available, please init first", obj.CurrentLabel)
+                obj.error("No BkgStat available, please init first.")
             end
             data = obj.BkgStat;
             data.Config = obj.Config.struct();
             save(filename, "-struct", "data")
-            fprintf("%s: BkgStat saved as %s.\n", obj.CurrentLabel, filename)
+            obj.info("BkgStat saved as [%s].", filename)
         end
 
         function plot(obj, setting_str, camera)
             if isempty(obj.BkgStat)
-                error("%s: No BkgStat available, please init first", obj.CurrentLabel)
+                obj.error("No BkgStat available, please init first")
             end
             stat = obj.BkgStat.(setting_str).(camera);
             plotStat(stat, obj.BkgData.(setting_str).AcquisitionConfig.NumAcquisitions)
+        end
+    end
+
+    methods (Access = protected, Hidden)
+        function init(obj)
+            for field = obj.Config.SettingList
+                obj.BkgData.(field) = load(fullfile(obj.Config.DataPath, obj.Config.(field))).Data;
+            end
+            obj.info("All data loaded.")
         end
     end
 
@@ -84,7 +86,7 @@ classdef BkgStatGenerator < BaseRunner
         
             num_outliers = sum(outliers, 'all');
             num_elements = numel(new_images);
-            fprintf('%s: Number of pixels disposed: %d, percentage in data: %.6f%%\n', obj.CurrentLabel, num_outliers, num_outliers/num_elements*100)
+            obj.info("Number of pixels disposed: %d, percentage in data: %.6f%%", num_outliers, num_outliers/num_elements*100)
         end
     end
 

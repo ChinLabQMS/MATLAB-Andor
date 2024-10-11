@@ -1,4 +1,4 @@
-classdef AnalysisRegistry
+classdef AnalysisRegistry < BaseObject
 
     properties
         OutputVars

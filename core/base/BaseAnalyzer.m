@@ -17,7 +17,7 @@ classdef BaseAnalyzer < BaseRunner
 
     methods (Access = protected, Hidden)
         function init(obj)
-            obj.info("Analyzer initialized.")
+            % Implement for each subclass
         end
     end
 

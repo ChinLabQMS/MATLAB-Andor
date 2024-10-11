@@ -15,15 +15,15 @@ classdef Acquisitor < BaseRunner
 
     methods
         function obj = Acquisitor(config, cameras, layouts, ...
-                                  data, stat, preprocessor, analyzer)
+                                  preprocessor, analyzer, data, stat)
             arguments
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
                 cameras (1, 1) CameraManager = CameraManager()
                 layouts = LayoutManager().empty()
+                preprocessor (1, 1) Preprocessor = Preprocessor()
+                analyzer (1, 1) Analyzer = Analyzer(preprocessor)
                 data (1, 1) DataManager = DataManager(config, cameras)
                 stat (1, 1) StatManager = StatManager(config)
-                preprocessor (1, 1) Preprocessor = Preprocessor()
-                analyzer (1, 1) Analyzer = Analyzer()
             end
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
@@ -37,6 +37,7 @@ classdef Acquisitor < BaseRunner
         % Initialize acquisition
         function init(obj)
             obj.CameraManager.init(obj.Config.ActiveCameras)
+            obj.LayoutManager.init()
             obj.DataManager.init()
             obj.StatManager.init()
             obj.Timer = tic;

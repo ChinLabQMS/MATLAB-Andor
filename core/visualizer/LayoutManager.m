@@ -10,6 +10,10 @@ classdef LayoutManager < BaseObject
         SmallAxes5 (1, 1) AxesRunner
     end
 
+    properties (Dependent, Hidden)
+        ListOfAxes (1, :) string
+    end
+
     methods
         function obj = LayoutManager(app, config)
             arguments
@@ -32,6 +36,16 @@ classdef LayoutManager < BaseObject
             end
         end
 
+        % Clear all line plots
+        function init(obj)
+            for field = obj.getPropList()
+                if obj.(field).Config.Style == "Line"
+                    obj.(field).clear()
+                end
+            end
+        end
+        
+        % Update axes content
         function update(obj, Live, names, options)
             arguments
                 obj
@@ -47,6 +61,10 @@ classdef LayoutManager < BaseObject
             if options.verbose
                 obj.info("Layout rendered in %.3f s.", toc(timer))
             end
+        end
+
+        function list = get.ListOfAxes(obj)
+            list = obj.getPropList();
         end
     end
 

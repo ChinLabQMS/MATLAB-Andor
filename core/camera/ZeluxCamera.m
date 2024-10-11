@@ -42,6 +42,7 @@ classdef ZeluxCamera < Camera
             obj.checkStatus()
             if obj.CameraHandle.IsArmed
                 obj.CameraHandle.Disarm;
+                obj.FrameIndex = 0;
                 obj.info("Camera disarmed.")
             end
         end

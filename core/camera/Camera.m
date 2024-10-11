@@ -78,6 +78,7 @@ classdef Camera < BaseRunner
     methods (Sealed)
         function init(obj)
             if obj.Initialized
+                obj.abortAcquisition()
                 return
             end
             obj.initCamera()

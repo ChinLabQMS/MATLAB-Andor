@@ -1,6 +1,6 @@
 classdef BkgStatGeneratorConfig < BaseObject
 
-    properties (SetAccess = {?BaseObject})
+    properties (SetAccess = {?BaseRunner})
         DataPath = "data/2024/09 September/20240926 camera readout noise/"
         Full_1MHz = "clean_bg_1MHz.mat"
         Full_3MHz = "clean_bg_3MHz.mat"

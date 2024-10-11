@@ -39,16 +39,18 @@
             Lat.R = center;
         end
 
-        function [corr, lat_corr] = convert(Lat, lat_corr, options)
+        function [corr, lat_corr] = convert2Real(Lat, lat_corr, options)
             arguments
                 Lat
                 lat_corr (:, 2) double = []
+                options.filter (1, 1) logical = true
                 options.x_lim (1, 2) double = [1, 1024]
                 options.y_lim (1, 2) double = [1, 1024]
-                options.full (1, 1) logical = false
+                options.full_range (1, 1) logical = false
                 options.remove_origin (1, 1) logical = false
             end
-            if options.full
+            % If generate lattice sites for the full range
+            if options.full_range
                 if ~isempty(lat_corr)
                     Lat.warn("Input lat_corr will be ignored to generate all sites within image frame.")
                 end
@@ -64,17 +66,25 @@
                 [Y, X] = meshgrid(lat_ymin:lat_ymax, lat_xmin:lat_xmax);
                 lat_corr = [X(:), Y(:)];
             end
+            % If discard origin in the lattice coordinate
             if options.remove_origin
                 idx = lat_corr(:, 1) == 0 & lat_corr(:, 2) == 0;
                 lat_corr = lat_corr(~idx, :);
             end
+            % Transform coordinates to real space
             corr = lat_corr * Lat.V + Lat.R;
-            idx = (corr(:, 1) >= options.x_lim(1)) & ...
-                  (corr(:, 1) <= options.x_lim(2) & ...
-                  (corr(:, 2) >= options.y_lim(1)) & ...
-                  (corr(:, 2) <= options.y_lim(2)));
-            corr = corr(idx, :);
-            lat_corr = lat_corr(idx, :);
+            if options.filter
+                idx = (corr(:, 1) >= options.x_lim(1)) & ...
+                      (corr(:, 1) <= options.x_lim(2) & ...
+                      (corr(:, 2) >= options.y_lim(1)) & ...
+                      (corr(:, 2) <= options.y_lim(2)));
+                corr = corr(idx, :);
+                lat_corr = lat_corr(idx, :);
+            end
+        end
+
+        function lat_corr = convert2Lat(corr)
+            lat_corr = (corr - Lat.R) / Lat.V;
         end
 
         function varargout = plot(Lat, lat_corr, options)
@@ -91,20 +101,39 @@
                 options.origin_radius (1, 1) double = 0.5
                 options.line_width (1, 1) double = 0.5
             end
-            corr = Lat.convert(lat_corr, "full", options.full, ...
+            corr = Lat.convert2Real(lat_corr, "full", options.full, ...
                 "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
+            % Use a different radius to display orgin
             if options.add_origin
                 radius = [repmat(options.norm_radius * norm(Lat.V1), size(corr, 1), 1);
                     options.origin_radius * norm(Lat.V1)];
-                corr = [corr; Lat.convert([0, 0])];
+                corr = [corr; Lat.convert2Real([0, 0])];
             else
                 radius = options.norm_radius * norm(Lat.V1);
             end
+            % Create a hggroup of lines of circles
             h = viscircles(options.ax, corr(:, 2:-1:1), radius, ...
                 'Color', options.color, 'EnhanceVisibility', false, 'LineWidth', options.line_width);
-            if nargout == 1  % Output the handle to the added circles
+            % Output the handle to the hggroup
+            if nargout == 1
                 varargout{1} = h;
             end
+        end
+
+        function plotV(Lat, options)
+            arguments
+                Lat
+                options.ax = gca()
+                options.origin (1, 2) double = [0, 0]
+            end
+            cObj = onCleanup(@()preserveHold(ishold(options.ax), options.ax)); % Preserve original hold state
+            hold(options.ax,'on');
+            quiver(options.ax, options.origin(1), options.origin(2), Lat.V1(1), Lat.V1(2), "off", ...
+                "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID))
+            axis equal
+            quiver(options.ax, options.origin(1), options.origin(2), Lat.V2(1), Lat.V2(2), "off", ...
+                "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID))
+            legend("Location", "eastoutside")
         end
 
         function calibrateR(Lat, signal, x_range, y_range, options)
@@ -165,7 +194,7 @@
                 imagesc(y_range, x_range, signal)
                 title(sprintf("%s: Signal", Lat.ID))
                 axis image
-                Lat.plot('full', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
             end
         end
 
@@ -279,5 +308,12 @@ function plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, ID)
         [peak_fit, Corr, Z, ~] = all_peak_fit{i}{:};
         plot(peak_fit, Corr, Z)
         title(sprintf("Peak pos: (%g, %g)", peak_pos(i, :)))
+    end
+end
+
+% Function for preserving hold behavior on exit
+function preserveHold(was_hold_on,ax)
+    if ~was_hold_on
+        hold(ax,'off');
     end
 end

@@ -1,4 +1,4 @@
-classdef LatCaliber < BaseRunner
+classdef LatCaliberator < BaseAnalyzer
     
     properties (SetAccess = protected)
         Signal
@@ -11,21 +11,18 @@ classdef LatCaliber < BaseRunner
     end
     
     methods
-        function obj = LatCaliber(config, preprocessor)
+        function obj = LatCaliberator(config, preprocessor)
             arguments
                 config (1, 1) LatCalibConfig = LatCalibConfig()
                 preprocessor (1, 1) Preprocessor = Preprocessor()
             end
-            obj@BaseRunner(config)
+            obj@BaseAnalyzer(config)
             obj.Preprocessor = preprocessor;
         end
 
-        function init(obj)
-            obj.Preprocessor.init()
-            data = load(obj.Config.DataPath).Data;
-            obj.Signal = obj.Preprocessor.processData(data);
+        function process(obj)
+            obj.Signal = obj.Preprocessor.processData(load(obj.Config.DataPath).Data);
             obj.info("Processed Signal loaded for lattice calibration.")
-
             for i = 1: length(obj.Config.CameraList)
                 camera = obj.Config.CameraList(i);
                 label = obj.Config.ImageLabel(i);
@@ -42,17 +39,18 @@ classdef LatCaliber < BaseRunner
                 obj.Stat.(camera) = s;
                 obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
             end
+            obj.info("Finish processing images.")
             % If provided a path to calibration file, use it
             if ~isempty(obj.Config.LatCalibFilePath)
                 obj.Lattice = load(obj.Config.LatCalibFilePath);
+                obj.info("Pre-calibration loaded from [%s].", obj.Config.LatCalibFilePath)
             end
-            obj.info("Finish processing images.")
         end
 
         function plot(obj, camera)
             s = obj.Stat.(camera);
             if ~isfield(s, "FFTPattern")
-                obj.error("Please process images first.")
+                obj.error("Please process images first to generate FFT Patterns.")
             end
             figure
             imagesc(log(s.FFTPattern))
@@ -88,6 +86,9 @@ classdef LatCaliber < BaseRunner
         end
 
         function recalibrate(obj)
+            if isempty(obj.Signal)
+                obj.process()
+            end
             for camera = obj.Config.CameraList
                 if ~isempty(obj.Lattice.(camera).K) && isfield(obj.Stat.(camera), "FFTPattern")
                     obj.calibrate(camera)
@@ -97,7 +98,11 @@ classdef LatCaliber < BaseRunner
             end
         end
 
-        function save(obj)
+        function save(obj, filename)
+            arguments
+                obj
+                filename (1, 1) string = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
+            end
             for camera = obj.Config.CameraList
                 if ~isfield(obj.Lattice, camera)
                     obj.warn("Camera %s is not calibrated.", camera)
@@ -105,7 +110,8 @@ classdef LatCaliber < BaseRunner
             end
             Lat = obj.Lattice;
             Lat.Config = obj.Config;
-            save(sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd")), "-struct", "Lat")
+            save(filename, "-struct", "Lat")
+            obj.info("Lattice calibration saved as [%s].", filename)
         end
     end
 

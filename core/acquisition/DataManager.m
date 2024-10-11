@@ -26,7 +26,11 @@ classdef DataManager < BaseStorage
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveSequence;
             num_acq = obj.AcquisitionConfig.NumAcquisitions;
-            for camera = obj.AcquisitionConfig.ActiveCameras
+            for camera = obj.getPropList()
+                if ~ismember(camera, obj.AcquisitionConfig.ActiveCameras)
+                    obj.(camera) = [];
+                    continue
+                end
                 % Record camera config
                 obj.(camera).Config = obj.CameraManager.(camera).Config.struct();
                 % Record some additional information to the camera config

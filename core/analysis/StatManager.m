@@ -15,6 +15,12 @@ classdef StatManager < BaseStorage
         function init(obj)
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveAnalysis;
+            for camera = obj.getPropList()
+                if ~ismember(camera, obj.AcquisitionConfig.ActiveCameras)
+                    obj.(camera) = [];
+                    continue
+                end
+            end
             for i = 1:height(sequence)
                 camera = string(sequence.Camera(i));
                 label = sequence.Label(i);

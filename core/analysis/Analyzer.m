@@ -3,13 +3,19 @@ classdef Analyzer < BaseAnalyzer
     properties (SetAccess = protected)
         Lattice
     end
+
+    properties (SetAccess = immutable)
+        Preprocessor
+    end
     
     methods
-        function obj = Analyzer(config)
+        function obj = Analyzer(preprocessor, config)
             arguments
+                preprocessor (1, 1) Preprocessor = Preprocessor()
                 config (1, 1) AnalysisConfig = AnalysisConfig()
             end
             obj@BaseAnalyzer(config)
+            obj.Preprocessor = preprocessor;
         end
 
         function res = analyze(obj, signal, label, config, options)

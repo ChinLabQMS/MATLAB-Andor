@@ -12,19 +12,19 @@ classdef Replayer < BaseRunner
     end
 
     methods
-        function obj = Replayer(config)
+        function obj = Replayer(preprocessor, analyzer, config)
             arguments
+                preprocessor (1, 1) Preprocessor = Preprocessor()
+                analyzer (1, 1) Analyzer = Analyzer(preprocessor)
                 config (1, 1) ReplayerConfig = ReplayerConfig()
             end
             obj@BaseRunner(config)
-            obj.Preprocessor = Preprocessor();
-            obj.Analyzer = Analyzer();
+            obj.Preprocessor = preprocessor;
+            obj.Analyzer = analyzer;
         end
 
         function init(obj)
             obj.Data = load(obj.Config.DataPath, "Data").Data;
-            obj.Preprocessor.init()
-            obj.Analyzer.init()
         end
     end
 
