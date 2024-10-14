@@ -1,9 +1,5 @@
 classdef SequenceRegistry < BaseObject
 
-    properties (Dependent, Hidden)
-        SequenceList
-    end
-
     properties (Constant)
         Empty = table( ...
             (1:10)', ...
@@ -50,6 +46,10 @@ classdef SequenceRegistry < BaseObject
             {'Start+Acquire', 'Start', 'Acquire', 'Analysis'}, 'Ordinal', true)', ...
             ["", "", "CalibLatR", "FitCenter", "", "", "", "", "FitCenter, CalibLatR", "FitCenter, CalibLatR", "", ""]', ...
             'VariableNames', {'Order', 'Camera', 'Label', 'Type', 'Note'})
+    end
+
+    properties (Dependent, Hidden)
+        SequenceList
     end
 
     methods

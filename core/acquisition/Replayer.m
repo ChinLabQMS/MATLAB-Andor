@@ -35,7 +35,11 @@ classdef Replayer < BaseAnalyzer
                 options.verbose_level (1, 1) double = 1
             end
             timer = tic;
-            obj.CurrentIndex = index;
+            if index <= obj.AcquisitionConfig.NumAcquisitions && index > 0
+                obj.CurrentIndex = index;
+            else
+                obj.CurrentIndex = 1;
+            end
             sequence_table = obj.AcquisitionConfig.ActiveSequence;
             for i = 1:height(sequence_table)
                 camera = string(sequence_table.Camera(i));

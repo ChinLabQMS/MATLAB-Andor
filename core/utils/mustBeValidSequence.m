@@ -42,7 +42,7 @@ function mustBeValidSequence(sequence_table)
                     error("Invalid sequence, label %s is analyzed more than once for camera %s", label, camera)
                 end
                 note = camera_seq.Note(i);
-                parseAnalysisOutput(note);
+                AnalysisRegistry.parseAnalysisOutput(note);
                 analyzed(end + 1) = label; %#ok<AGROW>
             end
         end

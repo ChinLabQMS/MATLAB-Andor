@@ -6,8 +6,7 @@ classdef LatCalibConfig < BaseObject
         CameraList = ["Andor19330", "Andor19331", "Zelux"]
         ImageLabel = ["Image", "Image", "Lattice"]
         CalibV_RFit = 7
-        CalibR_BinarizeThres = -100
-        CalibR_OutlierThres = 2000
+        CalibR_BinarizeThres = 0.5
     end
 
 end

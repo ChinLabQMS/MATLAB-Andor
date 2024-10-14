@@ -18,7 +18,7 @@ p.plot("Andor19330")
 
 %% Andor19330: Input initial peak positions as [x1, y1; x2, y2], at least two peaks
 close all
-p.calibrate("Andor19330", [105, 204; 156, 241; 212, 210])
+p.calibrate("Andor19330", [105, 204; 156, 241])
 
 %% Andor19331
 close all
@@ -26,20 +26,20 @@ p.plot("Andor19331")
 
 %%
 close all
-p.calibrate("Andor19331", [116, 165; 155, 216; 227, 212])
+p.calibrate("Andor19331", [155, 216; 116, 165])
 
 %% Zelux
 close all
 p.plot("Zelux")
 
 %% Input the peaks positions in the orientation similar to Andor19330
-close all
-p.calibrate("Zelux", [656, 566; 716, 595; 779, 571])
+% close all
+p.calibrate("Zelux", [656, 566; 716, 595])
 
 %% Save lattice calibration of all three cameras
 p.save()
 
-%% Recalibrate the lattice to a new dataset
+%% Re-calibrate the lattice to a new dataset
 
 % Set an initial calibration file location and new data location for re-calibration
 p.config( ...
@@ -47,6 +47,6 @@ p.config( ...
     "DataPath", "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat")
 p.recalibrate()
 
-%% Save recalibration result (default is with today's date)
+%% Save re-calibration result (default is with today's date)
 close all
 p.save()

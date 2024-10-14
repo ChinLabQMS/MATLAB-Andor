@@ -26,7 +26,7 @@ classdef StatManager < BaseStorage
                 label = sequence.Label(i);
                 note = sequence.Note(i);
                 num_stat = obj.AcquisitionConfig.NumStatistics;
-                [~, out_vars, out_data, num_out] = parseAnalysisOutput(note);
+                [~, out_vars, out_data, num_out] = AnalysisRegistry.parseAnalysisOutput(note);
                 if num_out > 0
                     obj.(camera).(label) = table('Size', [num_stat, length(out_vars) + length(out_data)], ...
                                                  'VariableTypes', [repmat("doublenan", 1, length(out_vars)), ...
@@ -62,6 +62,9 @@ classdef StatManager < BaseStorage
             end
         end
 
+        function s = struct(obj, varargin)
+            s = struct@BaseStorage(obj, varargin{:}, 'max_index', obj.AcquisitionConfig.NumStatistics);
+        end
     end
 
 end

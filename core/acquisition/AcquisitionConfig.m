@@ -23,7 +23,7 @@ classdef AcquisitionConfig < BaseObject
             active_analysis = obj.ActiveAnalysis;
             seq = active_analysis(active_analysis.Camera == camera & active_analysis.Label == label, :);
             if height(seq) == 1
-                [~, out_vars] = parseAnalysisOutput(seq.Note);
+                [~, out_vars] = AnalysisRegistry.parseAnalysisOutput(seq.Note);
                 contents = ("Analysis: " + out_vars')';
             else
                 contents = string.empty;

@@ -1,4 +1,5 @@
 classdef AxesRunner < BaseRunner
+    %AXESRUNNER Runner for updating axes with live data
     
     properties (SetAccess = immutable)
         AxesObj
@@ -74,7 +75,7 @@ classdef AxesRunner < BaseRunner
                 case "None"
                 case "Lattice"
                     Lat = info.Lattice.(obj.Config.CameraName);
-                    obj.AddonObj = Lat.plot(prepareSite("hex", "latr", 20), ...
+                    obj.AddonObj = Lat.plot(Lattice.prepareSite("hex", "latr", 20), ...
                         'ax', obj.AxesObj, 'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
                 case "PSF"
             end

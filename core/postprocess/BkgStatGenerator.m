@@ -1,4 +1,5 @@
 classdef BkgStatGenerator < BaseAnalyzer
+    %BKGSTATGENERATOR Generate background statistics for image preprocessing
 
     properties (SetAccess = protected)
         BkgData

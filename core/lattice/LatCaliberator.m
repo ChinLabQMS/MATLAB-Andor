@@ -1,4 +1,5 @@
 classdef LatCaliberator < BaseAnalyzer
+    %LATCALIBERATOR Calibrator for initial lattice calibration and recalibration
     
     properties (SetAccess = protected)
         Signal
@@ -78,10 +79,9 @@ classdef LatCaliberator < BaseAnalyzer
 
             obj.Stat.(camera).PeakFinal = Lat.calibrateV( ...
                 obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
-                "plot_diagnostic", true, ...
                 "R_fit", obj.Config.CalibV_RFit, ...
                 "binarize_thres", obj.Config.CalibR_BinarizeThres, ...
-                "outlier_thres", obj.Config.CalibR_OutlierThres);
+                "plot_diagnostic", true);
             disp(Lat)
         end
 

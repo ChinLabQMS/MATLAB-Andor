@@ -1,4 +1,5 @@
 classdef CameraManager < BaseObject
+    %CAMERAMANAGER Manage multiple cameras
 
     properties (SetAccess = immutable)
         Andor19330 (1, 1) Camera

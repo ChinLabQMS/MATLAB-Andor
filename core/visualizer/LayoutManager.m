@@ -1,4 +1,5 @@
 classdef LayoutManager < BaseObject
+    %LAYOUTMANAGER Manage layout of axes for visualization
 
     properties (SetAccess = immutable)
         BigAxes1 (1, 1) AxesRunner

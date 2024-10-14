@@ -28,14 +28,14 @@ classdef BaseStorage < BaseObject
         function s = struct(obj, options)
             arguments
                 obj
+                options.max_index = obj.AcquisitionConfig.NumAcquisitions
                 options.check_incomplete = true
                 options.completed_only = true
             end
-            if options.check_incomplete && (obj.CurrentIndex < obj.AcquisitionConfig.NumAcquisitions)
+            if options.check_incomplete && (obj.CurrentIndex < options.max_index)
+                obj.warn("Incomplete dataset, only %d / %d.", obj.CurrentIndex, options.max_index)
                 if options.completed_only
-                    obj.warn('Incomplete data, only %d of %d acquisitions. Save completed only.', obj.CurrentIndex, obj.AcquisitionConfig.NumAcquisitions)
-                else
-                    obj.warn('Incomplete data, only %d of %d acquisitions.', obj.CurrentIndex, obj.AcquisitionConfig.NumAcquisitions)
+                    obj.warn("Only completed data is saved.")
                 end
             end
             s = struct('AcquisitionConfig', obj.AcquisitionConfig.struct());
@@ -45,7 +45,7 @@ classdef BaseStorage < BaseObject
                 end
                 s.(camera) = obj.(camera);
                 % Remove the data that is not yet acquired.
-                if options.completed_only && (obj.CurrentIndex < obj.AcquisitionConfig.NumAcquisitions)
+                if options.completed_only && (obj.CurrentIndex < options.max_index)
                     for label = string(fields(s.(camera)))'
                         if class(s.(camera).(label)) == "table"
                             s.(camera).(label) = s.(camera).(label)(1:obj.CurrentIndex, :);

@@ -1,4 +1,5 @@
  classdef Lattice < BaseRunner
+    %LATTICE Class for lattice calibration and conversion
     
     properties (SetAccess = protected)
         K
@@ -25,7 +26,10 @@
             Lat@BaseRunner(config)
             Lat.ID = ID;            
         end
-
+        
+        % Initialize the calibration by
+        % - setting the lattice center
+        % - (or), specify a FFT peak position for getting K and V
         function init(Lat, center, xy_size, peak_pos)
             arguments
                 Lat
@@ -38,14 +42,15 @@
             end
             Lat.R = center;
         end
-
+        
+        % Convert lattice space coordinates to real space
         function [corr, lat_corr] = convert2Real(Lat, lat_corr, options)
             arguments
                 Lat
                 lat_corr (:, 2) double = []
                 options.filter (1, 1) logical = true
-                options.x_lim (1, 2) double = [1, 1024]
-                options.y_lim (1, 2) double = [1, 1024]
+                options.x_lim (1, 2) double = [1, Inf]
+                options.y_lim (1, 2) double = [1, Inf]
                 options.full_range (1, 1) logical = false
                 options.remove_origin (1, 1) logical = false
             end
@@ -71,8 +76,9 @@
                 idx = lat_corr(:, 1) == 0 & lat_corr(:, 2) == 0;
                 lat_corr = lat_corr(~idx, :);
             end
-            % Transform coordinates to real space
+            % ***IMPORTANT***Transform coordinates to real space
             corr = lat_corr * Lat.V + Lat.R;
+            % Filter lattice sites outside of a rectangular limit area
             if options.filter
                 idx = (corr(:, 1) >= options.x_lim(1)) & ...
                       (corr(:, 1) <= options.x_lim(2) & ...
@@ -82,18 +88,25 @@
                 lat_corr = lat_corr(idx, :);
             end
         end
-
+        
+        % Convert real-space coordinates to lattice space
         function lat_corr = convert2Lat(Lat, corr)
-            lat_corr = (corr - Lat.R) / Lat.V;
+            lat_corr = (corr - Lat.R) * Lat.K';
+        end
+        
+        % Cross conversion between two coordinates systems
+        function corr = convertCross(Lat, Lat2, corr2)
+            corr = Lat.convert2Real(Lat2.convert2Lat(corr2));
         end
 
+        % Overlaying the lattice sites
         function varargout = plot(Lat, lat_corr, options)
             arguments
                 Lat
                 lat_corr (:, 2) double = []
                 options.x_lim (1, 2) double = [1, 1024]
                 options.y_lim (1, 2) double = [1, 1024]
-                options.full (1, 1) logical = false
+                options.full_range (1, 1) logical = false
                 options.ax = gca()
                 options.color (1, 1) string = "r"
                 options.norm_radius (1, 1) double = 0.1
@@ -101,9 +114,9 @@
                 options.origin_radius (1, 1) double = 0.5
                 options.line_width (1, 1) double = 0.5
             end
-            corr = Lat.convert2Real(lat_corr, "full", options.full, ...
+            corr = Lat.convert2Real(lat_corr, "full_range", options.full_range, ...
                 "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
-            % Use a different radius to display orgin
+            % Use a different radius to display origin
             if options.add_origin
                 radius = [repmat(options.norm_radius * norm(Lat.V1), size(corr, 1), 1);
                     options.origin_radius * norm(Lat.V1)];
@@ -111,15 +124,16 @@
             else
                 radius = options.norm_radius * norm(Lat.V1);
             end
-            % Create a hggroup of lines of circles
+            % Create a group of lines of circles
             h = viscircles(options.ax, corr(:, 2:-1:1), radius, ...
                 'Color', options.color, 'EnhanceVisibility', false, 'LineWidth', options.line_width);
-            % Output the handle to the hggroup
+            % Output the handle to the group
             if nargout == 1
                 varargout{1} = h;
             end
         end
-
+        
+        % Plot lattice vectors
         function plotV(Lat, options)
             arguments
                 Lat
@@ -128,14 +142,15 @@
             end
             cObj = onCleanup(@()preserveHold(ishold(options.ax), options.ax)); % Preserve original hold state
             hold(options.ax,'on');
-            quiver(options.ax, options.origin(1), options.origin(2), Lat.V1(1), Lat.V1(2), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID))
-            axis equal
-            quiver(options.ax, options.origin(1), options.origin(2), Lat.V2(1), Lat.V2(2), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID))
-            legend("Location", "eastoutside")
+            quiver(options.ax, options.origin(2), options.origin(1), Lat.V1(2), Lat.V1(1), "off", ...
+                "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)
+            axis image
+            quiver(options.ax, options.origin(2), options.origin(1), Lat.V2(2), Lat.V2(1), "off", ...
+                "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID), "MaxHeadSize", 10)
+            legend()
         end
-
+        
+        % Calibrate lattice center (R) by phase
         function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
@@ -143,10 +158,10 @@
                 x_range (1, :) double = 1:size(signal, 1)
                 y_range (1, :) double = 1:size(signal, 2)
                 options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
-                options.outlier_thres (1, 1) double = Lat.Config.CalibR_OutlierThres
             end            
             signal_modified = signal;
-            signal_modified((signal_modified < options.binarize_thres) | (signal_modified > options.outlier_thres)) = 0;        
+            thres = options.binarize_thres * max(signal(:));
+            signal_modified((signal_modified < thres)) = 0;        
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -156,7 +171,8 @@
             end
             Lat.R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
         end
-
+        
+        % Calibrate lattice vectors with FFT
         function vargout = calibrateV(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
@@ -167,22 +183,22 @@
                 options.warning_latnorm_thres = Lat.Config.CalibV_WarnLatNormThres
                 options.warning_rsquared = Lat.Config.CalibV_WarnRSquared
                 options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
-                options.outlier_thres (1, 1) double = Lat.Config.CalibR_OutlierThres
                 options.plot_diagnostic (1, 1) logical = Lat.Config.CalibV_PlotDiagnostic
             end
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
             xy_size = size(signal);
+            % Start from initial calibration, find FFT peaks
             peak_init = convertK2FFTPeak(xy_size, Lat.K);
-            [peak_pos, all_peak_fit] = fitFFTPeaks(signal_fft, peak_init, ...
-                "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);         
+            [peak_pos, all_peak_fit] = Lat.fitFFTPeaks(signal_fft, peak_init, ...
+                "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);
+            % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             Lat.calibrateR(signal, x_range, y_range, ...
-                "binarize_thres", options.binarize_thres, "outlier_thres", options.outlier_thres)
+                "binarize_thres", options.binarize_thres)
             if nargout == 1
                 vargout{1} = peak_pos;
-            end
-        
+            end        
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
                 Lat.warn("Lattice vector length changed significantly by %.2f%%.",...
@@ -193,11 +209,14 @@
                 figure
                 imagesc(y_range, x_range, signal)
                 title(sprintf("%s: Signal", Lat.ID))
+                colorbar
                 axis image
                 Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                Lat.plotV("origin", Lat.R)
             end
         end
-
+        
+        % Convert the current K vector to an expected FFT peak location
         function peak_pos = convert2FFTPeak(Lat, xy_size)
             if ~isempty(Lat.K)
                 peak_pos = convertK2FFTPeak(xy_size, Lat.K);
@@ -205,7 +224,7 @@
                 Lat.error("Lattice vector is not initialized.")
             end
         end
-
+        
         function val = get.V1(Lat)
             val = Lat.V(1,:);
         end
@@ -223,7 +242,8 @@
                 val = v1 - v2;
             end
         end
-
+        
+        % Display lattice calibration details
         function disp(Lat)
             v1 = Lat.V1;
             v2 = Lat.V2;
@@ -241,53 +261,83 @@
         function label = getStatusLabel(Lat)
             label = sprintf(" (%s)", Lat.ID);
         end
+
+        % Use 2D Gauss fit to fit the FFT amplitude peaks
+        function [peak_pos, all_peak_fit] = fitFFTPeaks(Lat, FFT, peak_init, options)
+            arguments
+                Lat
+                FFT (:, :) double
+                peak_init (:, 2) double
+                options.R_fit (1, 1) double
+                options.warning_rsquared (1, 1) double = 0.5
+                options.plot_fftpeaks (1, 1) logical = false
+            end
+            peak_pos = peak_init;
+            num_peaks = size(peak_init, 1);
+            all_peak_fit = cell(1, num_peaks);
+            rx = options.R_fit(1);
+            ry = options.R_fit(end);
+            for i = 1:num_peaks
+                center = round(peak_init(i, :));
+                peak_data = prepareBox(FFT, center, [rx, ry]);        
+                % Fitting FFT peaks
+                [PeakFit,GOF,X,Y,Z] = fitGauss2D(peak_data, ...
+                    "x_range", -rx:rx, "y_range", -ry:ry, "offset", "linear");
+                all_peak_fit{i} = {PeakFit,[X,Y],Z,GOF};
+                if GOF.rsquare < options.warning_rsquared
+                    peak_pos = peak_init;
+                    Lat.warn('FFT peak fit might be off (rsquare=%.3f), not updating calibration.',...
+                        GOF.rsquare)
+                    return
+                else
+                    peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
+                end
+            end
+        end
     end
+
+    methods (Static)
+        function lat_corr = prepareSite(format, options)
+            arguments
+                format (1, 1) string = "hex"
+                options.latx_range = -10:10
+                options.laty_range = -10:10
+                options.latr = 10
+            end    
+            switch format
+                case 'rect'
+                    [Y, X] = meshgrid(options.laty_range, options.latx_range);
+                    lat_corr = [X(:), Y(:)];
+                case 'hex'
+                    r = options.latr;
+                    [Y, X] = meshgrid(-r:r, -r:r);
+                    idx = (Y(:) <= X(:) + r) & (Y(:) >= X(:) - r);
+                    lat_corr = [X(idx), Y(idx)];
+                otherwise
+                    error("Not implemented")
+            end
+        end
+    end
+    
 end
 
+% Convert FFT peak positions to K and V vectors
 function [K, V] = convertFFTPeak2K(xy_size, peak_pos)
+    % Position of DC components in a fftshift-ed 2D fft pattern
     xy_center = floor(xy_size / 2) + 1;
+    % Convert peak positions to K vectors
     K = (peak_pos - xy_center)./xy_size;
+    % Get real-space V vectors from K vectors
     V = (inv(K(1:2,:)))';
 end
 
+% Convert K vector to FFT peak positions
 function peak_pos = convertK2FFTPeak(xy_size, K)
     xy_center = floor(xy_size / 2) + 1;
     peak_pos = K.*xy_size + xy_center;
 end
 
-function [peak_pos, all_peak_fit] = fitFFTPeaks(FFT, peak_init, options)
-    arguments
-        FFT (:, :) double
-        peak_init (:, 2) double
-        options.R_fit (1, 1) double
-        options.warning_rsquared (1, 1) double = 0.5
-        options.plot_fftpeaks (1, 1) logical = false
-    end
-    peak_pos = peak_init;
-    num_peaks = size(peak_init, 1);
-    all_peak_fit = cell(1, num_peaks);
-    rx = options.R_fit(1);
-    ry = options.R_fit(end);    
-    for i = 1:num_peaks
-        center = round(peak_init(i, :));
-        peak_data = prepareBox(FFT, center, [rx, ry]);        
-        % Fitting FFT peaks
-        [PeakFit,GOF,X,Y,Z] = fitGauss2D(peak_data, ...
-            "x_range", -rx:rx, "y_range", -ry:ry, "offset", "linear");
-        all_peak_fit{i} = {PeakFit,[X,Y],Z,GOF};
-        if GOF.rsquare < options.warning_rsquared
-            peak_pos = peak_init;
-            warning('off','backtrace')
-            warning('FFT peak fit might be off (rsquare=%.3f), not updating calibration.',...
-                GOF.rsquare)
-            warning('on','backtrace')
-            return
-        else
-            peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
-        end
-    end
-end
-
+% Generate diagnostic plots on the FFT peak fits
 function plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, ID)
     % Plot FFT magnitude in log scale
     figure("Name", "FFT Magnitude")
@@ -295,11 +345,15 @@ function plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, ID)
     title(sprintf("[%s]: log(FFT)", ID))
     axis image
     colorbar
-    hold on
     viscircles(peak_init(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
     viscircles(peak_pos(:, 2:-1:1), 2, "EnhanceVisibility", false, "Color", "red", "LineWidth", 1);
     num_peaks = size(peak_pos, 1);
-
+    hold on
+    for i = 1: num_peaks
+        x = peak_pos(i, 2);
+        y = peak_pos(i, 1);
+        text(x + 10, y, num2str(i), "FontSize", 16, 'Color', 'r')
+    end
     % Plot FFT peaks fits
     figure("Name", "FFT Peak fits", "Units", "normalized", "Position", [0.1, 0.1, 0.7, 0.7])
     sgtitle(ID)

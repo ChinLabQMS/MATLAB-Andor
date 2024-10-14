@@ -1,4 +1,5 @@
 classdef Preprocessor < BaseAnalyzer
+    %PREPROCESSOR Preprocess raw images for further analysis
 
     properties (SetAccess = protected)
         Background
