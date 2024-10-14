@@ -51,6 +51,8 @@ classdef Analyzer < BaseAnalyzer
 
 end
 
+%% Registered functions in AnalysisRegistry
+
 function res = fitCenter(~, res, signal, ~, config)
     signal = getSignalSum(signal, getNumFrames(config));
     [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
