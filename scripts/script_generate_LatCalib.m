@@ -24,7 +24,7 @@ p.calibrate("Andor19330", [105, 204; 156, 241])
 close all
 p.plot("Andor19331")
 
-%%
+%% Andor19331: Input the peaks that corresponds to the Andor19330 peaks under its coordinates
 close all
 p.calibrate("Andor19331", [155, 216; 116, 165])
 
@@ -33,7 +33,7 @@ close all
 p.plot("Zelux")
 
 %% Input the peaks positions in the orientation similar to Andor19330
-% close all
+close all
 p.calibrate("Zelux", [656, 566; 716, 595])
 
 %% Save lattice calibration of all three cameras

@@ -1,4 +1,4 @@
- classdef Lattice < BaseRunner
+ classdef Lattice < BaseObject
     %LATTICE Class for lattice calibration and conversion
     
     properties (SetAccess = protected)
@@ -18,12 +18,10 @@
     end
     
     methods
-        function Lat = Lattice(ID, config)
+        function Lat = Lattice(ID)
             arguments
                 ID (1, 1) string = "Test"
-                config (1, 1) LatticeConfig = LatticeConfig()
             end
-            Lat@BaseRunner(config)
             Lat.ID = ID;            
         end
         
@@ -150,18 +148,19 @@
             legend()
         end
         
-        % Calibrate lattice center (R) by phase
-        function calibrateR(Lat, signal, x_range, y_range, options)
+        % Calibrate lattice center (R) by FFT phase
+        function varargout = calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
                 x_range (1, :) double = 1:size(signal, 1)
                 y_range (1, :) double = 1:size(signal, 2)
-                options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
+                options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
+                options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
             end            
             signal_modified = signal;
             thres = options.binarize_thres * max(signal(:));
-            signal_modified((signal_modified < thres)) = 0;        
+            signal_modified((signal_modified < thres)) = 0;
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -170,20 +169,30 @@
                 phase_vec(i) = angle(sum(phase_mask.*signal_modified, 'all'));
             end
             Lat.R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
+            if options.plot_diagnostic
+                figure
+                imagesc(y_range, x_range, signal_modified)
+                axis image
+                colorbar
+                title(sprintf("%s: Signal (modified)", Lat.ID))
+                Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                Lat.plotV("origin", Lat.R)
+            end
         end
         
         % Calibrate lattice vectors with FFT
-        function vargout = calibrateV(Lat, signal, x_range, y_range, options)
+        function varargout = calibrateV(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
                 x_range (1, :) double = 1:size(signal, 1)
                 y_range (1, :) double = 1:size(signal, 2)
-                options.R_fit = Lat.Config.CalibV_RFit
-                options.warning_latnorm_thres = Lat.Config.CalibV_WarnLatNormThres
-                options.warning_rsquared = Lat.Config.CalibV_WarnRSquared
-                options.binarize_thres (1, 1) double = Lat.Config.CalibR_BinarizeThres
-                options.plot_diagnostic (1, 1) logical = Lat.Config.CalibV_PlotDiagnostic
+                options.R_fit = LatCalibConfig.CalibV_RFit
+                options.warning_latnorm_thres = LatCalibConfig.CalibV_WarnLatNormThres
+                options.warning_rsquared = LatCalibConfig.CalibV_WarnRSquared
+                options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
+                options.plot_diagnosticR (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
+                options.plot_diagnosticV (1, 1) logical = LatCalibConfig.CalibV_PlotDiagnostic
             end
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
@@ -195,16 +204,16 @@
             % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             Lat.calibrateR(signal, x_range, y_range, ...
-                "binarize_thres", options.binarize_thres)
+                "binarize_thres", options.binarize_thres, "plot_diagnostic", options.plot_diagnosticR)
             if nargout == 1
-                vargout{1} = peak_pos;
+                varargout{1} = peak_pos;
             end        
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
                 Lat.warn("Lattice vector length changed significantly by %.2f%%.",...
                          100*(max(VDis)))
             end
-            if options.plot_diagnostic
+            if options.plot_diagnosticV
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
                 figure
                 imagesc(y_range, x_range, signal)
