@@ -18,7 +18,7 @@ p.plot("Andor19330")
 
 %% Andor19330: Input initial peak positions as [x1, y1; x2, y2], at least two peaks
 close all
-p.calibrate("Andor19330", [105, 204; 156, 241])
+p.calibrate("Andor19330", [105, 204; 156, 242])
 
 %% Andor19331
 close all

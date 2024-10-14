@@ -13,5 +13,5 @@ function [small_box, x_range, y_range] = prepareBox(signal, center, r)
     x_range = floor(max(1, xc - rx)): ceil(min(x_size, xc + rx));
     y_range = floor(max(1, yc - ry)): ceil(min(y_size, yc + ry));
 
-    small_box = signal(x_range,y_range);
+    small_box = signal(x_range, y_range);
 end

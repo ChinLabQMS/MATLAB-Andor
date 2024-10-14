@@ -2,9 +2,9 @@
     %LATTICE Class for lattice calibration and conversion
     
     properties (SetAccess = protected)
-        K
-        V
-        R
+        K  % Momentum-space reciprocal vectors, 2x2 double
+        V  % Real-space lattice vectors, 2x2 double
+        R  % Real-space lattice center, 1x2 double
     end
 
     properties (SetAccess = immutable)
@@ -102,8 +102,8 @@
             arguments
                 Lat
                 lat_corr (:, 2) double = []
-                options.x_lim (1, 2) double = [1, 1024]
-                options.y_lim (1, 2) double = [1, 1024]
+                options.x_lim (1, 2) double = [1, Inf]
+                options.y_lim (1, 2) double = [1, Inf]
                 options.full_range (1, 1) logical = false
                 options.ax = gca()
                 options.color (1, 1) string = "r"
@@ -207,7 +207,7 @@
                 "binarize_thres", options.binarize_thres, "plot_diagnostic", options.plot_diagnosticR)
             if nargout == 1
                 varargout{1} = peak_pos;
-            end        
+            end
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > options.warning_latnorm_thres)
                 Lat.warn("Lattice vector length changed significantly by %.2f%%.",...
@@ -294,13 +294,9 @@
                     "x_range", -rx:rx, "y_range", -ry:ry, "offset", "linear");
                 all_peak_fit{i} = {PeakFit,[X,Y],Z,GOF};
                 if GOF.rsquare < options.warning_rsquared
-                    peak_pos = peak_init;
-                    Lat.warn('FFT peak fit might be off (rsquare=%.3f), not updating calibration.',...
-                        GOF.rsquare)
-                    return
-                else
-                    peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
+                    Lat.warn('FFT peak fit might be off (rsquare=%.3f).', GOF.rsquare)
                 end
+                peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
             end
         end
     end
