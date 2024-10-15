@@ -76,4 +76,3 @@ function [average_psf, final_centroids_1] = fitPSF(image, thresh_percent, crop_s
     imshow(average_psf,[],'InitialMagnification','fit');
     title('Average PSF')
 end
-
