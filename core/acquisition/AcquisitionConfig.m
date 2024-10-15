@@ -1,7 +1,7 @@
 classdef AcquisitionConfig < BaseObject
     
     properties (SetAccess = {?BaseRunner})
-        SequenceTable {mustBeValidSequence} = SequenceRegistry.Full4Analysis
+        SequenceTable {SequenceRegistry.mustBeValidSequence} = SequenceRegistry.Full4Analysis
         NumAcquisitions (1, 1) double = 20
         NumStatistics (1, 1) double = 2000
         Refresh (1, 1) double = 0.01

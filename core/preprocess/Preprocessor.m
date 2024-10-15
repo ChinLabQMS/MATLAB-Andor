@@ -114,6 +114,8 @@ classdef Preprocessor < BaseAnalyzer
 
 end
 
+%% Utilities function
+
 function str = parseConfig(config)
     if config.Cropped
         str1 = "Cropped_";

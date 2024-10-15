@@ -46,7 +46,7 @@
             arguments
                 Lat
                 lat_corr (:, 2) double = []
-                options.filter (1, 1) logical = true
+                options.filter (1, 1) logical = false
                 options.x_lim (1, 2) double = [1, Inf]
                 options.y_lim (1, 2) double = [1, Inf]
                 options.full_range (1, 1) logical = false
@@ -74,7 +74,7 @@
                 idx = lat_corr(:, 1) == 0 & lat_corr(:, 2) == 0;
                 lat_corr = lat_corr(~idx, :);
             end
-            % ***IMPORTANT***Transform coordinates to real space
+            % Transform coordinates to real space
             corr = lat_corr * Lat.V + Lat.R;
             % Filter lattice sites outside of a rectangular limit area
             if options.filter
@@ -93,17 +93,27 @@
         end
         
         % Cross conversion between two coordinates systems
-        function corr = convertCross(Lat, Lat2, corr2)
-            corr = Lat.convert2Real(Lat2.convert2Lat(corr2));
+        function [corr2, lat_corr] = convertCross(Lat, Lat2, corr, options)
+            arguments
+                Lat (1, 1) Lattice
+                Lat2 (1, 1) Lattice
+                corr (:, 2) double = []
+                options.round_corr (1, 1) logical = true
+            end
+            [corr2, lat_corr] = Lat2.convert2Real(Lat.convert2Lat(corr), 'filter', false);
+            if options.round_corr
+                corr2 = round(corr2);
+            end
         end
 
         % Overlaying the lattice sites
         function varargout = plot(Lat, lat_corr, options)
             arguments
                 Lat
-                lat_corr (:, 2) double = []
-                options.x_lim (1, 2) double = [1, Inf]
-                options.y_lim (1, 2) double = [1, Inf]
+                lat_corr (:, 2) double = Lattice.prepareSite('hex', 'latr', 20)
+                options.filter (1, 1) logical = true
+                options.x_lim (1, 2) double = [1, 1440]
+                options.y_lim (1, 2) double = [1, 1440]
                 options.full_range (1, 1) logical = false
                 options.ax = gca()
                 options.color (1, 1) string = "r"
@@ -112,7 +122,7 @@
                 options.origin_radius (1, 1) double = 0.5
                 options.line_width (1, 1) double = 0.5
             end
-            corr = Lat.convert2Real(lat_corr, "full_range", options.full_range, ...
+            corr = Lat.convert2Real(lat_corr, "filter", options.filter, "full_range", options.full_range, ...
                 "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
             % Use a different radius to display origin
             if options.add_origin
@@ -149,7 +159,7 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function varargout = calibrateR(Lat, signal, x_range, y_range, options)
+        function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
@@ -161,6 +171,7 @@
             signal_modified = signal;
             thres = options.binarize_thres * max(signal(:));
             signal_modified((signal_modified < thres)) = 0;
+            
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -197,15 +208,17 @@
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
             xy_size = size(signal);
+
             % Start from initial calibration, find FFT peaks
             peak_init = convertK2FFTPeak(xy_size, Lat.K);
             [peak_pos, all_peak_fit] = Lat.fitFFTPeaks(signal_fft, peak_init, ...
                 "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);
+            
             % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             Lat.calibrateR(signal, x_range, y_range, ...
                 "binarize_thres", options.binarize_thres, "plot_diagnostic", options.plot_diagnosticR)
-            if nargout == 1
+            if nargout == 1  % return new FFT peak positions
                 varargout{1} = peak_pos;
             end
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');

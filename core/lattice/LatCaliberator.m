@@ -6,24 +6,16 @@ classdef LatCaliberator < BaseAnalyzer
         Stat
         Lattice
     end
-
-    properties (SetAccess = immutable)
-        Preprocessor
-    end
     
     methods
-        function obj = LatCaliberator(config, preprocessor)
+        function obj = LatCaliberator(config)
             arguments
                 config (1, 1) LatCalibConfig = LatCalibConfig()
-                preprocessor (1, 1) Preprocessor = Preprocessor()
             end
             obj@BaseAnalyzer(config)
-            obj.Preprocessor = preprocessor;
         end
 
         function process(obj)
-            obj.Signal = obj.Preprocessor.processData(load(obj.Config.DataPath).Data);
-            obj.info("Processed Signal loaded for lattice calibration.")
             for i = 1: length(obj.Config.CameraList)
                 camera = obj.Config.CameraList(i);
                 label = obj.Config.ImageLabel(i);
@@ -110,6 +102,13 @@ classdef LatCaliberator < BaseAnalyzer
             Lat.Config = obj.Config;
             save(filename, "-struct", "Lat")
             obj.info("Lattice calibration saved as [%s].", filename)
+        end
+    end
+
+    methods (Access = protected)
+        function init(obj)
+            obj.Signal = Preprocessor().processData(load(obj.Config.DataPath).Data);
+            obj.info("Processed Signal loaded for lattice calibration.")
         end
     end
 
