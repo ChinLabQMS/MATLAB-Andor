@@ -159,7 +159,7 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function varargout = calibrateR(Lat, signal, x_range, y_range, options)
+        function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
@@ -171,6 +171,7 @@
             signal_modified = signal;
             thres = options.binarize_thres * max(signal(:));
             signal_modified((signal_modified < thres)) = 0;
+            
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -207,15 +208,17 @@
             LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
             xy_size = size(signal);
+
             % Start from initial calibration, find FFT peaks
             peak_init = convertK2FFTPeak(xy_size, Lat.K);
             [peak_pos, all_peak_fit] = Lat.fitFFTPeaks(signal_fft, peak_init, ...
                 "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);
+            
             % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             Lat.calibrateR(signal, x_range, y_range, ...
                 "binarize_thres", options.binarize_thres, "plot_diagnostic", options.plot_diagnosticR)
-            if nargout == 1
+            if nargout == 1  % return new FFT peak positions
                 varargout{1} = peak_pos;
             end
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');

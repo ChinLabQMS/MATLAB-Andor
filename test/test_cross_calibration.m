@@ -29,7 +29,7 @@ corr = [X(:), Y(:)];
 % Corresponding pixel position in Andor19330 frame
 [corr2, lat_corr] = Lat19331.convertCross(Lat19330, corr);
 
-% Get the pixel value in Andor19330 frame at transformed corrdinates
+% Get the pixel value in Andor19330 frame at transformed coordinates
 value2 = reshape(getPixelValue(corr2, signal2), 1024, 1024);
 
 %% Show transformed image
@@ -57,7 +57,6 @@ Lat19330.plot()
 title('Original Andor19330 image')
 
 %% Maximize overlapping by calculating cosine similarity
-% 1 - pdist2(signal(:)', value2(:)', "cosine")
 
 Lat19331_R = Lat19331.R;
 

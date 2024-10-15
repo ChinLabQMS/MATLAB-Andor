@@ -3,6 +3,9 @@ classdef PreprocessConfig < BaseObject
     properties (SetAccess = {?BaseObject})
         BackgroundDataPath = "calibration/BkgStat_20240930.mat"
         ProcessCamName = ["Andor19330", "Andor19331"]
+    end
+
+    properties (Constant)
         BackgroundSubtraction_VarName = "SmoothMean"
         OffsetCorrection_RegionWidth = 100
         OffsetCorrection_Warning = true
