@@ -9,7 +9,7 @@ p = Preprocessor;
 Signal = p.processData(Data);
 
 %% Load a lattice pre-calibration
-LatCalib = load('calibration\LatCalib_20241002.mat');
+LatCalib = load('calibration/LatCalib_20241002.mat');
 
 %% Iterate through the dataset and re-calibrate lattice vectors (and center)
 

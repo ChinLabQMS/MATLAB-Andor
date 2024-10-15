@@ -46,7 +46,7 @@
             arguments
                 Lat
                 lat_corr (:, 2) double = []
-                options.filter (1, 1) logical = true
+                options.filter (1, 1) logical = false
                 options.x_lim (1, 2) double = [1, Inf]
                 options.y_lim (1, 2) double = [1, Inf]
                 options.full_range (1, 1) logical = false
@@ -74,7 +74,7 @@
                 idx = lat_corr(:, 1) == 0 & lat_corr(:, 2) == 0;
                 lat_corr = lat_corr(~idx, :);
             end
-            % ***IMPORTANT***Transform coordinates to real space
+            % Transform coordinates to real space
             corr = lat_corr * Lat.V + Lat.R;
             % Filter lattice sites outside of a rectangular limit area
             if options.filter
@@ -93,17 +93,27 @@
         end
         
         % Cross conversion between two coordinates systems
-        function corr = convertCross(Lat, Lat2, corr2)
-            corr = Lat.convert2Real(Lat2.convert2Lat(corr2));
+        function [corr2, lat_corr] = convertCross(Lat, Lat2, corr, options)
+            arguments
+                Lat (1, 1) Lattice
+                Lat2 (1, 1) Lattice
+                corr (:, 2) double = []
+                options.round_corr (1, 1) logical = true
+            end
+            [corr2, lat_corr] = Lat2.convert2Real(Lat.convert2Lat(corr), 'filter', false);
+            if options.round_corr
+                corr2 = round(corr2);
+            end
         end
 
         % Overlaying the lattice sites
         function varargout = plot(Lat, lat_corr, options)
             arguments
                 Lat
-                lat_corr (:, 2) double = []
-                options.x_lim (1, 2) double = [1, Inf]
-                options.y_lim (1, 2) double = [1, Inf]
+                lat_corr (:, 2) double = Lattice.prepareSite('hex', 'latr', 20)
+                options.filter (1, 1) logical = true
+                options.x_lim (1, 2) double = [1, 1440]
+                options.y_lim (1, 2) double = [1, 1440]
                 options.full_range (1, 1) logical = false
                 options.ax = gca()
                 options.color (1, 1) string = "r"
@@ -112,7 +122,7 @@
                 options.origin_radius (1, 1) double = 0.5
                 options.line_width (1, 1) double = 0.5
             end
-            corr = Lat.convert2Real(lat_corr, "full_range", options.full_range, ...
+            corr = Lat.convert2Real(lat_corr, "filter", options.filter, "full_range", options.full_range, ...
                 "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
             % Use a different radius to display origin
             if options.add_origin

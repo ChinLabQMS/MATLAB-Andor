@@ -1,6 +1,6 @@
 classdef AppConfig < BaseObject
-   
-    properties
+
+    properties (Constant)
         BaseAnalysis = ["Signal: Max", "Background: Max", "Background: Variance"]
         ScreenOffset = [10, 35, -20, -70]
         SequenceTable = "Full4Analysis"

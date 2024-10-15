@@ -84,7 +84,7 @@ classdef Replayer < BaseAnalyzer
     methods (Access = protected, Hidden)
         function init(obj)
             [obj.DataManager, obj.AcquisitionConfig, obj.CameraManager] = DataManager.struct2obj( ...
-                load(obj.Config.DataPath, "Data").Data); %#ok<PROP>
+                load(obj.Config.DataPath, "Data").Data, "test_mode", obj.Config.TestMode); %#ok<PROP>
             obj.StatManager = StatManager(obj.AcquisitionConfig); %#ok<CPROP>
             obj.StatManager.init()
             obj.CurrentIndex = 0;
