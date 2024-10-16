@@ -33,10 +33,24 @@ for i = 1:Signal.AcquisitionConfig.NumAcquisitions
         LatCalib.(camera).calibrateR(signal_box, x_range, y_range)
         % Store the updated calibration in a result variable
         result(i).(camera + "_R") = LatCalib.(camera).R;
+        result(i).(camera + "_RLat") = LatCalib.(camera).R * LatCalib.(camera).K';
         
         %LatCalib.(camera).plot(lat_corr)
     end
 end
+
+%%
+Andor19330_xy = cat(1, result.Andor19330_RLat);
+Andor19331_xy = cat(1, result.Andor19331_RLat);
+Zelux_xy = cat(1, result.Zelux_RLat);
+Andor19330_xy = Andor19330_xy - Andor19330_xy(1, :);
+Andor19331_xy = Andor19331_xy - Andor19331_xy(1, :);
+Zelux_xy = Zelux_xy - Zelux_xy(1, :);
+plot(Andor19330_xy(:, 1), Andor19330_xy(:, 2), "DisplayName", "Andor19330")
+hold on
+plot(Andor19331_xy(:, 1), Andor19331_xy(:, 2), "DisplayName", "Andor19331")
+plot(Zelux_xy(:, 1), Zelux_xy(:, 2), "DisplayName", "Zelux")
+legend()
 
 %%
 
