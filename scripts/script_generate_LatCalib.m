@@ -2,17 +2,19 @@
 clear; clc;
 p = LatCaliberator;
 
-%% Config data path
+%% Pre-calibration, with no existing calibration file
 
-% If calibrating initially, set LatCalibFilePath to []
+% Config data path
+% - for initial calibration, set LatCalibFilePath to []
 p.config( ...
     "LatCalibFilePath", [], ... 
     "DataPath", "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat")
 
-%% Process the data (pre-process to remove offset and outliers, get fitted centers, etc.)
+% Process the data
+% - pre-process to remove offset and outliers, get fitted centers and FFT patterns, etc.
 p.process()
 
-%% Andor19330: Plot FFT of a small box
+%% Andor19330: Plot FFT of a small box centered at atom cloud
 close all
 p.plot("Andor19330")
 
@@ -36,7 +38,10 @@ p.plot("Zelux")
 close all
 p.calibrate("Zelux", [656, 566; 716, 595])
 
-%% Save lattice calibration of all three cameras
+%% Cross-calibrate Andor19331 to Andor19330
+
+
+%% Save lattice calibration of all three cameras (default is with today's date)
 p.save()
 
 %% Re-calibrate the lattice to a new dataset

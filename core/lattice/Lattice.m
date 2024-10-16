@@ -54,9 +54,6 @@
             end
             % If generate lattice sites for the full range
             if options.full_range
-                if ~isempty(lat_corr)
-                    Lat.warn("Input lat_corr will be ignored to generate all sites within image frame.")
-                end
                 corners = [options.x_lim(1), options.y_lim(1); 
                            options.x_lim(2), options.y_lim(1); 
                            options.x_lim(1), options.y_lim(2); 
@@ -106,6 +103,18 @@
             end
         end
 
+        % Cross conversion of one image between two coordinates systems
+        function signal2 = convertCrossAtom(Lat, Lat2, signal, x_range, y_range, options)
+            arguments
+                Lat (1, 1) Lattice
+                Lat2 (1, 1) Lattice
+                signal (:, :) double
+                x_range (1, :) double = 1:size(signal, 1)
+                y_range (1, :) double = 1:size(signal, 2)
+                options.round_corr (1, 1) logical = true
+            end
+        end
+
         % Overlaying the lattice sites
         function varargout = plot(Lat, lat_corr, options)
             arguments
@@ -147,14 +156,15 @@
                 Lat
                 options.ax = gca()
                 options.origin (1, 2) double = [0, 0]
+                options.scale (1, 1) double = 1
             end
             cObj = onCleanup(@()preserveHold(ishold(options.ax), options.ax)); % Preserve original hold state
             hold(options.ax,'on');
             quiver(options.ax, options.origin(2), options.origin(1), Lat.V1(2), Lat.V1(1), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)
+                "scale", options.scale, "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)
             axis image
             quiver(options.ax, options.origin(2), options.origin(1), Lat.V2(2), Lat.V2(1), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID), "MaxHeadSize", 10)
+                "scale", options.scale, "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID), "MaxHeadSize", 10)
             legend()
         end
         
@@ -165,13 +175,17 @@
                 signal (:, :) double
                 x_range (1, :) double = 1:size(signal, 1)
                 y_range (1, :) double = 1:size(signal, 2)
+                options.label (1, :) string = "Image"
                 options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
-            end            
+            end
             signal_modified = signal;
-            thres = options.binarize_thres * max(signal(:));
-            signal_modified((signal_modified < thres)) = 0;
-            
+            % If the image is not directly from lattice, do filtering
+            if options.label ~= "Lattice"
+                thres = options.binarize_thres * max(signal(:));
+                signal_modified((signal_modified < thres)) = 0;
+            end
+
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -186,7 +200,7 @@
                 axis image
                 colorbar
                 title(sprintf("%s: Signal (modified)", Lat.ID))
-                Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV("origin", Lat.R)
             end
         end

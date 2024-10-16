@@ -2,9 +2,9 @@
 clear; clc;
 DataPath = 'data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat';
 Data = load(DataPath, "Data").Data;
+
 %% Preprocess the data
-p = Preprocessor;
-Signal = p.processData(Data);
+Signal = Preprocessor().processData(Data);
 
 %% Load a lattice pre-calibration
 LatCalib = load('calibration/LatCalib_20241002.mat');

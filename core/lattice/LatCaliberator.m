@@ -14,7 +14,8 @@ classdef LatCaliberator < BaseAnalyzer
             end
             obj@BaseAnalyzer(config)
         end
-
+        
+        % Generate FFT patterns for lattice calibration
         function process(obj)
             for i = 1: length(obj.Config.CameraList)
                 camera = obj.Config.CameraList(i);
@@ -22,24 +23,22 @@ classdef LatCaliberator < BaseAnalyzer
                 obj.info("Processing data for camera %s ...", camera)
                 
                 s.MeanImage = getSignalSum(obj.Signal.(camera).(label), getNumFrames(obj.Signal.(camera).Config));
-                [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);
-                
+                [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);                
                 [s.FFTImage, s.FFTX, s.FFTY] = prepareBox(s.MeanImage, [xc, yc], 2*[xw, yw]);
                 s.FFTPattern = abs(fftshift(fft2(s.FFTImage)));
                 s.Center = [xc, yc];
-                s.Width = [xw, yw];
-
+                s.Width = [xw, yw];                
                 obj.Stat.(camera) = s;
-                obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
+
+                if isempty(obj.Config.LatCalibFilePath)
+                    obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
+                    obj.info("Lattice object created.")
+                end
             end
             obj.info("Finish processing images.")
-            % If provided a path to calibration file, use it
-            if ~isempty(obj.Config.LatCalibFilePath)
-                obj.Lattice = load(obj.Config.LatCalibFilePath);
-                obj.info("Pre-calibration loaded from [%s].", obj.Config.LatCalibFilePath)
-            end
         end
 
+        % Plot FFT pattern of images acquired by specified camera
         function plot(obj, camera)
             s = obj.Stat.(camera);
             if ~isfield(s, "FFTPattern")
@@ -57,31 +56,39 @@ classdef LatCaliberator < BaseAnalyzer
             end
         end
 
-        function calibrate(obj, camera, peak_init)
+        function calibrate(obj, camera, peak_init, options)
             arguments
                 obj
-                camera
-                peak_init = obj.Lattice.(camera).convert2FFTPeak(size(obj.Stat.(camera).FFTPattern))
+                camera (1, 1) string
+                peak_init (:, 2) double = obj.Lattice.(camera).convert2FFTPeak(size(obj.Stat.(camera).FFTPattern))
+                options.plot_diagnosticV (1, 1) logical = true
+                options.plot_diagnosticR (1, 1) logical = true
             end
             Lat = obj.Lattice.(camera);
             FFT = obj.Stat.(camera).FFTPattern;
             obj.Stat.(camera).PeakInit = peak_init;
             Lat.init(obj.Stat.(camera).Center, size(FFT), peak_init)
-            disp(Lat)
-
+            disp(Lat)  % Display initial lattice calibration
             obj.Stat.(camera).PeakFinal = Lat.calibrateV( ...
                 obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
-                "plot_diagnosticV", true, "plot_diagnosticR", true);
-            disp(Lat)
+                "plot_diagnosticV", options.plot_diagnosticV, "plot_diagnosticR", options.plot_diagnosticR);
+            disp(Lat)  % Display final lattice calibration
+        end
+        
+        function calibrateAtom(obj, camera1, camera2)
+
         end
 
-        function recalibrate(obj)
-            if isempty(obj.Signal)
-                obj.process()
+        function recalibrate(obj, options)
+            arguments
+                obj
+                options.plot_diagnosticV (1, 1) logical = true
+                options.plot_diagnosticR (1, 1) logical = true
             end
             for camera = obj.Config.CameraList
                 if ~isempty(obj.Lattice.(camera).K) && isfield(obj.Stat.(camera), "FFTPattern")
-                    obj.calibrate(camera)
+                    obj.calibrate(camera, "plot_diagnosticV", options.plot_diagnosticV, ...
+                        "plot_diagnosticR", options.plot_diagnosticR)
                 else
                     obj.warn("Unable to recalibrate camera %s, please provide initial calibration first.", camera)
                 end
@@ -109,6 +116,10 @@ classdef LatCaliberator < BaseAnalyzer
         function init(obj)
             obj.Signal = Preprocessor().processData(load(obj.Config.DataPath).Data);
             obj.info("Processed Signal loaded for lattice calibration.")
+            if ~isempty(obj.Config.LatCalibFilePath)
+                obj.Lattice = load(obj.Config.LatCalibFilePath);
+                obj.info("Pre-calibration loaded from [%s].", obj.Config.LatCalibFilePath)
+            end
         end
     end
 
