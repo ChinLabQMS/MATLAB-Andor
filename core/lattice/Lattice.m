@@ -209,7 +209,7 @@
         end
         
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
-        function varargout = calibrateCamera(Lat, Lat2, signal, x_range, y_range, ...
+        function varargout = calibrateO(Lat, Lat2, signal, x_range, y_range, ...
                 signal2, x_range2, y_range2, options)
             arguments
                 Lat (1, 1) Lattice
@@ -220,9 +220,9 @@
                 signal2 (:, :) double
                 x_range2 (1, :) double
                 y_range2 (1, :) double
-                options.sites = LatCalibConfig.CalibCam_Sites
-                options.verbose (1, 1) logical = LatCalibConfig.CalibCam_Verbose
-                options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibCam_PlotDiagnostic
+                options.sites = LatCalibConfig.CalibO_Sites
+                options.verbose (1, 1) logical = LatCalibConfig.CalibO_Verbose
+                options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibO_PlotDiagnostic
             end
             best_transformed = [];
             best_center = [];
