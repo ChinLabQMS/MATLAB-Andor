@@ -14,6 +14,9 @@ classdef LatCalibConfig < BaseObject
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
+        CalibCam_Sites = Lattice.prepareSite("hex", "latr", 20)
+        CalibCam_Verbose = true
+        CalibCam_PlotDiagnostic = false
     end
     
 end

@@ -19,9 +19,7 @@ classdef LatCaliberator < BaseAnalyzer
         function process(obj)
             for i = 1: length(obj.Config.CameraList)
                 camera = obj.Config.CameraList(i);
-                label = obj.Config.ImageLabel(i);
-                obj.info("Processing data for camera %s ...", camera)
-                
+                label = obj.Config.ImageLabel(i);                
                 s.MeanImage = getSignalSum(obj.Signal.(camera).(label), getNumFrames(obj.Signal.(camera).Config));
                 [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);                
                 [s.FFTImage, s.FFTX, s.FFTY] = prepareBox(s.MeanImage, [xc, yc], 2*[xw, yw]);
@@ -32,7 +30,7 @@ classdef LatCaliberator < BaseAnalyzer
 
                 if isempty(obj.Config.LatCalibFilePath)
                     obj.Lattice.(camera) = Lattice(camera); %#ok<CPROP>
-                    obj.info("Lattice object created.")
+                    obj.info("Lattice object created for camera %s.", camera)
                 end
             end
             obj.info("Finish processing images.")
@@ -75,7 +73,7 @@ classdef LatCaliberator < BaseAnalyzer
             disp(Lat)  % Display final lattice calibration
         end
         
-        function calibrateAtom(obj, camera1, camera2)
+        function calibrateSignal(obj, camera, camera2)
 
         end
 
@@ -115,7 +113,6 @@ classdef LatCaliberator < BaseAnalyzer
     methods (Access = protected)
         function init(obj)
             obj.Signal = Preprocessor().processData(load(obj.Config.DataPath).Data);
-            obj.info("Processed Signal loaded for lattice calibration.")
             if ~isempty(obj.Config.LatCalibFilePath)
                 obj.Lattice = load(obj.Config.LatCalibFilePath);
                 obj.info("Pre-calibration loaded from [%s].", obj.Config.LatCalibFilePath)

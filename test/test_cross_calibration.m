@@ -27,7 +27,7 @@ y_range = 1:1024;
 corr = [X(:), Y(:)];
 
 % Corresponding pixel position in Andor19330 frame
-[corr2, lat_corr] = Lat19331.convertCross(Lat19330, corr);
+[corr2, lat_corr] = Lat19331.convertCamera(Lat19330, corr);
 
 % Get the pixel value in Andor19330 frame at transformed coordinates
 value2 = reshape(getPixelValue(corr2, signal2), 1024, 1024);
