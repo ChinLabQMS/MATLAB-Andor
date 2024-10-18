@@ -9,12 +9,13 @@ classdef LatCalibConfig < BaseObject
 
     properties (Constant)
         CalibR_BinarizeThres = 0.5
+        CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
         CalibV_RFit = 7
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
-        CalibO_Sites = Lattice.prepareSite("hex", "latr", 2)
+        CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
         CalibO_Verbose = false
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false

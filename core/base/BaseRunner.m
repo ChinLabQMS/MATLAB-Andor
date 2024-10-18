@@ -44,6 +44,7 @@ classdef BaseRunner < BaseObject
                 s (1, 1) struct
                 obj (1, 1) BaseObject = BaseObject()
                 options.prop_list = string(fields(s))'
+                options.verbose = true
             end
             for field = options.prop_list
                 if isprop(obj, field)
@@ -54,7 +55,9 @@ classdef BaseRunner < BaseObject
                     end
                 end
             end
-            obj.info("Object loaded from structure.")
+            if options.verbose
+                obj.info("Object loaded from structure.")
+            end
         end
     end
     

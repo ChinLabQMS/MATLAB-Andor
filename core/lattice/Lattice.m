@@ -2,9 +2,10 @@
     %LATTICE Class for lattice calibration and conversion
     
     properties (SetAccess = {?BaseRunner})
-        K  % Momentum-space reciprocal vectors, 2x2 double
-        V  % Real-space lattice vectors, 2x2 double
-        R  % Real-space lattice center, 1x2 double
+        K                       % Momentum-space reciprocal vectors, 2x2 double
+        V                       % Real-space lattice vectors, 2x2 double
+        R                       % Real-space lattice center, 1x2 double
+        Rerr = struct.empty     % Uncertainty in R
     end
 
     properties (SetAccess = immutable)
@@ -92,7 +93,6 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        % TODO: Bootstrapping to 4 equal parts to get uncertainty
         function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
@@ -100,6 +100,7 @@
                 x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
+                options.bootstrapping (1, 1) logical = LatCalibConfig.CalibR_Bootstrapping
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
             end
             signal_modified = signal;
@@ -108,14 +109,20 @@
                 thres = options.binarize_thres * max(signal(:));
                 signal_modified((signal_modified < thres)) = 0;
             end
-            % Extract lattice center coordinates from phase at FFT peak
-            [Y, X] = meshgrid(y_range, x_range);
-            phase_vec = zeros(1,2);
-            for i = 1:2
-                phase_mask = exp(-1i*2*pi*(Lat.K(i,1)*X + Lat.K(i,2)*Y));
-                phase_vec(i) = angle(sum(phase_mask.*signal_modified, 'all'));
+            % Update Lat.R
+            Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
+            % Use 4 equal size sub-area to get uncertainty
+            if options.bootstrapping
+                Lat.Rerr = struct('R_Sub', nan(4, 2), ...
+                    'V1_Mean', [], 'V1_Max', [], 'V1_Min', [], 'V1_Std', [], ...
+                    'V2_Mean', [], 'V2_Max', [], 'V2_Min', [], 'V2_Std', []);
+                s = partitionSignal(signal_modified, x_range, y_range);
+                for i = 1:length(s)
+                    Lat.Rerr.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
+                end
+                Lat.Rerr.V1_Mean = mean(Lat.Rerr.R_Sub(:, 1));
+                Lat.Rerr.V1_Max = max(Lat.Rerr.R_Sub(:, 1));
             end
-            Lat.R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
             if options.plot_diagnostic
                 figure
                 Lat.imageSignal(signal_modified, x_range, y_range, "title", sprintf("%s: Signal (modified)", Lat.ID))
@@ -124,8 +131,8 @@
             end
         end
         
-        % Calibrate lattice vectors with FFT
-        function varargout = calibrateV(Lat, signal, x_range, y_range, options)
+        % Calibrate lattice vectors with FFT, then lattice centers
+        function varargout = calibrate(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
@@ -144,7 +151,7 @@
 
             % Start from initial calibration, find FFT peaks
             peak_init = convertK2FFTPeak(xy_size, Lat.K);
-            [peak_pos, all_peak_fit] = Lat.fitFFTPeaks(signal_fft, peak_init, ...
+            [peak_pos, all_peak_fit] = fitFFTPeaks(Lat, signal_fft, peak_init, ...
                 "R_fit", options.R_fit, "warning_rsquared", options.warning_rsquared);
             
             % Use fitted FFT peak position to get new calibration
@@ -354,6 +361,21 @@
                 Lat.error("Lattice vector is not initialized.")
             end
         end
+        
+        % Convert FFT phase to lattice center R
+        function R = convertFFTPhase2R(Lat, signal, x_range, y_range)
+            if isempty(Lat.K)
+                Lat.error("Please calibrate lattice vector before calibrating center.")
+            end
+            % Extract lattice center coordinates from phase at FFT peak
+            [Y, X] = meshgrid(y_range, x_range);
+            phase_vec = zeros(1,2);
+            for i = 1:2
+                phase_mask = exp(-1i*2*pi*(Lat.K(i,1)*X + Lat.K(i,2)*Y));
+                phase_vec(i) = angle(sum(phase_mask.*signal, 'all'));
+            end
+            R = (round(Lat.R*Lat.K(1:2,:)' + phase_vec/(2*pi)) - 1/(2*pi)*phase_vec) * Lat.V;
+        end
 
         % Display lattice calibration details
         function disp(Lat)
@@ -401,35 +423,6 @@
         function label = getStatusLabel(Lat)
             label = sprintf("%s (%s)", class(Lat), Lat.ID);
         end
-
-        % Use 2D Gauss fit to fit the FFT amplitude peaks
-        function [peak_pos, all_peak_fit] = fitFFTPeaks(Lat, FFT, peak_init, options)
-            arguments
-                Lat
-                FFT (:, :) double
-                peak_init (:, 2) double
-                options.R_fit (1, 1) double
-                options.warning_rsquared (1, 1) double = 0.5
-                options.plot_fftpeaks (1, 1) logical = false
-            end
-            peak_pos = peak_init;
-            num_peaks = size(peak_init, 1);
-            all_peak_fit = cell(1, num_peaks);
-            rx = options.R_fit(1);
-            ry = options.R_fit(end);
-            for i = 1:num_peaks
-                center = round(peak_init(i, :));
-                peak_data = prepareBox(FFT, center, [rx, ry]);        
-                % Fitting FFT peaks
-                [PeakFit,GOF,X,Y,Z] = fitGauss2D(peak_data, ...
-                    "x_range", -rx:rx, "y_range", -ry:ry, "offset", "linear");
-                all_peak_fit{i} = {PeakFit,[X,Y],Z,GOF};
-                if GOF.rsquare < options.warning_rsquared
-                    Lat.warn('FFT peak fit might be off (rsquare=%.3f).', GOF.rsquare)
-                end
-                peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
-            end
-        end
     end
 
     methods (Static)
@@ -468,12 +461,14 @@
             title(options.title)
         end
 
-        function Lat = struct2obj(s, ID)
+        function Lat = struct2obj(s, ID, options)
             arguments
                 s (1, 1) struct
                 ID (1, 1) string = s.ID
+                options.verbose (1, 1) logical = true
             end
-            Lat = BaseRunner.struct2obj(s, Lattice(ID), "prop_list", ["K", "V", "R"]);
+            Lat = BaseRunner.struct2obj(s, Lattice(ID), "prop_list", ["K", "V", "R"], ...
+                'verbose', options.verbose);
         end
 
         function checkDiff(Lat, Lat2)
@@ -511,6 +506,58 @@ end
 function peak_pos = convertK2FFTPeak(xy_size, K)
     xy_center = floor(xy_size / 2) + 1;
     peak_pos = K.*xy_size + xy_center;
+end
+
+% Use 2D Gauss fit to fit the FFT amplitude peaks
+function [peak_pos, all_peak_fit] = fitFFTPeaks(Lat, FFT, peak_init, options)
+    arguments
+        Lat
+        FFT (:, :) double
+        peak_init (:, 2) double
+        options.R_fit (1, 1) double
+        options.warning_rsquared (1, 1) double = 0.5
+        options.plot_fftpeaks (1, 1) logical = false
+    end
+    peak_pos = peak_init;
+    num_peaks = size(peak_init, 1);
+    all_peak_fit = cell(1, num_peaks);
+    rx = options.R_fit(1);
+    ry = options.R_fit(end);
+    for i = 1:num_peaks
+        center = round(peak_init(i, :));
+        peak_data = prepareBox(FFT, center, [rx, ry]);        
+        % Fitting FFT peaks
+        [PeakFit,GOF,X,Y,Z] = fitGauss2D(peak_data, ...
+            "x_range", -rx:rx, "y_range", -ry:ry, "offset", "linear");
+        all_peak_fit{i} = {PeakFit,[X,Y],Z,GOF};
+        if GOF.rsquare < options.warning_rsquared
+            Lat.warn('FFT peak fit might be off (rsquare=%.3f).', GOF.rsquare)
+        end
+        peak_pos(i, :) = [PeakFit.x0, PeakFit.y0] + center;
+    end
+end
+
+% Partition signal into 4 equal size subareas
+function s = partitionSignal(signal, x_range, y_range)
+    arguments
+        signal (:, :) double
+        x_range (1, :) double = 1:size(signal, 1)
+        y_range (1, :) double = 1:size(signal, 2)
+    end
+    x_idx1 = 1:floor(length(x_range) / 2);
+    x_idx2 = floor(length(x_range) / 2) + 1: length(x_range);
+    y_idx1 = 1:floor(length(y_range) / 2);
+    y_idx2 = floor(length(y_range) / 2) + 1: length(y_range);
+    x_idx = [x_idx1; x_idx1; x_idx2; x_idx2];
+    y_idx = [y_idx1; y_idx2; y_idx1; y_idx2];
+    x_range_list = x_range(x_idx);
+    y_range_list = y_range(y_idx);
+    s(4) = struct();
+    for i = 1:4
+        s(i).XRange = x_range_list(i, :);
+        s(i).YRange = y_range_list(i, :);
+        s(i).Signal = signal(x_idx(i, :), y_idx(i, :));
+    end
 end
 
 % Generate diagnostic plots on the FFT peak fits

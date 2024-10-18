@@ -40,7 +40,10 @@ p.calibrate("Zelux", [], [656, 566; 716, 595])
 
 %% Cross-calibrate Andor19331 to Andor19330
 close all
-p.calibrateO('signal_index', 2)
+p.calibrateO('signal_index', 2, 'sites', Lattice.prepareSite('hex', 'latr', 20))
+
+%% (optional) Calibrate to a different signal index by searching a smaller region
+p.calibrateO('signal_index', 20, 'sites', Lattice.prepareSite('hex', 'latr', 2))
 
 %% Save lattice calibration of all three cameras (default is with today's date)
 p.save()

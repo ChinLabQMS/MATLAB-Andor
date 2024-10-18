@@ -70,8 +70,8 @@ classdef LatCaliberator < BaseAnalyzer
                 center = obj.Stat.(camera).Center;
             end
             Lat.init(center, size(FFT), peak_init)
-            Lat0 = Lattice.struct2obj(Lat.struct(), camera + "_previous");
-            obj.Stat.(camera).PeakFinal = Lat.calibrateV( ...
+            Lat0 = Lattice.struct2obj(Lat.struct(), camera + "_previous", "verbose", false);
+            obj.Stat.(camera).PeakFinal = Lat.calibrate( ...
                 obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
                 "plot_diagnosticV", options.plot_diagnosticV, "plot_diagnosticR", options.plot_diagnosticR);
             Lattice.checkDiff(Lat0, Lat)
@@ -86,7 +86,7 @@ classdef LatCaliberator < BaseAnalyzer
                 label (1, 1) string = "Image"
                 label2 (1, 1) string = "Image"
                 options.signal_index (1, 1) double = 1
-                options.sites (:, 2) double = Lattice.prepareSite("hex", "latr", 20)
+                options.sites (:, 2) double = LatCalibConfig.CalibO_Sites
                 options.verbose (1, 1) logical = false
                 options.plot_diagnostic (1, 1) logical = true
             end
@@ -156,8 +156,4 @@ classdef LatCaliberator < BaseAnalyzer
         end
     end
 
-end
-
-function printStatistics(Lat, Lat2)
-    
 end
