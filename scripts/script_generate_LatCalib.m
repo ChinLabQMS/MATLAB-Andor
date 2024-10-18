@@ -39,18 +39,20 @@ close all
 p.calibrate("Zelux", [656, 566; 716, 595])
 
 %% Cross-calibrate Andor19331 to Andor19330
-
+close all
+p.calibrateO()
 
 %% Save lattice calibration of all three cameras (default is with today's date)
 p.save()
 
 %% Re-calibrate the lattice to a new dataset
 
+close all
 % Set an initial calibration file location and new data location for re-calibration
 p.config( ...
     "LatCalibFilePath", "calibration/LatCalib_20241002.mat", ... 
     "DataPath", "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat")
-p.recalibrate()
+p.recalibrate("plot_diagnosticV", false, "plot_diagnosticR", false, "plot_diagnosticO", true)
 
 %% Save re-calibration result (default is with today's date)
 close all

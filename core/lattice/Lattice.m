@@ -95,15 +95,14 @@
             arguments
                 Lat
                 signal (:, :) double
-                x_range (1, :) double = 1:size(signal, 1)
-                y_range (1, :) double = 1:size(signal, 2)
-                options.label (1, :) string = "Image"
+                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
+                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
             end
             signal_modified = signal;
             % If the image is not directly from lattice, do filtering
-            if options.label ~= "Lattice"
+            if Lat.ID ~= "Zelux"
                 thres = options.binarize_thres * max(signal(:));
                 signal_modified((signal_modified < thres)) = 0;
             end
@@ -129,8 +128,8 @@
             arguments
                 Lat
                 signal (:, :) double
-                x_range (1, :) double = 1:size(signal, 1)
-                y_range (1, :) double = 1:size(signal, 2)
+                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
+                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 options.R_fit = LatCalibConfig.CalibV_RFit
                 options.warning_latnorm_thres = LatCalibConfig.CalibV_WarnLatNormThres
                 options.warning_rsquared = LatCalibConfig.CalibV_WarnRSquared
@@ -168,7 +167,7 @@
             end
         end
 
-        % Convert coordinates in Lat camera space to Lat2 camera space
+        % Convert coordinates in Lat space to Lat2 space
         function [corr2, lat_corr] = transform(Lat, Lat2, corr, options)
             arguments
                 Lat (1, 1) Lattice
@@ -192,8 +191,8 @@
                 x_range2 (1, :) double
                 y_range2 (1, :) double
                 signal (:, :) double
-                x_range (1, :) double = 1: size(signal, 1)
-                y_range (1, :) double = 1: size(signal, 2)
+                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1: size(signal, 1)
+                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1: size(signal, 2)
             end
             % All pixels in Lat2 camera space
             [Y2, X2] = meshgrid(y_range2, x_range2);
@@ -204,61 +203,88 @@
             idx = (corr(:, 1) >= x_range(1)) & (corr(:, 1) <= x_range(end)) ...
                 & (corr(:, 2) >= y_range(1)) & (corr(:, 2) <= y_range(end));
             transformed2 = zeros(length(x_range2), length(y_range2));
-            transformed2(idx) = signal(corr(idx, 1) - options.x_lim(1) + 1 ...
-                + (corr(idx, 2) - options.y_lim(1)) * size(signal, 1));
+            transformed2(idx) = signal(corr(idx, 1) - x_range(1) + 1 ...
+                + (corr(idx, 2) - y_range(1)) * size(signal, 1));
         end
         
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
-        function varargout = calibrateO(Lat, Lat2, signal, x_range, y_range, ...
-                signal2, x_range2, y_range2, options)
+        function varargout = calibrateO(Lat, Lat2, signal, signal2, ...
+                x_range, y_range, x_range2, y_range2, options)
             arguments
                 Lat (1, 1) Lattice
                 Lat2 (1, 1) Lattice
                 signal (:, :) double
-                x_range (1, :) double
-                y_range (1, :) double
                 signal2 (:, :) double
-                x_range2 (1, :) double
-                y_range2 (1, :) double
+                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
+                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
+                x_range2 (1, :) double {mustBeValidRange(signal2, 1, x_range2)} = 1:size(signal2, 1)
+                y_range2 (1, :) double {mustBeValidRange(signal2, 2, y_range2)} = 1:size(signal2, 2)
                 options.sites = LatCalibConfig.CalibO_Sites
+                options.debug (1, 1) logical = LatCalibConfig.CalibO_Debug
                 options.verbose (1, 1) logical = LatCalibConfig.CalibO_Verbose
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibO_PlotDiagnostic
             end
-            best_transformed = [];
+            best_score = -1;
+            best_site = [];
             best_center = [];
-            best_score = 0;
-            for site = options.sites'
-                Lat.init(site');
+            best_transformed = [];
+            R_init = Lat.R;
+            Lat.info("Current lattice center = (%4.3f px, %4.3f px).", Lat.R(1), Lat.R(2))
+            num_sites = size(options.sites, 1);
+            sites_corr = Lat.convert2Real(options.sites, "filter", false);
+            site_scores = zeros(num_sites, 1);
+            for i = 1: num_sites
+                site = options.sites(i, :);
+                site_corr = sites_corr(i, :);
+                Lat.R = site_corr;
                 transformed = Lat2.transformSignal(Lat, x_range, y_range, signal2, x_range2, y_range2);
-                score = 1 - pdist2(signal(:)', transformed(:)', "cosine");
-                if score > best_score
+                site_scores(i) = 1 - pdist2(signal(:)', transformed(:)', "cosine");
+                if site_scores(i) > best_score
+                    best_score = site_scores(i);
+                    best_site = site;
+                    best_center = site_corr;
                     best_transformed = transformed;
-                    best_center = site';
-                    best_score = score;
                 end
                 if options.verbose
-                    obj.info("Trying site (%d, %d), score is %4.2f.", site(1), site(2), score)
+                    Lat.info("Trying site (%3d, %3d) at (%5.2f px, %5.2f px), score is %4.3f.", ...
+                        site(1), site(2), site_corr(1), site_corr(2), site_scores(i))
                 end
             end
-            if isempty(best_score)
-                obj.error("Cross calibration failed, no score above 0 found.")
+            if isempty(best_center)
+                Lat.R = R_init;
+                Lat.error("Cross calibration failed, no score above 0 found.")
             end
-            Lat.init(best_center);
-            obj.info("Lattice center is cross-calibrated. Maximum cosine similarity is %4.2f.", max_v)
+            Lat.R = best_center;
+            Lat.info("Lattice center is cross-calibrated. Maximum cosine similarity is %4.3f at site (%d, %d) = (%4.3f px, %4.3f px).", ...
+                best_score, best_site(1), best_site(2), best_center(1), best_center(2))
             if nargout == 1
                 varargout{1} = best_transformed;
             end
             if options.plot_diagnostic
+                empty_image = zeros(length(x_range), length(y_range));
+                figure
+                Lat.imageSignal(empty_image, x_range, y_range)
+                title('Similarity between images from different cameras')
+                hold on
+                scatter(best_center(2), best_center(1), 100, "red")
+                scatter(sites_corr(:, 2), sites_corr(:, 1), 50, site_scores, 'filled')
+                clim([min(site_scores), max(site_scores)])
+
                 figure
                 subplot(1, 3, 1)
+                Lat2.imageSignal(signal2, x_range2, y_range2, "title", sprintf("%s: reference", Lat2.ID))
+                Lat2.plot(options.sites)
+                subplot(1, 3, 2)
                 Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: calibrated", Lat.ID))
                 Lat.plot(options.sites)
-                subplot(1, 3, 2)
-                Lat2.imageSignal(signal, x_range, y_range, "title", sprintf("%s: original", Lat2.ID))
-                Lat2.plot(options.sites)
+                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', 'EnhanceVisibility', false);
                 subplot(1, 3, 3)
-                Lat.imageSignal(best_transformed, x_range, y_range, "title", sprintf("%s: best_transformed from %s", Lat.ID, Lat2.ID))
+                Lat.imageSignal(best_transformed, x_range, y_range, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
                 Lat.plot(options.sites)
+                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', 'EnhanceVisibility', false);
+            end
+            if options.debug
+                Lat.R = R_init;
             end
         end
 
@@ -288,10 +314,9 @@
             else
                 radius = options.norm_radius * norm(Lat.V1);
             end
-            % Create a group of lines of circles
             h = viscircles(options.ax, corr(:, 2:-1:1), radius, ...
                 'Color', options.color, 'EnhanceVisibility', false, 'LineWidth', options.line_width);
-            % Output the handle to the group
+            % Output the handle to the group of circles
             if nargout == 1
                 varargout{1} = h;
             end
@@ -416,8 +441,8 @@
         function imageSignal(signal, x_range, y_range, ax, options)
             arguments
                 signal (:, :) double
-                x_range (1, :) double = 1: size(signal, 1)
-                y_range (1, :) double = 1: size(signal, 2)
+                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1: size(signal, 1)
+                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1: size(signal, 2)
                 ax = gca()
                 options.title (1, 1) string = ""
             end
@@ -478,8 +503,9 @@ function preserveHold(was_hold_on,ax)
     end
 end
 
-function mustBeValidRange(obj, signal, dim, range)
+% Input argument validation
+function mustBeValidRange(signal, dim, range)
     if size(signal, dim) ~= length(range)
-        obj.error("Range does not match signal dimension.")
+        error("Range does not match signal dimension.")
     end
 end
