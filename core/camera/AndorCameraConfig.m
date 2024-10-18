@@ -30,7 +30,8 @@ classdef AndorCameraConfig < BaseObject
 
     methods (Static)
         function obj = struct2obj(s)
-            obj = BaseRunner.struct2obj(s, AndorCameraConfig());
+            obj = BaseRunner.struct2obj(s, AndorCameraConfig(), ...
+                "prop_list", ["Exposure", "ExternalTrigger", "XPixels", "YPixels", "Cropped", "FastKinetic", "FastKineticSeriesLength", "HSSpeed", "VSSpeed", "MaxPixelValue"]);
         end
     end
     

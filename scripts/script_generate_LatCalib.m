@@ -18,9 +18,9 @@ p.process()
 close all
 p.plot("Andor19330")
 
-%% Andor19330: Input initial peak positions as [x1, y1; x2, y2], at least two peaks
+%% Andor19330: Input center of lattice and initial peak positions as [x1, y1; x2, y2]
 close all
-p.calibrate("Andor19330", [105, 204; 156, 242])
+p.calibrate("Andor19330", [], [105, 204; 156, 242])
 
 %% Andor19331
 close all
@@ -28,7 +28,7 @@ p.plot("Andor19331")
 
 %% Andor19331: Input the peaks that corresponds to the Andor19330 peaks under its coordinates
 close all
-p.calibrate("Andor19331", [155, 216; 116, 165])
+p.calibrate("Andor19331", [], [155, 216; 116, 165])
 
 %% Zelux
 close all
@@ -36,11 +36,11 @@ p.plot("Zelux")
 
 %% Input the peaks positions in the orientation similar to Andor19330
 close all
-p.calibrate("Zelux", [656, 566; 716, 595])
+p.calibrate("Zelux", [], [656, 566; 716, 595])
 
 %% Cross-calibrate Andor19331 to Andor19330
 close all
-p.calibrateO()
+p.calibrateO('signal_index', 2)
 
 %% Save lattice calibration of all three cameras (default is with today's date)
 p.save()

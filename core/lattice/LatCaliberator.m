@@ -27,7 +27,6 @@ classdef LatCaliberator < BaseAnalyzer
                 s.Center = [xc, yc];
                 s.Width = [xw, yw];                
                 obj.Stat.(camera) = s;
-
                 if isempty(obj.Config.LatCalibFilePath)
                     obj.LatCalib.(camera) = Lattice(camera);
                     obj.info("Lattice object created for camera %s.", camera)
@@ -55,10 +54,11 @@ classdef LatCaliberator < BaseAnalyzer
         end
         
         % Calibrate the lattice vector from a single camera
-        function calibrate(obj, camera, peak_init, options)
+        function calibrate(obj, camera, center, peak_init, options)
             arguments
                 obj
                 camera (1, 1) string
+                center double = []
                 peak_init (:, 2) double = obj.LatCalib.(camera).convert2FFTPeak(size(obj.Stat.(camera).FFTPattern))
                 options.plot_diagnosticV (1, 1) logical = true
                 options.plot_diagnosticR (1, 1) logical = true
@@ -66,33 +66,39 @@ classdef LatCaliberator < BaseAnalyzer
             Lat = obj.LatCalib.(camera);
             FFT = obj.Stat.(camera).FFTPattern;
             obj.Stat.(camera).PeakInit = peak_init;
-            Lat.init(obj.Stat.(camera).Center, size(FFT), peak_init)
-            disp(Lat)  % Display initial lattice calibration
+            if isempty(obj.Config.LatCalibFilePath)
+                center = obj.Stat.(camera).Center;
+            end
+            Lat.init(center, size(FFT), peak_init)
+            Lat0 = Lattice.struct2obj(Lat.struct(), camera + "_previous");
             obj.Stat.(camera).PeakFinal = Lat.calibrateV( ...
                 obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
                 "plot_diagnosticV", options.plot_diagnosticV, "plot_diagnosticR", options.plot_diagnosticR);
-            disp(Lat)  % Display final lattice calibration
+            Lattice.checkDiff(Lat0, Lat)
         end
         
         % Cross-calibrate the lattice origin of camera to match camera2
-        function calibrateO(obj, camera, camera2, label, label2, signal_index, options)
+        function calibrateO(obj, camera, camera2, label, label2, options)
             arguments
                 obj
                 camera (1, 1) string = "Andor19331"
                 camera2 (1, 1) string = "Andor19330"
                 label (1, 1) string = "Image"
                 label2 (1, 1) string = "Image"
-                signal_index (1, 1) double = 1
+                options.signal_index (1, 1) double = 1
                 options.sites (:, 2) double = Lattice.prepareSite("hex", "latr", 20)
                 options.verbose (1, 1) logical = false
                 options.plot_diagnostic (1, 1) logical = true
             end
-            signal = getSignalSum(obj.Signal.(camera).(label)(:, :, signal_index), ...
+            if isempty(obj.Stat)
+                obj.process()
+            end
+            signal = getSignalSum(obj.Signal.(camera).(label)(:, :, options.signal_index), ...
                 getNumFrames(obj.Signal.(camera).Config), "first_only", true);
-            signal2 = getSignalSum(obj.Signal.(camera2).(label2)(:, :, signal_index), ...
+            signal2 = getSignalSum(obj.Signal.(camera2).(label2)(:, :, options.signal_index), ...
                 getNumFrames(obj.Signal.(camera2).Config), "first_only", true);
-            [signal, x_range, y_range] = prepareBox(signal, obj.Stat.(camera).Center, 2 * obj.Stat.(camera).Width);
-            [signal2, x_range2, y_range2] = prepareBox(signal2, obj.Stat.(camera2).Center, 2 * obj.Stat.(camera2).Width);
+            [signal, x_range, y_range] = prepareBox(signal, obj.Stat.(camera).Center, 2*obj.Stat.(camera).Width);
+            [signal2, x_range2, y_range2] = prepareBox(signal2, obj.Stat.(camera2).Center, 2*obj.Stat.(camera2).Width);
             obj.LatCalib.(camera).calibrateR(signal, x_range, y_range)
             obj.LatCalib.(camera2).calibrateR(signal2, x_range2, y_range2)
             obj.LatCalib.(camera).calibrateO(obj.LatCalib.(camera2), ...
@@ -107,6 +113,9 @@ classdef LatCaliberator < BaseAnalyzer
                 options.plot_diagnosticV (1, 1) logical = true
                 options.plot_diagnosticR (1, 1) logical = true
                 options.plot_diagnosticO (1, 1) logical = true
+            end
+            if isempty(obj.Stat)
+                obj.process()
             end
             for camera = obj.Config.CameraList
                 if ~isempty(obj.LatCalib.(camera).K) && isfield(obj.Stat.(camera), "FFTPattern")
@@ -147,4 +156,8 @@ classdef LatCaliberator < BaseAnalyzer
         end
     end
 
+end
+
+function printStatistics(Lat, Lat2)
+    
 end

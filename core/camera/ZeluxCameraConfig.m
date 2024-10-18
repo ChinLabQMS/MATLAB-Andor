@@ -10,7 +10,8 @@ classdef ZeluxCameraConfig < BaseObject
     
     methods (Static)
         function obj = struct2obj(s)
-            obj = BaseRunner.struct2obj(s, ZeluxCameraConfig());
+            obj = BaseRunner.struct2obj(s, ZeluxCameraConfig(), ...
+                "prop_list", ["Exposure", "ExternalTrigger", "XPixels", "YPixels", "MaxPixelValue"]);
         end
     end
 

@@ -39,17 +39,18 @@ classdef BaseRunner < BaseObject
 
     methods (Static)
         % Converts a structure to an object, iterating over the fields of the structure
-        function obj = struct2obj(s, obj)
+        function obj = struct2obj(s, obj, options)
             arguments
                 s (1, 1) struct
                 obj (1, 1) BaseObject = BaseObject()
+                options.prop_list = string(fields(s))'
             end
-            for field = string(fields(s))'
+            for field = options.prop_list
                 if isprop(obj, field)
                     try
                         obj.(field) = s.(field);
-                    catch
-                        obj.warn("Invalid field [%s]", field)
+                    catch me
+                        obj.warn("Invalid field [%s], %s", field, getReport(me, 'extended', 'hyperlinks', 'on'))
                     end
                 end
             end

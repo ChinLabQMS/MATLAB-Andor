@@ -1,7 +1,7 @@
  classdef Lattice < BaseObject
     %LATTICE Class for lattice calibration and conversion
     
-    properties (SetAccess = protected)
+    properties (SetAccess = {?BaseRunner})
         K  % Momentum-space reciprocal vectors, 2x2 double
         V  % Real-space lattice vectors, 2x2 double
         R  % Real-space lattice center, 1x2 double
@@ -31,14 +31,16 @@
         function init(Lat, center, xy_size, peak_pos)
             arguments
                 Lat
-                center (1, 2) double
+                center double = []
                 xy_size = []
                 peak_pos = []
             end
             if ~isempty(peak_pos) && ~isempty(xy_size)
                 [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             end
-            Lat.R = center;
+            if ~isempty(center)
+                Lat.R = center;
+            end
         end
         
         % Convert lattice space coordinates to real space
@@ -106,7 +108,6 @@
                 thres = options.binarize_thres * max(signal(:));
                 signal_modified((signal_modified < thres)) = 0;
             end
-
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -119,7 +120,7 @@
                 figure
                 Lat.imageSignal(signal_modified, x_range, y_range, "title", sprintf("%s: Signal (modified)", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
-                Lat.plotV("origin", Lat.R)
+                Lat.plotV()
             end
         end
         
@@ -161,9 +162,9 @@
             if options.plot_diagnosticV
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
                 figure
-                Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: Signal (modified)", Lat.ID))
+                Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: Signal", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
-                Lat.plotV("origin", Lat.R)
+                Lat.plotV()
             end
         end
 
@@ -255,8 +256,8 @@
                 Lat.error("Cross calibration failed, no score above 0 found.")
             end
             Lat.R = best_center;
-            Lat.info("Lattice center is cross-calibrated. Maximum cosine similarity is %4.3f at site (%d, %d) = (%4.3f px, %4.3f px).", ...
-                best_score, best_site(1), best_site(2), best_center(1), best_center(2))
+            Lat.info("Lattice center is cross-calibrated to [%s]. Maximum cosine similarity is %4.3f at site (%d, %d) = (%4.3f px, %4.3f px).", ...
+                Lat2.ID, best_score, best_site(1), best_site(2), best_center(1), best_center(2))
             if nargout == 1
                 varargout{1} = best_transformed;
             end
@@ -274,14 +275,19 @@
                 subplot(1, 3, 1)
                 Lat2.imageSignal(signal2, x_range2, y_range2, "title", sprintf("%s: reference", Lat2.ID))
                 Lat2.plot(options.sites)
+                Lat2.plotV()
                 subplot(1, 3, 2)
                 Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: calibrated", Lat.ID))
                 Lat.plot(options.sites)
-                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', 'EnhanceVisibility', false);
+                Lat.plotV()
+                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
+                    'EnhanceVisibility', false, 'LineWidth', 0.5);
                 subplot(1, 3, 3)
                 Lat.imageSignal(best_transformed, x_range, y_range, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
                 Lat.plot(options.sites)
-                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', 'EnhanceVisibility', false);
+                Lat.plotV()
+                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
+                    'EnhanceVisibility', false, 'LineWidth', 0.5);
             end
             if options.debug
                 Lat.R = R_init;
@@ -327,7 +333,7 @@
             arguments
                 Lat
                 options.ax = gca()
-                options.origin (1, 2) double = [0, 0]
+                options.origin (1, 2) double = Lat.R
                 options.scale (1, 1) double = 1
             end
             cObj = onCleanup(@()preserveHold(ishold(options.ax), options.ax)); % Preserve original hold state
@@ -351,39 +357,49 @@
 
         % Display lattice calibration details
         function disp(Lat)
+            if isempty(Lat.V)
+                fprintf('%s: Details unset\n', Lat.getStatusLabel())
+                return
+            end
             v1 = Lat.V1;
             v2 = Lat.V2;
             v3 = Lat.V3;
-            fprintf('%s%s: \n\tR = (%5.2f, %5.2f)\n', class(Lat), Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
-            fprintf('\tV1 = (%5.2f, %5.2f),\t|V1| = %5.2f px\n', v1(1), v1(2), norm(v1))
-            fprintf('\tV2 = (%5.2f, %5.2f),\t|V2| = %5.2f px\n', v2(1), v2(2), norm(v2))
-            fprintf('\tV3 = (%5.2f, %5.2f),\t|V3| = %5.2f px\n', v3(1), v3(2), norm(v3))
+            fprintf('%s: \n\tR  = (%7.2f, %7.2f) px\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
+            fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', v1(1), v1(2), norm(v1))
+            fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', v2(1), v2(2), norm(v2))
+            fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', v3(1), v3(2), norm(v3))
             fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(v1*v2'/(norm(v1)*norm(v2))))
             fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(v1*v3'/(norm(v1)*norm(v3))))
         end
         
         function val = get.V1(Lat)
+            if isempty(Lat.V)
+                val = [];
+                return
+            end
             val = Lat.V(1,:);
         end
 
         function val = get.V2(Lat)
+            if isempty(Lat.V)
+                val = [];
+                return
+            end
             val = Lat.V(2,:);
         end
 
         function val = get.V3(Lat)
-            v1 = Lat.V1;
-            v2 = Lat.V2;
-            if acosd(v1*v2'/(norm(v1)*norm(v2))) > 90
-                val = v1 + v2;
-            else
-                val = v1 - v2;
+            if isempty(Lat.V)
+                val = [];
+                return
             end
+            val = Lat.V1 + Lat.V2;
         end
     end
     
     methods (Access = protected)
         function label = getStatusLabel(Lat)
-            label = sprintf(" (%s)", Lat.ID);
+            label = sprintf("%s (%s)", class(Lat), Lat.ID);
         end
 
         % Use 2D Gauss fit to fit the FFT amplitude peaks
@@ -450,6 +466,32 @@
             axis image
             colorbar
             title(options.title)
+        end
+
+        function Lat = struct2obj(s, ID)
+            arguments
+                s (1, 1) struct
+                ID (1, 1) string = s.ID
+            end
+            Lat = BaseRunner.struct2obj(s, Lattice(ID), "prop_list", ["K", "V", "R"]);
+        end
+
+        function checkDiff(Lat, Lat2)
+            V1 = [Lat.V; Lat.V3];
+            V2 = [Lat2.V; Lat2.V3];
+            fprintf('Difference between %s and %s:\n', Lat.getStatusLabel(), Lat2.getStatusLabel())
+            fprintf('\t R_1 = (%7.2f, %7.2f),\t R_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
+                    Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat.R(1) - Lat2.R(1), Lat.R(2) - Lat2.R(2))
+            for i = 1:3
+                fprintf('(%d)\t V_1 = (%7.2f, %7.2f),\t V_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
+                    i, V1(i, 1), V1(i, 2), V2(i, 1), V2(i, 2), V1(i, 1) - V2(i, 1), V1(i, 2) - V2(i, 2)) 
+            end
+            for i = 1:3
+                norm1 = norm(V1(i, :));
+                norm2 = norm(V2(i, :));
+                fprintf('(%d)\t|V11| = %14.2f px,\t|V12| = %14.2f px,\tDiff = %14.2f px (%5.3f%%)\n', ...
+                    i, norm1, norm2, norm1 - norm2, 200*(norm1 - norm2)/(norm1 + norm2))
+            end
         end
     end
     
