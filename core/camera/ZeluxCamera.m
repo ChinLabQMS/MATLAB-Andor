@@ -116,6 +116,7 @@ classdef ZeluxCamera < Camera
             end
         end
 
+        % Override the default getStatusLabel method from Camera
         function label = getStatusLabel(obj)
             label = sprintf("%s%d(Index: %d)", class(obj), obj.ID, obj.FrameIndex);
         end

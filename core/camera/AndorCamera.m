@@ -111,18 +111,6 @@ classdef AndorCamera < Camera
             end
             obj.info('Current temperature = %g C, Status = %s', temperature, status)
         end
-
-        function checkTemperatureUntilStable(obj, options)
-            arguments
-                obj
-                options.refresh (1, 1) double = 5
-                options.timeout (1, 1) double = 300
-            end
-            timer = tic;
-            while ~obj.checkTemperature() && toc(timer) < options.timeout
-                pause(options.refresh)
-            end
-        end
     end
 
     methods (Access = protected, Hidden)

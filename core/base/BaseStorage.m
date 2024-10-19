@@ -38,7 +38,7 @@ classdef BaseStorage < BaseObject
                     obj.warn("Only completed data is saved.")
                 end
             end
-            s = struct('AcquisitionConfig', obj.AcquisitionConfig.struct());
+            s.AcquisitionConfig = obj.AcquisitionConfig.struct();
             for camera = obj.getPropList()
                 if isempty(obj.(camera))
                     continue
@@ -63,7 +63,8 @@ classdef BaseStorage < BaseObject
         end
     end
 
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
+        % Override the default getPropList method from BaseObject
         function cameras = getPropList(obj)
             cameras = getPropList@BaseObject(obj, 'excluded', ["CurrentIndex", "AcquisitionConfig"]);
         end

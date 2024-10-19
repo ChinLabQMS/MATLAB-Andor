@@ -43,11 +43,11 @@ classdef BaseRunner < BaseObject
             arguments
                 s (1, 1) struct
                 obj (1, 1) BaseObject = BaseObject()
-                options.prop_list = string(fields(s))'
+                options.prop_list = obj.getPropList()
                 options.verbose = true
             end
             for field = options.prop_list
-                if isprop(obj, field)
+                if isfield(s, field)
                     try
                         obj.(field) = s.(field);
                     catch me

@@ -5,7 +5,6 @@
         K                       % Momentum-space reciprocal vectors, 2x2 double
         V                       % Real-space lattice vectors, 2x2 double
         R                       % Real-space lattice center, 1x2 double
-        Rerr = struct.empty     % Uncertainty in R
     end
 
     properties (SetAccess = immutable)
@@ -93,7 +92,7 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function calibrateR(Lat, signal, x_range, y_range, options)
+        function varargout = calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal (:, :) double
@@ -112,12 +111,12 @@
             % Update Lat.R
             Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
             % Use 4 equal size sub-area to get uncertainty
-            if options.bootstrapping
-                Lat.Rerr = getSubStat(Lat, signal_modified, x_range, y_range);
+            if options.bootstrapping && nargout == 1
+                varargout{1} = getSubStat(Lat, signal_modified, x_range, y_range);
             end
             if options.plot_diagnostic
                 figure
-                Lat.imageSignal(signal_modified, x_range, y_range, "title", sprintf("%s: Signal (modified)", Lat.ID))
+                Lat.imagesc(y_range, x_range, signal_modified, "title", sprintf("%s: Signal (modified)", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
@@ -161,7 +160,7 @@
             if options.plot_diagnosticV
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
                 figure
-                Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: Signal", Lat.ID))
+                Lat.imagesc(y_range, x_range, signal, "title", sprintf("%s: Signal", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
@@ -263,8 +262,7 @@
             if options.plot_diagnostic
                 empty_image = zeros(length(x_range), length(y_range));
                 figure
-                Lat.imageSignal(empty_image, x_range, y_range)
-                title('Similarity between images from different cameras')
+                Lat.imagesc(y_range, x_range, empty_image, "title", 'Similarity between images from different cameras')
                 hold on
                 scatter(best_center(2), best_center(1), 100, "red")
                 scatter(sites_corr(:, 2), sites_corr(:, 1), 50, site_scores, 'filled')
@@ -272,23 +270,23 @@
 
                 figure
                 subplot(1, 3, 1)
-                Lat2.imageSignal(signal2, x_range2, y_range2, "title", sprintf("%s: reference", Lat2.ID))
+                Lat2.imagesc(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
                 Lat2.plot(options.sites)
                 Lat2.plotV()
                 subplot(1, 3, 2)
-                Lat.imageSignal(signal, x_range, y_range, "title", sprintf("%s: calibrated", Lat.ID))
+                Lat.imagesc(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
                 viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
                     'EnhanceVisibility', false, 'LineWidth', 0.5);
                 subplot(1, 3, 3)
-                Lat.imageSignal(best_transformed, x_range, y_range, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
+                Lat.imagesc(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
                 viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
                     'EnhanceVisibility', false, 'LineWidth', 0.5);
             end
-            if options.debug
+            if options.debug  % Reset to initial R
                 Lat.R = R_init;
             end
         end
@@ -411,7 +409,7 @@
         end
     end
     
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
         function label = getStatusLabel(Lat)
             label = sprintf("%s (%s)", class(Lat), Lat.ID);
         end
@@ -439,15 +437,14 @@
             end
         end
 
-        function imageSignal(signal, x_range, y_range, ax, options)
+        function imagesc(varargin, options)
+            arguments (Repeating)
+                varargin
+            end
             arguments
-                signal (:, :) double
-                x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1: size(signal, 1)
-                y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1: size(signal, 2)
-                ax = gca()
                 options.title (1, 1) string = ""
             end
-            imagesc(ax, y_range, x_range, signal)
+            imagesc(varargin{:})
             axis image
             colorbar
             title(options.title)
@@ -530,7 +527,7 @@ function [peak_pos, all_peak_fit] = fitFFTPeaks(Lat, FFT, peak_init, options)
 end
 
 % Partition signal into 4 equal size subareas
-function s = partitionSignal(signal, x_range, y_range)
+function s = partitionSignal4(signal, x_range, y_range)
     arguments
         signal (:, :) double
         x_range (1, :) double = 1:size(signal, 1)
@@ -552,29 +549,28 @@ function s = partitionSignal(signal, x_range, y_range)
     end
 end
 
+% Get statistics of the offset calibration of sub-areas
 function res = getSubStat(Lat, signal, x_range, y_range)
-    s = partitionSignal(signal, x_range, y_range);
-    res = struct('R_Sub', nan(length(s), 2), ...
-             'V1_Mean', [], 'V1_Max', [], 'V1_Min', [], 'V1_Std', [], ...
-             'V2_Mean', [], 'V2_Max', [], 'V2_Min', [], 'V2_Std', []);
+    s = partitionSignal4(signal, x_range, y_range);
+    res.R_Sub = nan(length(s), 2);
     for i = 1:length(s)
         res.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
     end
-    res.V1_Mean = mean(res.R_Sub(:, 1));
-    res.V1_Max = max(res.R_Sub(:, 1));
-    res.V1_Min = min(res.R_Sub(:, 1));
-    res.V1_Std = std(res.R_Sub(:, 1));
-    res.V2_Mean = mean(res.R_Sub(:, 2));
-    res.V2_Max = max(res.R_Sub(:, 2));
-    res.V2_Min = min(res.R_Sub(:, 2));
-    res.V2_Std = std(res.R_Sub(:, 2));
+    res.R1_Mean = mean(res.R_Sub(:, 1));
+    res.R1_Max = max(res.R_Sub(:, 1));
+    res.R1_Min = min(res.R_Sub(:, 1));
+    res.R1_Std = std(res.R_Sub(:, 1));
+    res.R2_Mean = mean(res.R_Sub(:, 2));
+    res.R2_Max = max(res.R_Sub(:, 2));
+    res.R2_Min = min(res.R_Sub(:, 2));
+    res.R2_Std = std(res.R_Sub(:, 2));
 end
 
 % Generate diagnostic plots on the FFT peak fits
 function plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, ID)
     % Plot FFT magnitude in log scale
     figure("Name", "FFT Magnitude")
-    Lattice.imageSignal(log(signal_fft), "title", sprintf("[%s]: log(FFT)", ID))
+    Lattice.imagesc(log(signal_fft), "title", sprintf("[%s]: log(FFT)", ID))
     viscircles(peak_init(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
     viscircles(peak_pos(:, 2:-1:1), 2, "EnhanceVisibility", false, "Color", "red", "LineWidth", 1);
     num_peaks = size(peak_pos, 1);

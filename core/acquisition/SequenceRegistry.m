@@ -1,4 +1,5 @@
 classdef SequenceRegistry < BaseObject
+    % SequenceRegistry: Registry of acquisition sequences.
 
     properties (Constant)
         Empty = table( ...
@@ -48,17 +49,11 @@ classdef SequenceRegistry < BaseObject
             'VariableNames', {'Order', 'Camera', 'Label', 'Type', 'Note'})
     end
 
-    properties (Dependent, Hidden)
-        SequenceList
-    end
-
-    methods
-        function list = get.SequenceList(obj)
-            list = obj.getPropList();
-        end
-    end
-
     methods (Static)
+        function list = getSequenceList()
+            list = SequenceRegistry().getPropList();
+        end
+
         function mustBeValidSequence(sequence_table)
             arguments
                 sequence_table (:, 5) table
@@ -103,7 +98,7 @@ classdef SequenceRegistry < BaseObject
                             error("Invalid sequence, label %s is analyzed more than once for camera %s", label, camera)
                         end
                         note = camera_seq.Note(i);
-                        AnalysisRegistry.parseAnalysisOutput(note);
+                        AnalysisRegistry.parseAnalysisNote(note);
                         analyzed(end + 1) = label; %#ok<AGROW>
                     end
                 end
@@ -111,6 +106,23 @@ classdef SequenceRegistry < BaseObject
                     error("Invalid sequence, missing acquire command for camera %s.", camera)
                 end
             end
+        end
+
+        % Parse the acquisition note to pass to the Camera
+        function args = parseNoteParams(note)
+            arguments
+                note (1, 1) string
+            end
+            params = split(note, ", ")';
+            for p = params
+                if contains(p, "=")
+                    [key, value] = split(p, "=");
+                    args.(key) = str2double(value);
+                else
+                    args.(p) = true;
+                end
+            end
+            args = namedargs2cell(args);
         end
     end
 

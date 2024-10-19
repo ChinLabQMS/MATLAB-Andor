@@ -1,4 +1,4 @@
-classdef Preprocessor < BaseAnalyzer
+classdef Preprocessor < BaseProcessor
     %PREPROCESSOR Preprocess raw images for further analysis
 
     properties (SetAccess = protected)
@@ -10,7 +10,7 @@ classdef Preprocessor < BaseAnalyzer
             arguments
                 config (1, 1) PreprocessConfig = PreprocessConfig();
             end
-            obj@BaseAnalyzer(config);
+            obj@BaseProcessor(config);
         end
 
         function [signal, leakage] = process(obj, raw, label, config, options)
@@ -63,7 +63,7 @@ classdef Preprocessor < BaseAnalyzer
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
+        function applyConfig(obj)
             obj.Background = load(obj.Config.BackgroundDataPath);
             obj.info("Background loaded.")
         end

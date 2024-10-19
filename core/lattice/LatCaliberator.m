@@ -1,4 +1,4 @@
-classdef LatCaliberator < BaseAnalyzer
+classdef LatCaliberator < BaseProcessor
     %LATCALIBERATOR Calibrator for initial lattice calibration and recalibration
     
     properties (SetAccess = protected)
@@ -12,7 +12,7 @@ classdef LatCaliberator < BaseAnalyzer
             arguments
                 config (1, 1) LatCalibConfig = LatCalibConfig()
             end
-            obj@BaseAnalyzer(config)
+            obj@BaseProcessor(config)
         end
         
         % Generate FFT patterns for lattice calibration
@@ -147,7 +147,7 @@ classdef LatCaliberator < BaseAnalyzer
     end
 
     methods (Access = protected)
-        function init(obj)
+        function applyConfig(obj)
             obj.Signal = Preprocessor().processData(load(obj.Config.DataPath).Data);
             if ~isempty(obj.Config.LatCalibFilePath)
                 obj.LatCalib = load(obj.Config.LatCalibFilePath);

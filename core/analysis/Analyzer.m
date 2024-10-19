@@ -1,4 +1,4 @@
-classdef Analyzer < BaseAnalyzer
+classdef Analyzer < BaseProcessor
 
     properties (SetAccess = protected)
         Lattice
@@ -14,7 +14,7 @@ classdef Analyzer < BaseAnalyzer
                 preprocessor (1, 1) Preprocessor = Preprocessor()
                 config (1, 1) AnalysisConfig = AnalysisConfig()
             end
-            obj@BaseAnalyzer(config)
+            obj@BaseProcessor(config)
             obj.Preprocessor = preprocessor;
         end
 
@@ -28,7 +28,7 @@ classdef Analyzer < BaseAnalyzer
             end
             timer = tic;
             res = struct();
-            processes = AnalysisRegistry.parseAnalysisOutput(config.AnalysisNote.(label));
+            processes = AnalysisRegistry.parseAnalysisNote(config.AnalysisNote.(label));
             for p = processes
                 res = feval(AnalysisRegistry.(p).FuncName, ...
                             obj, res, signal, label, config);
@@ -43,9 +43,9 @@ classdef Analyzer < BaseAnalyzer
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
+        function applyConfig(obj)
             obj.Lattice = load(obj.Config.LatCalibFilePath);
-            obj.info("Lattice calibration loaded.")
+            obj.info("Lattice calibration file loaded.")
         end
     end
 

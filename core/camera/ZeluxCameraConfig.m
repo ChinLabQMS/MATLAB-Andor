@@ -6,13 +6,21 @@ classdef ZeluxCameraConfig < BaseObject
         XPixels = 1440
         YPixels = 1080
         MaxPixelValue = 1022
-        NumFrames = 1
+    end
+
+    properties (Dependent, Hidden)
+        NumFrames (1, 1) double {mustBePositive, mustBeInteger}
+    end
+
+    methods
+        function val = get.NumFrames(obj)
+            val = 1;
+        end
     end
     
     methods (Static)
         function obj = struct2obj(s)
-            obj = BaseRunner.struct2obj(s, ZeluxCameraConfig(), ...
-                "prop_list", ["Exposure", "ExternalTrigger", "XPixels", "YPixels", "MaxPixelValue"]);
+            obj = BaseRunner.struct2obj(s, ZeluxCameraConfig());
         end
     end
 

@@ -26,7 +26,7 @@ classdef StatManager < BaseStorage
                 label = sequence.Label(i);
                 note = sequence.Note(i);
                 num_stat = obj.AcquisitionConfig.NumStatistics;
-                [~, out_vars, out_data, num_out] = AnalysisRegistry.parseAnalysisOutput(note);
+                [~, out_vars, out_data, num_out] = AnalysisRegistry.parseAnalysisNote(note);
                 if num_out > 0
                     obj.(camera).(label) = table('Size', [num_stat, length(out_vars) + length(out_data)], ...
                                                  'VariableTypes', [repmat("doublenan", 1, length(out_vars)), ...

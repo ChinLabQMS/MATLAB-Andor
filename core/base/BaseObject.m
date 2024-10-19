@@ -21,7 +21,7 @@ classdef BaseObject < handle
         end
     end
    
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
         % Returns a list of properties of the object as a row vector of string
         function list = getPropList(obj, options)
             arguments

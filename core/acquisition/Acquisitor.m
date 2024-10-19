@@ -11,7 +11,7 @@ classdef Acquisitor < BaseRunner
 
     properties (SetAccess = protected)
         Timer (1, 1) uint64
-        RunNumber = 0
+        RunNumber (1, 1) double = 0
     end
 
     methods
@@ -122,7 +122,8 @@ classdef Acquisitor < BaseRunner
         end
     end
 
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
+        % Override the default getStatusLabel method from BaseObject
         function label = getStatusLabel(obj)
             label = sprintf("%s(RunNum: %d, Index: %d)", class(obj), obj.RunNumber, obj.DataManager.CurrentIndex);
         end

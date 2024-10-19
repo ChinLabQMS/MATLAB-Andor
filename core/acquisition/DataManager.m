@@ -76,7 +76,7 @@ classdef DataManager < BaseStorage
                 end
             end
             if options.verbose
-                obj.info('Raw images added in %.3f s', toc(timer))
+                obj.info('Raw images added to index %d in %.3f s', obj.CurrentIndex, toc(timer))
             end
         end
     end

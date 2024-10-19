@@ -1,4 +1,4 @@
-classdef BkgStatGenerator < BaseAnalyzer
+classdef BkgStatGenerator < BaseProcessor
     %BKGSTATGENERATOR Generate background statistics for image preprocessing
 
     properties (SetAccess = protected)
@@ -11,7 +11,7 @@ classdef BkgStatGenerator < BaseAnalyzer
             arguments
                 config (1, 1) BkgStatGeneratorConfig = BkgStatGeneratorConfig()
             end
-            obj@BaseAnalyzer(config)
+            obj@BaseProcessor(config)
         end
 
         function process(obj)
@@ -45,7 +45,7 @@ classdef BkgStatGenerator < BaseAnalyzer
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
+        function applyConfig(obj)
             for field = obj.Config.SettingList
                 obj.BkgData.(field) = load(fullfile(obj.Config.DataPath, obj.Config.(field))).Data;
             end

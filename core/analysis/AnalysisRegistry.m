@@ -26,7 +26,7 @@ classdef AnalysisRegistry < BaseObject
     end
 
     methods (Static)
-        function [processes, out_vars, out_data, num_out] = parseAnalysisOutput(note)
+        function [processes, out_vars, out_data, num_out] = parseAnalysisNote(note)
             processes = split(note, ", ")';
             processes = processes(processes ~= "");
             if nargout == 1

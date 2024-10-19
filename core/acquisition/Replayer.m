@@ -1,4 +1,4 @@
-classdef Replayer < BaseAnalyzer
+classdef Replayer < BaseProcessor
 
     properties (SetAccess = immutable, Hidden)
         LayoutManager
@@ -22,7 +22,7 @@ classdef Replayer < BaseAnalyzer
                 analyzer (1, 1) Analyzer = Analyzer(preprocessor)
                 config (1, 1) ReplayerConfig = ReplayerConfig()
             end
-            obj@BaseAnalyzer(config)
+            obj@BaseProcessor(config)
             obj.LayoutManager = layouts;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
@@ -75,20 +75,20 @@ classdef Replayer < BaseAnalyzer
         end
     end
 
-    methods (Access = protected)
-        function label = getStatusLabel(obj)
-            label = sprintf("%s(Index: %d)", class(obj), obj.CurrentIndex);
-        end
-    end
-
     methods (Access = protected, Hidden)
-        function init(obj)
+        % Override the default behavior in BaseProcessor
+        function applyConfig(obj)
             [obj.DataManager, obj.AcquisitionConfig, obj.CameraManager] = DataManager.struct2obj( ...
                 load(obj.Config.DataPath, "Data").Data, "test_mode", obj.Config.TestMode); %#ok<PROP>
             obj.StatManager = StatManager(obj.AcquisitionConfig); %#ok<CPROP>
             obj.StatManager.init()
             obj.CurrentIndex = 0;
             obj.info("Dataset loaded from:\n\t'%s'.", obj.Config.DataPath)
+        end
+
+        % Override the default getStatusLabel method from BaseObject
+        function label = getStatusLabel(obj)
+            label = sprintf("%s(Index: %d)", class(obj), obj.CurrentIndex);
         end
     end
 
