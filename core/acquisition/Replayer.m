@@ -15,11 +15,11 @@ classdef Replayer < BaseAnalyzer
     end
 
     methods
-        function obj = Replayer(preprocessor, analyzer, layouts, config)
+        function obj = Replayer(layouts, preprocessor, analyzer, config)
             arguments
+                layouts = []
                 preprocessor (1, 1) Preprocessor = Preprocessor()
                 analyzer (1, 1) Analyzer = Analyzer(preprocessor)
-                layouts = []
                 config (1, 1) ReplayerConfig = ReplayerConfig()
             end
             obj@BaseAnalyzer(config)
@@ -88,7 +88,7 @@ classdef Replayer < BaseAnalyzer
             obj.StatManager = StatManager(obj.AcquisitionConfig); %#ok<CPROP>
             obj.StatManager.init()
             obj.CurrentIndex = 0;
-            obj.info("Dataset loaded from\n\t[%s].", obj.Config.DataPath)
+            obj.info("Dataset loaded from:\n\t'%s'.", obj.Config.DataPath)
         end
     end
 

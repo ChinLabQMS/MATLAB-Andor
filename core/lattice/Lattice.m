@@ -104,7 +104,7 @@
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
             end
             signal_modified = signal;
-            % If the image is not directly from lattice, do filtering
+            % If the image is not directly from imaging lattice, do filtering
             if Lat.ID ~= "Zelux"
                 thres = options.binarize_thres * max(signal(:));
                 signal_modified((signal_modified < thres)) = 0;
@@ -113,15 +113,7 @@
             Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
             % Use 4 equal size sub-area to get uncertainty
             if options.bootstrapping
-                Lat.Rerr = struct('R_Sub', nan(4, 2), ...
-                    'V1_Mean', [], 'V1_Max', [], 'V1_Min', [], 'V1_Std', [], ...
-                    'V2_Mean', [], 'V2_Max', [], 'V2_Min', [], 'V2_Std', []);
-                s = partitionSignal(signal_modified, x_range, y_range);
-                for i = 1:length(s)
-                    Lat.Rerr.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
-                end
-                Lat.Rerr.V1_Mean = mean(Lat.Rerr.R_Sub(:, 1));
-                Lat.Rerr.V1_Max = max(Lat.Rerr.R_Sub(:, 1));
+                Lat.Rerr = getSubStat(Lat, signal_modified, x_range, y_range);
             end
             if options.plot_diagnostic
                 figure
@@ -558,6 +550,24 @@ function s = partitionSignal(signal, x_range, y_range)
         s(i).YRange = y_range_list(i, :);
         s(i).Signal = signal(x_idx(i, :), y_idx(i, :));
     end
+end
+
+function res = getSubStat(Lat, signal, x_range, y_range)
+    s = partitionSignal(signal, x_range, y_range);
+    res = struct('R_Sub', nan(length(s), 2), ...
+             'V1_Mean', [], 'V1_Max', [], 'V1_Min', [], 'V1_Std', [], ...
+             'V2_Mean', [], 'V2_Max', [], 'V2_Min', [], 'V2_Std', []);
+    for i = 1:length(s)
+        res.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
+    end
+    res.V1_Mean = mean(res.R_Sub(:, 1));
+    res.V1_Max = max(res.R_Sub(:, 1));
+    res.V1_Min = min(res.R_Sub(:, 1));
+    res.V1_Std = std(res.R_Sub(:, 1));
+    res.V2_Mean = mean(res.R_Sub(:, 2));
+    res.V2_Max = max(res.R_Sub(:, 2));
+    res.V2_Min = min(res.R_Sub(:, 2));
+    res.V2_Std = std(res.R_Sub(:, 2));
 end
 
 % Generate diagnostic plots on the FFT peak fits

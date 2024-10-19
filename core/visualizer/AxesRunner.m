@@ -23,7 +23,12 @@ classdef AxesRunner < BaseRunner
 
         function update(obj, Live)
             obj.Live = Live;
-            data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+            try
+                data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+            catch
+                obj.warn("[%s %s] Not found in Live.", obj.Config.CameraName, obj.Config.ImageLabel)
+                return
+            end
             info = Live.Info;
             switch obj.Config.Style
                 case "Image"

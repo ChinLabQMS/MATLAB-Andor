@@ -52,22 +52,20 @@ classdef AndorCamera < Camera
             CheckWarning(status)
         end
 
-        function [num_available, first, last] = getNumberNewImages(obj)
+        function num_frames = getNumberNewImages(obj)
             obj.checkStatus()
             obj.setToCurrent()
             [ret, status] = GetStatus();
             CheckWarning(ret)
             if status == atmcd.DRV_ACQUIRING
-                num_available = 0;
-                first = 0;
-                last = 0;
+                num_frames = 0;
                 return
             end
             [ret, first, last] = GetNumberAvailableImages();
             if ret == atmcd.DRV_SUCCESS
-                num_available = last - first + 1;
+                num_frames = last - first + 1;
             elseif ret == atmcd.DRV_NO_NEW_DATA
-                num_available = 0;
+                num_frames = 0;
             else
                 CheckWarning(ret)
                 obj.error("Unable to get number of available images.")
@@ -270,20 +268,15 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
-        function [image, num_available, is_saturated] = acquireImage(obj, label)
-            [num_available, first, last] = obj.getNumberNewImages();
-            if num_available == 0
-                image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
-                is_saturated = false;
-                return
-            end
-            [ret, ImgData, ~, ~] = GetImages16(first, last, obj.Config.YPixels*obj.Config.XPixels);
+        function [image, status, is_saturated] = acquireImage(obj, label, num_frames)
+            [ret, image_data] = GetImages16(1, num_frames, obj.Config.YPixels*obj.Config.XPixels);
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
                 obj.error("[%s] Unable to acquire image.", label)
             end
-            image = uint16(flip(transpose(reshape(ImgData, obj.Config.YPixels, obj.Config.XPixels)), 1));
+            image = uint16(flip(transpose(reshape(image_data, obj.Config.YPixels, obj.Config.XPixels)), 1));
             is_saturated = any(image(:) == obj.Config.MaxPixelValue);
+            status = "good";
         end
 
         function setToCurrent(obj)

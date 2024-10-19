@@ -16,6 +16,7 @@ classdef AndorCameraConfig < BaseObject
     properties (Dependent, Hidden)
         FastKineticExposedRows (1, 1) double {mustBePositive, mustBeInteger}
         FastKineticOffset (1, 1) double {mustBePositive, mustBeInteger}
+        NumFrames (1, 1) double {mustBePositive, mustBeInteger}
     end
 
     methods
@@ -25,6 +26,14 @@ classdef AndorCameraConfig < BaseObject
 
         function offset = get.FastKineticOffset(obj)
            offset = obj.XPixels - obj.FastKineticExposedRows;
+        end
+
+        function val = get.NumFrames(obj)
+            if obj.FastKinetic
+                val = obj.FastKineticSeriesLength;
+            else
+                val = 1;
+            end
         end
     end
 

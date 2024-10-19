@@ -47,8 +47,8 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function num_available = getNumberNewImages(obj)
-            num_available = obj.CameraHandle.NumberOfQueuedFrames;
+        function num_frames = getNumberNewImages(obj)
+            num_frames = double(obj.CameraHandle.NumberOfQueuedFrames);
         end
 
         function [exposure_time, readout_time] = getTimings(obj)
@@ -96,22 +96,24 @@ classdef ZeluxCamera < Camera
                 obj.CameraHandle.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.SoftwareTriggered;
             end
             obj.CameraHandle.FramesPerTrigger_zeroForUnlimited = 1;
+            obj.CameraHandle.MaximumNumberOfFramesToQueue = 1;
         end
 
-        function [image, num_frames, is_saturated] = acquireImage(obj, label)
-            num_frames = obj.getNumberNewImages();
-            if num_frames == 0
-                image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
-                is_saturated = false;
-                return
+        function [image, status, is_saturated] = acquireImage(obj, label, num_frames)
+            image_frame = obj.CameraHandle.GetPendingFrameOrNull;
+            image = reshape(uint16(image_frame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
+            is_saturated = any(image(:) == obj.Config.MaxPixelValue);
+            OldFrameIndex = obj.FrameIndex;
+            obj.FrameIndex = image_frame.FrameNumber;
+            status = "good";
+            if obj.FrameIndex > OldFrameIndex + 1
+                obj.warn('[%s] Dropped frame detected.', label)
+                status = "dropped";
             end
             if num_frames > 1
                 obj.warn('[%s] Data processing falling behind acquisition. %d remains.', label, obj.CameraHandle.NumberOfQueuedFrames)
+                status = "behind";
             end
-            imageFrame = obj.CameraHandle.GetPendingFrameOrNull;
-            image = reshape(uint16(imageFrame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
-            is_saturated = any(image(:) == obj.Config.MaxPixelValue);
-            obj.FrameIndex = imageFrame.FrameNumber;
         end
 
         function label = getStatusLabel(obj)

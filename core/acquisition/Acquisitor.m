@@ -11,6 +11,7 @@ classdef Acquisitor < BaseRunner
 
     properties (SetAccess = protected)
         Timer (1, 1) uint64
+        RunNumber = 0
     end
 
     methods
@@ -41,6 +42,7 @@ classdef Acquisitor < BaseRunner
             obj.DataManager.init()
             obj.StatManager.init()
             obj.Timer = tic;
+            obj.RunNumber = 0;
             obj.info("Acquisition initialized.\n")
         end
 
@@ -48,10 +50,19 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
+                options.drop_bad (1, 1) logical = true
                 options.verbose_level (1, 1) double = 1
             end
             timer = tic;
+            obj.RunNumber = obj.RunNumber + 1;
             sequence_table = obj.Config.ActiveSequence;
+            % Raw data, processed data (remove background), analysis
+            raw = struct();
+            signal = struct();
+            background = struct();
+            analysis = struct();
+            % Check the status of the acquisition
+            good = true;
             for i = 1:height(sequence_table)
                 camera = string(sequence_table.Camera(i));
                 label = string(sequence_table.Label(i));
@@ -63,9 +74,12 @@ classdef Acquisitor < BaseRunner
                 end
                 if type == "Acquire" || type == "Start+Acquire"
                     % Acquire raw images
-                    raw.(camera).(label) = obj.CameraManager.(camera).acquire( ...
+                    [raw.(camera).(label), status] = obj.CameraManager.(camera).acquire( ...
                         'refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout, ...
                         'label', label, 'verbose', options.verbose_level > 1);
+                    if status ~= "good"
+                        good = false;
+                    end
                     % Preprocess raw images
                     [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process( ...
                         raw.(camera).(label), label, config, ...
@@ -78,17 +92,22 @@ classdef Acquisitor < BaseRunner
                         "verbose", options.verbose_level > 2);
                 end
             end
-            obj.DataManager.add(raw, "verbose", options.verbose_level > 2);
-            obj.StatManager.add(analysis, "verbose", options.verbose_level > 3);
             if ~isempty(obj.LayoutManager)
                 Live = struct('Raw', raw, 'Signal', signal, ...
-                          'Background', background, 'Analysis', analysis, ...
-                          'Info', struct('RunNumber', obj.DataManager.CurrentIndex, ...
-                                         'Lattice', obj.Analyzer.Lattice));
+                              'Background', background, 'Analysis', analysis, ...
+                              'Info', struct('RunNumber', obj.RunNumber, ...
+                                             'Lattice', obj.Analyzer.Lattice));
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_level > 1)
             end
+            if good || ~options.drop_bad
+                obj.DataManager.add(raw, "verbose", options.verbose_level > 2);
+                obj.StatManager.add(analysis, "verbose", options.verbose_level > 3);
+            else
+                obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
+                obj.warn("Bad acquisition detected, data dropped and acquisition aborted.")
+            end
             if options.verbose_level > 0
-                obj.info("Sequence completed in %.3f s.\n", toc(timer))
+                obj.info("Sequence completed in %.3f s, current index = %d.\n", toc(timer), obj.DataManager.CurrentIndex)
             end
         end
 
@@ -102,7 +121,7 @@ classdef Acquisitor < BaseRunner
 
     methods (Access = protected)
         function label = getStatusLabel(obj)
-            label = sprintf("%s(Index: %d)", class(obj), obj.DataManager.CurrentIndex);
+            label = sprintf("%s(RunNum = %d)", class(obj), obj.RunNumber);
         end
     end
 

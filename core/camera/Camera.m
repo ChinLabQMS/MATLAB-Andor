@@ -44,16 +44,16 @@ classdef Camera < BaseRunner
             obj.checkStatus()
         end
 
-        function num_available = getNumberNewImages(obj)
+        function num_frames = getNumberNewImages(obj)
             % Implement for each subclass
             obj.checkStatus()
             if isempty(obj.AcquisitionStartTime)
                 obj.error("Acquisition not started.")
             end
             if datetime("now") > obj.AcquisitionStartTime + seconds(obj.Config.Exposure)
-                num_available = 1;
+                num_frames = 1;
             else
-                num_available = 0;
+                num_frames = 0;
             end
         end
 
@@ -102,32 +102,40 @@ classdef Camera < BaseRunner
             obj.applyConfig()
         end
 
-        function [image, num_frames, is_saturated] = acquire(obj, options)
+        function [image, status, num_frames] = acquire(obj, options)
             arguments
                 obj
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 1000
+                options.min_wait (1, 1) double = 0
                 options.verbose (1, 1) logical = false
                 options.label (1, 1) string = "Image"
             end
             timer = tic;
-            while toc(timer) < options.timeout && (obj.getNumberNewImages() == 0)
+            num_frames = obj.getNumberNewImages();
+            while toc(timer) < options.timeout && (num_frames == 0)
+                num_frames = obj.getNumberNewImages();
                 pause(options.refresh)
             end
-            if toc(timer) >= options.timeout
-                obj.warn("Acquisition timed out.")
+            elapsed = toc(timer);
+            if elapsed >= options.timeout
+                obj.warn("Acquisition timed out, aborting acquisition.")
                 obj.abortAcquisition()
                 image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
-                num_frames = 0;
-                is_saturated = false;
+                status = "timeout";
                 return
             end
-            [image, num_frames, is_saturated] = obj.acquireImage(options.label);
+            [image, status, is_saturated] = obj.acquireImage(options.label, num_frames);
+            if elapsed < options.min_wait
+                obj.warn("[%s] Elapsed time too short for this acquisition.", options.label)
+                status = "immediate";
+            end
             if is_saturated
                 obj.warn("[%s] Image is saturated.", options.label)
             end
             if options.verbose
-                obj.info("[%s] Acquisition complete in %4.2f s.", options.label, toc(timer))
+                obj.info("[%s] Acquisition of %d frames completed in %4.2f s.", ...
+                    options.label, num_frames, toc(timer))
             end
         end
     end
@@ -161,15 +169,15 @@ classdef Camera < BaseRunner
             end
         end
 
-        function [image, num_frames, is_saturated] = acquireImage(obj, label)
+        function [image, status, is_saturated] = acquireImage(obj, label, ~)
             % Implement for each subclass
-            num_frames = obj.getNumberNewImages();
             if isfield(obj.ExampleImage, label)
                 obj.CurrentIndex = mod(obj.CurrentIndex, size(obj.ExampleImage.(label), 3)) + 1;
                 image = obj.ExampleImage.(label)(:, :, obj.CurrentIndex);
             else
                 image = randi(obj.Config.MaxPixelValue, obj.Config.XPixels, obj.Config.YPixels, "uint16");
             end
+            status = "good";
             is_saturated = false;
         end
 

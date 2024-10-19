@@ -151,7 +151,7 @@ classdef LatCaliberator < BaseAnalyzer
             obj.Signal = Preprocessor().processData(load(obj.Config.DataPath).Data);
             if ~isempty(obj.Config.LatCalibFilePath)
                 obj.LatCalib = load(obj.Config.LatCalibFilePath);
-                obj.info("Pre-calibration loaded from [%s].", obj.Config.LatCalibFilePath)
+                obj.info("Pre-calibration loaded from:\n\t'%s'.", obj.Config.LatCalibFilePath)
             end
         end
     end

@@ -1,0 +1,2 @@
+classdef LatProcessor < BaseRunner
+end
