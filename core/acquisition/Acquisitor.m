@@ -50,6 +50,7 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
+                options.abort (1, 1) logical = true
                 options.drop_bad (1, 1) logical = true
                 options.verbose_level (1, 1) double = 1
             end
@@ -103,11 +104,13 @@ classdef Acquisitor < BaseRunner
                 obj.DataManager.add(raw, "verbose", options.verbose_level > 2);
                 obj.StatManager.add(analysis, "verbose", options.verbose_level > 3);
             else
+                obj.warn("Bad acquisition detected, data dropped.")
+            end
+            if options.abort
                 obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
-                obj.warn("Bad acquisition detected, data dropped and acquisition aborted.")
             end
             if options.verbose_level > 0
-                obj.info("Sequence completed in %.3f s, current index = %d.\n", toc(timer), obj.DataManager.CurrentIndex)
+                obj.info("Sequence completed in %.3f s.\n", toc(timer))
             end
         end
 
@@ -121,7 +124,7 @@ classdef Acquisitor < BaseRunner
 
     methods (Access = protected)
         function label = getStatusLabel(obj)
-            label = sprintf("%s(RunNum = %d)", class(obj), obj.RunNumber);
+            label = sprintf("%s(RunNum: %d, Index: %d)", class(obj), obj.RunNumber, obj.DataManager.CurrentIndex);
         end
     end
 
