@@ -16,43 +16,12 @@ classdef ZeluxCamera < Camera
             obj@Camera(index, config)
         end
 
-        function startAcquisition(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = false
-            end
-            obj.checkStatus()
-            % Put the camera in armed state, ready to receive trigger.
-            if ~obj.CameraHandle.IsArmed
-                obj.CameraHandle.Arm;
-                if options.verbose
-                    obj.info("Camera armed.")
-                end
-            end
-            % Issue a software trigger if triggered internally.
-            if ~obj.Config.ExternalTrigger
-                obj.CameraHandle.IssueSoftwareTrigger;
-                if options.verbose
-                    obj.info("Software trigger issued.")
-                end
-            end
-        end
-
-        function abortAcquisition(obj)
-            obj.checkStatus()
-            if obj.CameraHandle.IsArmed
-                obj.CameraHandle.Disarm;
-                obj.FrameIndex = 0;
-                obj.info("Camera disarmed.")
-            end
-        end
-
         function num_frames = getNumberNewImages(obj)
             num_frames = double(obj.CameraHandle.NumberOfQueuedFrames);
         end
 
         function [exposure_time, readout_time] = getTimings(obj)
-            obj.checkStatus()
+            obj.checkInitialized()
             exposure_time = double(obj.CameraHandle.ExposureTime_us) * 1e-6;
             readout_time = double(obj.CameraHandle.FrameTime_us) * 1e-6;
             obj.info('Readout time = %.3g s, Exposure time = %.2g s', readout_time, exposure_time)
@@ -95,24 +64,38 @@ classdef ZeluxCamera < Camera
             else
                 obj.CameraHandle.OperationMode = Thorlabs.TSI.TLCameraInterfaces.OperationMode.SoftwareTriggered;
             end
+            obj.CameraHandle.MaximumNumberOfFramesToQueue = obj.Config.MaxQueuedFrames;
             obj.CameraHandle.FramesPerTrigger_zeroForUnlimited = 1;
-            obj.CameraHandle.MaximumNumberOfFramesToQueue = 1;
         end
 
-        function [image, status, is_saturated] = acquireImage(obj, label, num_frames)
+        function startAcquisitionCamera(obj)
+            % Put the camera in armed state, ready to receive trigger.
+            if ~obj.CameraHandle.IsArmed
+                obj.CameraHandle.Arm;
+                obj.info("Camera armed.")
+            end
+            % Issue a software trigger if triggered internally.
+            if ~obj.Config.ExternalTrigger
+                obj.CameraHandle.IssueSoftwareTrigger;
+            end
+        end
+
+        function abortAcquisitionCamera(obj)
+            if obj.CameraHandle.IsArmed
+                obj.CameraHandle.Disarm;
+                obj.FrameIndex = 0;
+                obj.info("Camera disarmed.")
+            end
+        end
+
+        function [image, status] = acquireImage(obj, label)
             image_frame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(image_frame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
-            is_saturated = any(image(:) == obj.Config.MaxPixelValue);
             OldFrameIndex = obj.FrameIndex;
             obj.FrameIndex = image_frame.FrameNumber;
-            status = "good";
             if obj.FrameIndex > OldFrameIndex + 1
-                obj.warn('[%s] Dropped frame detected.', label)
+                obj.warn2('[%s] Dropped frame detected.', label)
                 status = "dropped";
-            end
-            if num_frames > 1
-                obj.warn('[%s] Data processing falling behind acquisition. %d remains.', label, obj.CameraHandle.NumberOfQueuedFrames)
-                status = "behind";
             end
         end
 

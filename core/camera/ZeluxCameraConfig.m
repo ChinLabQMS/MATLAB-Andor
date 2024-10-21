@@ -6,16 +6,7 @@ classdef ZeluxCameraConfig < BaseObject
         XPixels = 1440
         YPixels = 1080
         MaxPixelValue = 1022
-    end
-
-    properties (Dependent, Hidden)
-        NumFrames (1, 1) double {mustBePositive, mustBeInteger}
-    end
-
-    methods
-        function val = get.NumFrames(obj)
-            val = 1;
-        end
+        MaxQueuedFrames = 1
     end
     
     methods (Static)

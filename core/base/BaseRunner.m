@@ -25,8 +25,8 @@ classdef BaseRunner < BaseObject
             for i = 1:length(name)
                 try
                     obj.Config.(name{i}) = value{i};
-                catch
-                    obj.warn("Invalid configuration option [%s]", name{i})
+                catch me
+                    obj.warn2("Error occurs during setting property '%s'\n\t%s", name{i}, me.message)
                 end
             end
         end
@@ -51,7 +51,7 @@ classdef BaseRunner < BaseObject
                     try
                         obj.(field) = s.(field);
                     catch me
-                        obj.warn("Invalid field [%s], %s", field, getReport(me, 'extended', 'hyperlinks', 'on'))
+                        obj.warn2("Error occurs during setting property '%s'\n\t%s", field, me.message)
                     end
                 end
             end

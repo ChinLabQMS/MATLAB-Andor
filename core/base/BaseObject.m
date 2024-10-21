@@ -48,13 +48,17 @@ classdef BaseObject < handle
 
         % Logs a warning with the current time and the class name
         function warn(obj, info, varargin)
-            warning('backtrace', 'off')
-            warning("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+            cprintf([179, 98, 5], "[%s] %s: %s\n", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+                 obj.getStatusLabel(), sprintf(info, varargin{:}))
+        end
+        
+        % Logs an elevated (red) warning
+        function warn2(obj, info, varargin)
+            fprintf(2, "[%s] %s: %s\n", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                 obj.getStatusLabel(), sprintf(info, varargin{:}))
-            warning('backtrace', 'on')
         end
 
-        % Logs an error with the current time and the class name
+        % Logs and throw an error with the current time and the class name
         function error(obj, info, varargin)
             error("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                 obj.getStatusLabel(), sprintf(info, varargin{:}))

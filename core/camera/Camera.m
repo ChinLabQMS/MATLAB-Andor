@@ -1,5 +1,5 @@
 classdef Camera < BaseRunner
-    %CAMERA Base class for camera objects.
+    %CAMERA Base class for camera objects. Also simulate a real camera.
     
     properties (SetAccess = immutable, Hidden)
         ID
@@ -7,6 +7,7 @@ classdef Camera < BaseRunner
 
     properties (SetAccess = protected)
         Initialized (1, 1) logical = false
+        NumExpectedFrames (1, 1) double = 0
     end
 
     properties (Access = private)
@@ -15,7 +16,8 @@ classdef Camera < BaseRunner
         ExampleImage
         CurrentIndex = 0
     end
-
+    
+    % Override these methods to implement for each subclass
     methods
         function obj = Camera(id, config)
             arguments
@@ -26,45 +28,20 @@ classdef Camera < BaseRunner
             obj.ID = id;
         end
 
-        function startAcquisition(obj, options)
-            % Implement for each subclass
-            arguments
-                obj
-                options.verbose (1, 1) logical = false
-            end
-            obj.checkStatus()
-            obj.AcquisitionStartTime = datetime("now");
-            if options.verbose
-                obj.info("Acquisition started.")
-            end
-        end
-        
-        function abortAcquisition(obj)
-            % Implement for each subclass
-            obj.checkStatus()
-        end
-
-        function num_frames = getNumberNewImages(obj)
-            % Implement for each subclass
-            obj.checkStatus()
+        function num_available = getNumberNewImages(obj)
+            obj.checkInitialized()
             if isempty(obj.AcquisitionStartTime)
                 obj.error("Acquisition not started.")
             end
-            if datetime("now") > obj.AcquisitionStartTime + seconds(obj.Config.Exposure)
-                num_frames = 1;
-            else
-                num_frames = 0;
-            end
+            num_available = sum(datetime("now") > obj.AcquisitionStartTime + seconds(obj.Config.Exposure));
         end
 
         function [exposure_time, readout_time] = getTimings(obj)
-            % Implement for each subclass
             exposure_time = obj.Config.Exposure;
-            readout_time = 0;
+            readout_time = nan;
         end
 
         function [is_stable, temp, status] = checkTemperature(obj)
-            % Implement for each subclass
             is_stable = false;
             temp = nan;
             status = sprintf("Not implemented for this class %s", class(obj));
@@ -74,7 +51,8 @@ classdef Camera < BaseRunner
             obj.close()
         end
     end
-
+    
+    % Sealed methods for major camera functionalities
     methods (Sealed)
         function init(obj)
             if obj.Initialized
@@ -84,6 +62,7 @@ classdef Camera < BaseRunner
             obj.initCamera()
             obj.applyConfig()
             obj.Initialized = true;
+            obj.NumExpectedFrames = 0;
             obj.info("Camera initialized.")
         end
 
@@ -102,61 +81,102 @@ classdef Camera < BaseRunner
             obj.applyConfig()
         end
 
-        function [image, status, num_frames] = acquire(obj, options)
+        function startAcquisition(obj, options)
             arguments
                 obj
+                options.verbose (1, 1) logical = false
+            end
+            obj.checkInitialized()
+            if obj.NumExpectedFrames == 0
+                obj.abortAcquisitionCamera()  % Clear the internal memory before first acquisition
+            end
+            if obj.NumExpectedFrames < obj.Config.MaxQueuedFrames
+                obj.startAcquisitionCamera()  % Start acquisition
+                obj.NumExpectedFrames = obj.NumExpectedFrames + 1;
+            else
+                obj.abortAcquisition()
+                obj.error("Too many start commands before retriving data, MaxQueuedFrames = %d.", obj.Config.MaxQueuedFrames)
+            end
+            if options.verbose
+                obj.info("Acquisition started for frame number = %d.", obj.NumExpectedFrames)
+            end
+        end
+        
+        function abortAcquisition(obj)
+            obj.checkInitialized()
+            obj.abortAcquisitionCamera()
+            obj.NumExpectedFrames = 0;
+        end
+
+        function [image, status] = acquire(obj, options)
+            arguments
+                obj
+                options.label (1, 1) string = "Image"
                 options.refresh (1, 1) double {mustBePositive} = 0.01
-                options.timeout (1, 1) double {mustBePositive} = 1000
+                options.timeout (1, 1) double {mustBePositive} = 10
+                options.flag_immediate (1, 1) logical = false
                 options.min_wait (1, 1) double = 0
                 options.verbose (1, 1) logical = false
-                options.label (1, 1) string = "Image"
             end
             timer = tic;
-            num_frames = obj.getNumberNewImages();
-            while toc(timer) < options.timeout && (num_frames == 0)
-                num_frames = obj.getNumberNewImages();
-                pause(options.refresh)
+            obj.checkInitialized()
+            if obj.NumExpectedFrames == 0
+                obj.error("[%s] Expected number of frame is 0, please start acquisition before retriving data.", options.label)
             end
-            elapsed = toc(timer);
-            if elapsed >= options.timeout
-                obj.warn("Acquisition timed out, aborting acquisition.")
-                obj.abortAcquisition()
-                image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
-                status = "timeout";
-                return
-            end
-            [image, status, is_saturated] = obj.acquireImage(options.label, num_frames);
-            if elapsed < options.min_wait
-                obj.warn("[%s] Elapsed time too short for this acquisition.", options.label)
+            num_available = obj.getNumberNewImages();
+            status = "good";
+            if num_available > obj.NumExpectedFrames
+                status = "delayed"; %#ok<*NASGU>
+                obj.warn2("[%s] More than expected images are available, check if analysis falls behind acquisition.", options.label)
+            elseif num_available == obj.NumExpectedFrames && options.flag_immediate
                 status = "immediate";
+                obj.warn2("[%s] Image is immediately available upon acquire.", options.label)
+            else
+                while toc(timer) < options.timeout && (num_available < obj.NumExpectedFrames)
+                    num_available = obj.getNumberNewImages();
+                    pause(options.refresh)
+                end
+                elapsed = toc(timer);
+                if elapsed >= options.timeout
+                    image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
+                    status = "timeout";
+                    obj.warn2("[%s] Acquisition timed out.", options.label)
+                    obj.abortAcquisitionCamera()
+                    return
+                elseif elapsed < options.min_wait
+                    status = "short";
+                    obj.warn2("[%s] Elapsed time too short for this acquisition.", options.label)
+                end
             end
-            if is_saturated
+            [image, new_status] = obj.acquireImage(options.label);
+            if status == "good" && new_status ~= "good"
+                status = new_status;
+            end
+            obj.NumExpectedFrames = obj.NumExpectedFrames - 1;
+            if any(image(:) == obj.Config.MaxPixelValue)
                 obj.warn("[%s] Image is saturated.", options.label)
             end
             if options.verbose
-                obj.info("[%s] Acquisition of %d frames completed in %4.2f s.", ...
-                    options.label, num_frames, toc(timer))
+                obj.info("[%s] Acquisition completed in %4.2f s.", options.label, toc(timer))
             end
         end
     end
-
-    methods (Access = protected, Hidden)
+    
+    % Hidden methods, implement for each subclass
+    methods (Access = private, Hidden)
         function initCamera(obj)
-            % Implement for each subclass
             try
                 obj.ExampleImage = load(obj.ExampleLocation, "Data").Data.(obj.ID);
             catch
-                obj.warn("Example image not found at [%s].", obj.ExampleLocation)
+                obj.warn("Example image not found at '%s'.", obj.ExampleLocation)
                 obj.ExampleImage = struct.empty;
             end
         end
 
-        function closeCamera(obj)
-            % Implement for each subclass
+        function closeCamera(~)
         end
 
         function applyConfig(obj)
-            % Implement for each subclass
             for label = string(fields(obj.ExampleImage)')
                 if label.endsWith("Config")
                     continue
@@ -169,25 +189,35 @@ classdef Camera < BaseRunner
             end
         end
 
-        function [image, status, is_saturated] = acquireImage(obj, label, ~)
-            % Implement for each subclass
+        function startAcquisitionCamera(obj)
+            obj.AcquisitionStartTime = [obj.AcquisitionStartTime, datetime("now")];
+        end
+
+        function abortAcquisitionCamera(obj)
+            obj.AcquisitionStartTime = [];
+        end
+
+        function [image, status] = acquireImage(obj, label)
             if isfield(obj.ExampleImage, label)
                 obj.CurrentIndex = mod(obj.CurrentIndex, size(obj.ExampleImage.(label), 3)) + 1;
                 image = obj.ExampleImage.(label)(:, :, obj.CurrentIndex);
             else
-                image = randi(obj.Config.MaxPixelValue, obj.Config.XPixels, obj.Config.YPixels, "uint16");
+                image = randi(obj.Config.MaxPixelValue - 1, obj.Config.XPixels, obj.Config.YPixels, "uint16");
             end
             status = "good";
-            is_saturated = false;
+            obj.AcquisitionStartTime = obj.AcquisitionStartTime(2:end);
         end
-
+    end
+    
+    % Generic methods shared by all subclasses, can be overridden
+    methods (Access = protected, Hidden)
         function label = getStatusLabel(obj)
             label = string(class(obj)) + string(obj.ID);
         end
     end
 
     methods (Access = protected, Sealed, Hidden)
-        function checkStatus(obj)
+        function checkInitialized(obj)
             if ~obj.Initialized
                 obj.error("Camera not initialized.")
             end

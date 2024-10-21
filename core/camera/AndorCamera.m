@@ -15,57 +15,32 @@ classdef AndorCamera < Camera
             obj@Camera(serial_number, config)
         end
 
-        function startAcquisition(obj, options)
-            arguments
-                obj
-                options.verbose (1, 1) logical = false
-            end
-            obj.abortAcquisition()
-            [ret] = StartAcquisition();
-            CheckWarning(ret)
-            if options.verbose
-                obj.info("Acquisition started.")
-            end
-        end
-
-        function abortAcquisition(obj)
-            obj.checkStatus()
-            obj.setToCurrent()
-            % Get status and abort acquisition if it is acquiring
-            [ret, status] = GetStatus();
-            CheckWarning(ret)
-            if status == atmcd.DRV_ACQUIRING
-                [ret] = AbortAcquisition();
-                CheckWarning(ret)
-                obj.info("Acquisition aborted.")
-            end
-            % Free internal memory
-            [ret] = FreeInternalMemory();
-            CheckWarning(ret)
-        end
-
         function [ret, status] = getStatus(obj)
-            obj.checkStatus()
+            obj.checkInitialized()
             obj.setToCurrent()
             [ret, status] = GetStatus();
             CheckWarning(ret)
             CheckWarning(status)
         end
 
-        function num_frames = getNumberNewImages(obj)
-            obj.checkStatus()
+        function num_available = getNumberNewImages(obj)
+            obj.checkInitialized()
             obj.setToCurrent()
             [ret, status] = GetStatus();
             CheckWarning(ret)
             if status == atmcd.DRV_ACQUIRING
-                num_frames = 0;
+                num_available = 0;
                 return
             end
             [ret, first, last] = GetNumberAvailableImages();
             if ret == atmcd.DRV_SUCCESS
-                num_frames = last - first + 1;
+                num_available = 1;
+                if first ~= 1 || last ~= obj.Config.NumSubFrames
+                    obj.error("Subframes acquired (first: %d, last: %d) does not match configuration.", ...
+                        first, last)
+                end
             elseif ret == atmcd.DRV_NO_NEW_DATA
-                num_frames = 0;
+                num_available = 0;
             else
                 CheckWarning(ret)
                 obj.error("Unable to get number of available images.")
@@ -73,7 +48,7 @@ classdef AndorCamera < Camera
         end
 
         function [exposure_time, readout_time, keep_clean_time] = getTimings(obj)
-            obj.checkStatus()
+            obj.checkInitialized()
             obj.setToCurrent()
             if obj.Config.FastKinetic
                 [ret, exposure_time] = GetFKExposureTime();
@@ -256,14 +231,34 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
-        function [image, status, is_saturated] = acquireImage(obj, label, num_frames)
+        function startAcquisitionCamera(obj)
+            obj.abortAcquisitionCamera()
+            [ret] = StartAcquisition();
+            CheckWarning(ret)
+        end
+        
+        function abortAcquisitionCamera(obj)
+            obj.setToCurrent()
+            % Get status and abort acquisition if it is acquiring
+            [ret, status] = GetStatus();
+            CheckWarning(ret)
+            if status == atmcd.DRV_ACQUIRING
+                [ret] = AbortAcquisition();
+                CheckWarning(ret)
+                obj.info("Acquisition aborted.")
+            end
+            % Free internal memory
+            [ret] = FreeInternalMemory();
+            CheckWarning(ret)
+        end
+
+        function [image, status] = acquireImage(obj, label, num_frames)
             [ret, image_data] = GetImages16(1, num_frames, obj.Config.YPixels*obj.Config.XPixels);
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
                 obj.error("[%s] Unable to acquire image.", label)
             end
             image = uint16(flip(transpose(reshape(image_data, obj.Config.YPixels, obj.Config.XPixels)), 1));
-            is_saturated = any(image(:) == obj.Config.MaxPixelValue);
             status = "good";
         end
 

@@ -28,10 +28,9 @@ classdef Analyzer < BaseProcessor
             end
             timer = tic;
             res = struct();
-            processes = AnalysisRegistry.parseAnalysisNote(config.AnalysisNote.(label));
-            for p = processes
-                res = feval(AnalysisRegistry.(p).FuncName, ...
-                            obj, res, signal, label, config);
+            processes = AnalysisRegistry.parseOutput(config.AnalysisNote.(label));
+            for p = string(fields(processes))'
+                res = processes.(p).Func(res, obj, signal, label, config, processes.(p).Args{:});
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", config.CameraName, label, toc(timer))
@@ -49,28 +48,4 @@ classdef Analyzer < BaseProcessor
         end
     end
 
-end
-
-%% Registered functions in AnalysisRegistry
-
-function res = fitCenter(~, res, signal, ~, config)
-    signal = getSignalSum(signal, getNumFrames(config));
-    [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
-end
-
-function res = fitGauss(~, res, signal, ~, ~)
-    f = fitGauss2D(signal);
-    res.GaussX = f.x0;
-    res.GaussY = f.y0;
-    res.GaussXWid = f.s1;
-    res.GaussYWid = f.s2;
-end
-
-function res = calibLatR(obj, res, signal, ~, config)
-    camera = config.CameraName;
-    signal = getSignalSum(signal, getNumFrames(config), "first_only", true);
-    Lat = obj.Lattice.(camera);
-    Lat.calibrateR(signal)
-    res.LatX = obj.Lattice.(camera).R(1);
-    res.LatY = obj.Lattice.(camera).R(2);
 end

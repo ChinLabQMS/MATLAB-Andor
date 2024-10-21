@@ -1,4 +1,4 @@
-classdef SequenceRegistry < BaseObject
+classdef SequenceRegistry < BaseObject %#ok<*AGROW>
     % SequenceRegistry: Registry of acquisition sequences.
 
     properties (Constant)
@@ -19,6 +19,15 @@ classdef SequenceRegistry < BaseObject
              categorical({'Start+Acquire', 'Start+Acquire', 'Analysis', 'Analysis', 'Analysis', 'Analysis'}, ...
             {'Start+Acquire', 'Start', 'Acquire', 'Analysis'}, 'Ordinal', true)', ...
             ["", "", "", "", "", ""]', ...
+            'VariableNames', {'Order', 'Camera', 'Label', 'Type', 'Note'})
+        ZeluxBasic2 = table( ...
+            (1:8)', ...
+            categorical({'Zelux', 'Zelux', 'Zelux', 'Zelux', 'Zelux', 'Zelux', '--inactive--', '--inactive--'}, ...
+            {'Andor19330', 'Andor19331', 'Zelux', '--inactive--'}, 'Ordinal', true)', ...
+            ["Lattice", "DMD", "Lattice", "DMD", "Lattice", "DMD", "", ""]', ...
+             categorical({'Start', 'Start', 'Acquire', 'Acquire', 'Analysis', 'Analysis', 'Analysis', 'Analysis'}, ...
+            {'Start+Acquire', 'Start', 'Acquire', 'Analysis'}, 'Ordinal', true)', ...
+            ["", "", "", "", "", "", "", ""]', ...
             'VariableNames', {'Order', 'Camera', 'Label', 'Type', 'Note'})
         AndorBasic = table( ...
             (1:8)', ...
@@ -65,64 +74,42 @@ classdef SequenceRegistry < BaseObject
             end
             for camera = active_cameras
                 camera_seq = sequence_table(sequence_table.Camera == camera, :);
-                started = false;
+                started = string.empty;
                 acquired = string.empty;
                 analyzed = string.empty;
                 for i = 1:height(camera_seq)
                     label = string(camera_seq.Label(i));
                     type = string(camera_seq.Type(i));
                     if type == "Start" || type == "Start+Acquire"
-                        if started
-                            error("Invalid sequence, multiple start commands before acquire for camera %s.", camera)
-                        end
-                        started = true;
+                        started = [started, label]; 
                     end
                     if type == "Acquire" || type == "Start+Acquire"
-                        if ~started
-                            error("Invalid sequence, acquire command before start command for camera %s.", camera)
-                        end
-                        if any(acquired == label)
-                            error("Invalid sequence, label %s is acquired more than once for camera %s.", label, camera)
-                        end
                         if label == ""
                             error("Invalid sequence, empty label for acquire command for camera %s.", camera)
                         end
-                        started = false;
-                        acquired(end + 1) = label; %#ok<AGROW>
+                        if ~ismember(label, started)
+                            error("Invalid sequence, acquire command before start command for camera %s.", camera)
+                        end
+                        if ismember(label, acquired)
+                            error("Invalid sequence, label %s is acquired more than once for camera %s.", label, camera)
+                        end
+                        started(started == label) = [];
+                        acquired(end + 1) = label;
                     end
                     if type == "Analysis"
-                        if ~any(acquired == label)
+                        if ~ismember(label, acquired)
                             error("Invalid sequence, missing acquire command for analysis on %s for camera %s.", label, camera)
                         end
-                        if any(analyzed == label)
+                        if ismember(label, analyzed)
                             error("Invalid sequence, label %s is analyzed more than once for camera %s", label, camera)
                         end
-                        note = camera_seq.Note(i);
-                        AnalysisRegistry.parseAnalysisNote(note);
-                        analyzed(end + 1) = label; %#ok<AGROW>
+                        analyzed(end + 1) = label;
                     end
                 end
-                if started
+                if ~isempty(started)
                     error("Invalid sequence, missing acquire command for camera %s.", camera)
                 end
             end
-        end
-
-        % Parse the acquisition note to pass to the Camera
-        function args = parseNoteParams(note)
-            arguments
-                note (1, 1) string
-            end
-            params = split(note, ", ")';
-            for p = params
-                if contains(p, "=")
-                    [key, value] = split(p, "=");
-                    args.(key) = str2double(value);
-                else
-                    args.(p) = true;
-                end
-            end
-            args = namedargs2cell(args);
         end
     end
 
