@@ -2,12 +2,12 @@ classdef AxesRunner < BaseRunner
     %AXESRUNNER Runner for updating axes with live data
     
     properties (SetAccess = immutable)
-        AxesObj
+        AxesHandle
     end
 
     properties (SetAccess = protected)
-        GraphObj
-        AddonObj
+        GraphHandle
+        AddonHandle
         Live = struct.empty
     end
 
@@ -18,7 +18,7 @@ classdef AxesRunner < BaseRunner
                 config (1, 1) AxesConfig = AxesConfig()
             end
             obj@BaseRunner(config)
-            obj.AxesObj = ax;
+            obj.AxesHandle = ax;
         end
 
         function update(obj, Live)
@@ -49,16 +49,16 @@ classdef AxesRunner < BaseRunner
         end
 
         function clear(obj)
-            cla(obj.AxesObj)
-            obj.GraphObj = matlab.graphics.primitive.(obj.Config.Style).empty;
+            cla(obj.AxesHandle)
+            obj.GraphHandle = matlab.graphics.primitive.(obj.Config.Style).empty;
         end
 
         function uisave(obj)
-            if isempty(obj.GraphObj)
+            if isempty(obj.GraphHandle)
                 return
             end
-            PlotData.XData = obj.GraphObj.XData; 
-            PlotData.YData = obj.GraphObj.YData; 
+            PlotData.XData = obj.GraphHandle.XData; 
+            PlotData.YData = obj.GraphHandle.YData; 
             PlotData.Config = obj.Config.struct(); %#ok<STRNU>
             uisave("PlotData", "PlotData.mat")
         end
@@ -66,23 +66,23 @@ classdef AxesRunner < BaseRunner
 
     methods (Access = protected)
         function updateImage(obj, data, info)
-            if isempty(obj.GraphObj)
-                obj.GraphObj = imagesc(obj.AxesObj, data);
-                colorbar(obj.AxesObj)
+            if isempty(obj.GraphHandle)
+                obj.GraphHandle = imagesc(obj.AxesHandle, data);
+                colorbar(obj.AxesHandle)
             else
                 [x_size, y_size] = size(data);
-                obj.GraphObj.XData = [1, y_size];
-                obj.GraphObj.YData = [1, x_size];
-                obj.GraphObj.CData = data;
+                obj.GraphHandle.XData = [1, y_size];
+                obj.GraphHandle.YData = [1, x_size];
+                obj.GraphHandle.CData = data;
             end
-            delete(obj.AddonObj)
+            delete(obj.AddonHandle)
             switch obj.Config.FuncName
                 case "None"
                 case "Lattice"
                     Lat = info.Lattice.(obj.Config.CameraName);
-                    obj.AddonObj = Lat.plot(Lattice.prepareSite("hex", "latr", 20), ...
-                        'ax', obj.AxesObj, 'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
-                case "PSF"
+                    obj.AddonHandle = Lat.plot(Lattice.prepareSite("hex", "latr", 20), ...
+                        'ax', obj.AxesHandle, 'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
+                case "Lattice All"
             end
         end
 
@@ -97,11 +97,11 @@ classdef AxesRunner < BaseRunner
                 otherwise
                     new = reshape(data.(obj.Config.FuncName), [], 1);
             end
-            if isempty(obj.GraphObj)
-                obj.GraphObj = plot(obj.AxesObj, info.RunNumber, new, "LineWidth", 2);
+            if isempty(obj.GraphHandle)
+                obj.GraphHandle = plot(obj.AxesHandle, info.RunNumber, new, "LineWidth", 2);
             else
-                obj.GraphObj.XData = [obj.GraphObj.XData, info.RunNumber];
-                obj.GraphObj.YData = [obj.GraphObj.YData, new];
+                obj.GraphHandle.XData = [obj.GraphHandle.XData, info.RunNumber];
+                obj.GraphHandle.YData = [obj.GraphHandle.YData, new];
             end
         end
     end

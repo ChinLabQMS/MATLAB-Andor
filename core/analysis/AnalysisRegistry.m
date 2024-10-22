@@ -57,14 +57,17 @@ classdef AnalysisRegistry < BaseObject
 end
 
 %% Registered functions in AnalysisRegistry
-% Format: res = func(res, analyzer, signal, label, cam_config, varargin)
+% Format: res = func(res, signal, info, options)
 
-function res = fitCenter(res, ~, signal, ~, config)
-    signal = getSignalSum(signal, getNumFrames(config));
+function res = fitCenter(res, signal, info)
+    assert(all(isfield(info, "config")))
+    signal = getSignalSum(signal, getNumFrames(info.config));
     [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
 end
 
-function res = fitGauss(res, ~, signal, ~, ~)
+function res = fitGauss(res, signal, info)
+    assert(all(isfield(info, "config")))
+    signal = getSignalSum(signal, getNumFrames(info.config));
     f = fitGauss2D(signal);
     res.GaussX = f.x0;
     res.GaussY = f.y0;
@@ -72,19 +75,17 @@ function res = fitGauss(res, ~, signal, ~, ~)
     res.GaussYWid = f.s2;
 end
 
-function res = calibLatR(res, analyzer, signal, ~, config, options)
+function res = calibLatR(res, signal, info, options)
     arguments
         res (1, 1) struct
-        analyzer (1, 1) BaseProcessor
         signal (:, :) double
-        ~
-        config (1, 1) struct
+        info (1, 1) struct
         options.first_only = true
     end
-    camera = config.CameraName;
-    signal = getSignalSum(signal, getNumFrames(config), "first_only", options.first_only);
-    Lat = analyzer.Lattice.(camera);
+    assert(all(isfield(info, ["camera", "config", "lattice"])))
+    signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
+    Lat = info.lattice.(info.camera);
     Lat.calibrateR(signal)
-    res.LatX = analyzer.Lattice.(camera).R(1);
-    res.LatY = analyzer.Lattice.(camera).R(2);
+    res.LatX = Lat.R(1);
+    res.LatY = Lat.R(2);
 end

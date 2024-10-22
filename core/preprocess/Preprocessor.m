@@ -13,26 +13,27 @@ classdef Preprocessor < BaseProcessor
             obj@BaseProcessor(config);
         end
 
-        function [signal, leakage] = process(obj, raw, label, config, options)
+        function [signal, leakage] = process(obj, raw, options, options2)
             arguments
                 obj
                 raw (:, :, :) double
-                label (1, 1) string
-                config (1, 1) struct
-                options.verbose (1, 1) logical = false
-                options.cam_name (1, :) string = obj.Config.ProcessCamName
+                options.camera (1, 1) string
+                options.label (1, 1) string
+                options.config (1, 1) {mustBeA(options.config, ["struct", "BaseObject"])}
+                options2.verbose (1, 1) logical = false
+                options2.camera_list (1, :) string = PreprocessConfig.Process_CameraList
             end
-            if ~ismember(config.CameraName, options.cam_name)
+            if ~ismember(options.camera, options2.camera_list)
                 signal = raw;
                 leakage = zeros(size(signal));
                 return
             end
             timer = tic;
-            signal = obj.subtractBackground(raw, label, config);
-            signal = obj.removeOutlier(signal, label, config);
-            [signal, leakage] = obj.correctOffset(signal, label, config);
-            if options.verbose
-                obj.info("[%s %s] Preprocessing completed in %.3f s.", config.CameraName, label, toc(timer))
+            signal = obj.subtractBackground(raw, options);
+            signal = obj.removeOutlier(signal, options);
+            [signal, leakage] = obj.correctOffset(signal, options);
+            if options2.verbose
+                obj.info("[%s %s] Preprocessing completed in %.3f s.", options.camera, options.label, toc(timer))
             end
         end
 
@@ -41,9 +42,10 @@ classdef Preprocessor < BaseProcessor
             leakage = data;
             for label = string(fields(data.Config.AcquisitionNote)')
                 [signal.(label), leakage.(label)] = obj.process( ...
-                    data.(label), label, data.Config, varargin{:});
+                    data.(label), 'camera', data.Config.CameraName, 'label', label, 'config', data.Config, ...
+                    varargin{:});
             end
-            obj.info("Data from camera %s is processed.", data.Config.CameraName)
+            obj.info("Data taken by camera %s is processed.", data.Config.CameraName)
         end
 
         function [signal, leakage] = processData(obj, data, varargin)
@@ -65,16 +67,18 @@ classdef Preprocessor < BaseProcessor
     methods (Access = protected, Hidden)
         function applyConfig(obj)
             obj.Background = load(obj.Config.BackgroundDataPath);
-            obj.info("Background loaded.")
+            obj.info("Background file loaded.")
         end
     end
 
     methods (Access = protected)
-        function signal = subtractBackground(obj, raw, ~, config)
-            signal = raw - obj.Background.(parseConfig(config)).(config.CameraName).(obj.Config.BackgroundSubtraction_VarName);
+        function signal = subtractBackground(obj, raw, info)
+            assert(all(isfield(info, "camera")))
+            signal = raw - obj.Background.(parseConfig(info.config)).(info.camera).(obj.Config.BackgroundSubtraction_VarName);
         end
 
-        function signal = removeOutlier(obj, raw, label, config)
+        function signal = removeOutlier(obj, raw, info)
+            assert(all(isfield(info, ["camera", "label"])))
             signal = raw;
             num_acq = size(signal, 3);
             [max_val, max_idx] = maxk(raw(:), (obj.Config.OutlierRemoval_NumMaxPixels + 1) * num_acq);
@@ -85,28 +89,29 @@ classdef Preprocessor < BaseProcessor
                 index = find(diff1, 1, 'last');
                 signal(max_idx(1:index)) = max_val(index + 1);
                 obj.warn("[%s %s] [%d] outliers detected, max = %g, min = %g.", ...
-                         config.CameraName, label, index, max_val(1), max_val(index))
+                         info.camera, info.label, index, max_val(1), max_val(index))
             end
             if any(diff2)
                 index = find(diff2, 1, 'last');
                 signal(min_idx(1:index)) = min_val(index + 1);
                 obj.warn("[%s %s] [%d] outliers detected, max = %g, min = %g.", ...
-                         config.CameraName, label, index, min_val(index), min_val(1))
+                         info.camera, info.label, index, min_val(index), min_val(1))
             end
         end
 
-        function [signal, leakage, variance] = correctOffset(obj, raw, label, config)
+        function [signal, leakage, variance] = correctOffset(obj, raw, info)
+            assert(all(isfield(info, ["camera", "label", "config"])))
             [leakage, variance] = cancelOffset(raw, ...
-                getNumFrames(config),  obj.Config.OffsetCorrection_RegionWidth); 
+                getNumFrames(info.config),  obj.Config.OffsetCorrection_RegionWidth); 
             signal = raw - leakage;
             if obj.Config.OffsetCorrection_Warning
                 if any(abs(leakage) > obj.Config.OffsetCorrection_WarnOffsetThres)
                     obj.warn("[%s %s] Noticeable background offset, max = %4.2f, min = %4.2f.", ...
-                             config.CameraName, label, max(leakage(:)),min(leakage(:)))
+                             info.camera, info.label, max(leakage(:)),min(leakage(:)))
                 end
                 if any(variance > obj.Config.OffsetCorrection_WarnVarThres)
                     obj.warn("[%s %s] Noticeable background variance, max = %4.2f, min = %4.2f.", ...
-                             config.CameraName, label, max(variance(:)), min(variance(:)))
+                             info.camera, info.label, max(variance(:)), min(variance(:)))
                 end
             end
         end

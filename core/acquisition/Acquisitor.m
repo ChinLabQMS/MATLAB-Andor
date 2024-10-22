@@ -73,8 +73,8 @@ classdef Acquisitor < BaseRunner
             for i = 1:height(sequence_table)
                 type = string(sequence_table.Type(i));
                 camera = string(sequence_table.Camera(i));
-                label = string(sequence_table.Label(i));
-                config = obj.DataManager.(camera).Config;
+                label = sequence_table.Label(i);
+                config = obj.CameraManager.(camera).Config;
                 if type == "Start" || type == "Start+Acquire"
                     obj.CameraManager.(camera).startAcquisition("verbose", options.verbose_start)
                 end
@@ -87,14 +87,14 @@ classdef Acquisitor < BaseRunner
                     good = good && (status == "good");
                     % Preprocess raw images
                     [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process( ...
-                        raw.(camera).(label), label, config, ...
+                        raw.(camera).(label), 'camera', camera, 'label', label, 'config', config, ...
                         "verbose", options.verbose_preprocess);
                 end
                 if type == "Analysis"
                     processes = obj.Config.AnalysisProcesses.(camera).(label);
                     % Generate analysis statistics
                     analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                        signal.(camera).(label), label, config, processes, ...
+                        signal.(camera).(label), processes, 'camera', camera, 'label', label, 'config', config, ...
                         "verbose", options.verbose_analysis);
                 end
             end
@@ -102,7 +102,7 @@ classdef Acquisitor < BaseRunner
                 Live = struct('Raw', raw, 'Signal', signal, ...
                               'Background', background, 'Analysis', analysis, ...
                               'Info', struct('RunNumber', obj.RunNumber, ...
-                                             'Lattice', obj.Analyzer.Lattice));
+                                             'Lattice', obj.Analyzer.LatCalib));
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_layout)
             end
             if good || ~options.drop_bad_frame
