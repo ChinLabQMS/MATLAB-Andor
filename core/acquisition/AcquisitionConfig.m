@@ -14,10 +14,22 @@ classdef AcquisitionConfig < BaseObject
         ActiveAcquisition
         ActiveAnalysis
         ImageList
-        Acquisition_Params = struct()
-        Analysis_Processes = struct()
-        Analysis_OutVars = struct()
-        Analysis_OutData = struct()
+        AcquisitionParams = struct()
+        AnalysisProcesses = struct()
+        AnalysisOutVars = struct()
+        AnalysisOutData = struct()
+    end
+
+    properties (Constant)
+        Acquisition_AbortAtEnd = true
+        Acquisition_DropBadFrame = true
+        Acquisition_VerboseStart = false
+        Acquisition_VerboseAcquire = true
+        Acquisition_VerbosePreprocess = false
+        Acquisition_VerboseAnalysis = false
+        Acquisition_VerboseLayout = true
+        Acquisition_VerboseStorage = false
+        Acquisition_Verbose = true
     end
 
     methods
@@ -28,8 +40,8 @@ classdef AcquisitionConfig < BaseObject
         function contents = parseAnalysis2Content(obj, index_str)
             res = split(index_str, ": ");
             [camera, label] = res{:};
-            if isfield(obj.Analysis_OutVars, camera) && isfield(obj.Analysis_OutVars.(camera), label)
-                out_vars = obj.Analysis_OutVars.(camera).(label);
+            if isfield(obj.AnalysisOutVars, camera) && isfield(obj.AnalysisOutVars.(camera), label)
+                out_vars = obj.AnalysisOutVars.(camera).(label);
                 contents = ("Analysis: " + out_vars')';
             else
                 contents = string.empty;
@@ -64,7 +76,7 @@ classdef AcquisitionConfig < BaseObject
                 label = active_acquisition.Label(i);
                 note = active_acquisition.Note(i);
                 list_str{i} = sprintf('%s: %s', camera, label);
-                obj.Acquisition_Params.(camera).(label) = parseString2Args(note, "output_format", "cell");
+                obj.AcquisitionParams.(camera).(label) = parseString2Args(note, "output_format", "cell");
             end
             obj.ImageList = list_str;
 
@@ -73,8 +85,8 @@ classdef AcquisitionConfig < BaseObject
                 camera = string(active_analysis.Camera(i));
                 label = active_analysis.Label(i);
                 note = active_analysis.Note(i);
-                [obj.Analysis_Processes.(camera).(label), obj.Analysis_OutVars.(camera).(label), ...
-                    obj.Analysis_OutData.(camera).(label)] = AnalysisRegistry.parseOutput(note);
+                [obj.AnalysisProcesses.(camera).(label), obj.AnalysisOutVars.(camera).(label), ...
+                    obj.AnalysisOutData.(camera).(label)] = AnalysisRegistry.parseOutput(note);
             end
         end
     end

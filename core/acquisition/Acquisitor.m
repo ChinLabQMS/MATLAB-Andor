@@ -50,14 +50,15 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
-                options.drop_bad_frame (1, 1) logical = true
-                options.verbose_start (1, 1) logical = false
-                options.verbose_acquire (1, 1) logical = true
-                options.verbose_preprocess (1, 1) logical = false
-                options.verbose_analysis (1, 1) logical = false
-                options.verbose_layout (1, 1) logical = true
-                options.verbose_storage (1, 1) logical = false
-                options.verbose (1, 1) logical = true
+                options.abort_at_end (1, 1) logical = obj.Config.Acquisition_AbortAtEnd
+                options.drop_bad_frame (1, 1) logical = obj.Config.Acquisition_DropBadFrame
+                options.verbose_start (1, 1) logical = obj.Config.Acquisition_VerboseStart
+                options.verbose_acquire (1, 1) logical = obj.Config.Acquisition_VerboseAcquire
+                options.verbose_preprocess (1, 1) logical = obj.Config.Acquisition_VerbosePreprocess
+                options.verbose_analysis (1, 1) logical = obj.Config.Acquisition_VerboseAnalysis
+                options.verbose_layout (1, 1) logical = obj.Config.Acquisition_VerboseLayout
+                options.verbose_storage (1, 1) logical = obj.Config.Acquisition_VerboseStorage
+                options.verbose (1, 1) logical = obj.Config.Acquisition_Verbose
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
@@ -78,7 +79,7 @@ classdef Acquisitor < BaseRunner
                     obj.CameraManager.(camera).startAcquisition("verbose", options.verbose_start)
                 end
                 if type == "Acquire" || type == "Start+Acquire"
-                    args = obj.Config.Acquisition_Params.(camera).(label);
+                    args = obj.Config.AcquisitionParams.(camera).(label);
                     % Acquire raw images
                     [raw.(camera).(label), status] = obj.CameraManager.(camera).acquire( ...
                         'refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout, ...
@@ -90,9 +91,10 @@ classdef Acquisitor < BaseRunner
                         "verbose", options.verbose_preprocess);
                 end
                 if type == "Analysis"
+                    processes = obj.Config.AnalysisProcesses.(camera).(label);
                     % Generate analysis statistics
                     analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                        signal.(camera).(label), label, config, ...
+                        signal.(camera).(label), label, config, processes, ...
                         "verbose", options.verbose_analysis);
                 end
             end
@@ -108,6 +110,9 @@ classdef Acquisitor < BaseRunner
                 obj.StatManager.add(analysis, "verbose", options.verbose_storage);
             else
                 obj.warn("Bad acquisition detected, data dropped.")
+            end
+            if options.abort_at_end
+                obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
             end
             if options.verbose
                 obj.info("Sequence completed in %.3f s.\n", toc(timer))

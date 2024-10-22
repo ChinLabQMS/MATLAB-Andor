@@ -96,6 +96,8 @@ classdef ZeluxCamera < Camera
             if obj.FrameIndex > OldFrameIndex + 1
                 obj.warn2('[%s] Dropped frame detected.', label)
                 status = "dropped";
+            else
+                status = "good";
             end
         end
 

@@ -18,23 +18,26 @@ classdef Analyzer < BaseProcessor
             obj.Preprocessor = preprocessor;
         end
 
-        function res = analyze(obj, signal, label, config, options)
+        function res = analyze(obj, signal, label, config, processes, options)
             arguments
                 obj
                 signal (:, :) double
                 label (1, 1) string
                 config (1, 1) struct
+                processes (1, 1) struct
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
             res = struct();
-            processes = AnalysisRegistry.parseOutput(config.AnalysisNote.(label));
             for p = string(fields(processes))'
                 res = processes.(p).Func(res, obj, signal, label, config, processes.(p).Args{:});
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", config.CameraName, label, toc(timer))
             end
+        end
+
+        function analysis = analyzeSingleData(obj, data)
         end
 
         function analysis = analyzeData(obj, data)

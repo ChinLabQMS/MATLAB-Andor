@@ -99,13 +99,14 @@
                 x_range (1, :) double {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range (1, :) double {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 options.binarize_thres (1, 1) double = LatCalibConfig.CalibR_BinarizeThres
+                options.min_binarize_thres (1, 1) double = LatCalibConfig.CalibR_MinBinarizeThres
                 options.bootstrapping (1, 1) logical = LatCalibConfig.CalibR_Bootstrapping
                 options.plot_diagnostic (1, 1) logical = LatCalibConfig.CalibR_PlotDiagnostic
             end
             signal_modified = signal;
             % If the image is not directly from imaging lattice, do filtering
             if Lat.ID ~= "Zelux"
-                thres = options.binarize_thres * max(signal(:));
+                thres = max(options.binarize_thres * max(signal(:)), options.min_binarize_thres);
                 signal_modified((signal_modified < thres)) = 0;
             end
             % Update Lat.R

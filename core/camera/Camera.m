@@ -87,9 +87,6 @@ classdef Camera < BaseRunner
                 options.verbose (1, 1) logical = false
             end
             obj.checkInitialized()
-            if obj.NumExpectedFrames == 0
-                obj.abortAcquisitionCamera()  % Clear the internal memory before first acquisition
-            end
             if obj.NumExpectedFrames < obj.Config.MaxQueuedFrames
                 obj.startAcquisitionCamera()  % Start acquisition
                 obj.NumExpectedFrames = obj.NumExpectedFrames + 1;
@@ -163,7 +160,7 @@ classdef Camera < BaseRunner
     end
     
     % Hidden methods, implement for each subclass
-    methods (Access = private, Hidden)
+    methods (Access = protected, Hidden)
         function initCamera(obj)
             try
                 obj.ExampleImage = load(obj.ExampleLocation, "Data").Data.(obj.ID);

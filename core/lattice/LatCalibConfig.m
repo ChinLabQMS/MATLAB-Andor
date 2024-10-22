@@ -9,6 +9,7 @@ classdef LatCalibConfig < BaseObject
 
     properties (Constant)
         CalibR_BinarizeThres = 0.5
+        CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
         CalibV_RFit = 7
