@@ -45,7 +45,7 @@ classdef BaseStorage < BaseObject
                 end
             end
             s.AcquisitionConfig = obj.AcquisitionConfig.struct();
-            for camera = obj.getPropList()
+            for camera = obj.prop()
                 if isempty(obj.(camera))
                     continue
                 end

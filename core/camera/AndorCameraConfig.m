@@ -13,7 +13,7 @@ classdef AndorCameraConfig < BaseObject
         VSSpeed (1, 1) {mustBeMember(VSSpeed, [0, 1, 2, 3, 4, 5])} = 1  % Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
     end
 
-    properties (SetAccess = immutable, Hidden)
+    properties (SetAccess = immutable)
         MaxPixelValue = 65535
         MaxQueuedFrames = 1
     end

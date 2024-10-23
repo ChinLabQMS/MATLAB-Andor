@@ -58,6 +58,7 @@ classdef DataManager < BaseStorage
             end
             timer = tic;
             obj.CurrentIndex = obj.CurrentIndex + 1;
+            sequence = obj.AcquisitionConfig.ActiveAcquisition;
             for i = 1:height(sequence)
                 camera = string(sequence.Camera(i));
                 label = sequence.Label(i);

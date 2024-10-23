@@ -179,7 +179,7 @@ classdef Camera < BaseRunner
 
         function applyConfig(obj)
             for label = string(fields(obj.ExampleImage)')
-                if label.endsWith("Config")
+                if label == "Config"
                     continue
                 end
                 if ~isequal(size(obj.ExampleImage.(label), [1, 2]), [obj.Config.XPixels, obj.Config.YPixels])

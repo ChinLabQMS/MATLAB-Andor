@@ -51,7 +51,7 @@ classdef BaseObject < handle
                 obj.error("Multiple configuration input must be in pairs.")
             end
             for i = 1:2:length(args)
-                if isprop(obj, args{i})
+                if ismember(args{i}, obj.prop())
                     try
                         obj.(args{i}) = args{i + 1};
                     catch me
