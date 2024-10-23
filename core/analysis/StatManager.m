@@ -1,11 +1,5 @@
 classdef StatManager < BaseStorage
 
-    properties (SetAccess = protected)
-        Andor19330
-        Andor19331
-        Zelux
-    end
-
     methods
         function obj = StatManager(config)
             obj@BaseStorage(config)
@@ -15,19 +9,16 @@ classdef StatManager < BaseStorage
         function init(obj)
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveAnalysis;
-            for camera = obj.getPropList()
-                if ~ismember(camera, obj.AcquisitionConfig.ActiveCameras)
-                    obj.(camera) = [];
-                    continue
-                end
+            for camera = obj.prop()
+                obj.(camera) = [];
             end
             for i = 1:height(sequence)
                 camera = string(sequence.Camera(i));
                 label = sequence.Label(i);
-                note = sequence.Note(i);
                 num_stat = obj.AcquisitionConfig.NumStatistics;
-                [~, out_vars, out_data, num_out] = AnalysisRegistry.parseOutput(note);
-                if num_out > 0
+                out_vars = obj.AcquisitionConfig.AnalysisOutVars.(camera).(label);
+                out_data = obj.AcquisitionConfig.AnalysisOutData.(camera).(label);
+                if length(out_vars) + length(out_data) > 0
                     obj.(camera).(label) = table('Size', [num_stat, length(out_vars) + length(out_data)], ...
                                                  'VariableTypes', [repmat("doublenan", 1, length(out_vars)), ...
                                                                    repmat("cell", 1, length(out_data))], ...
@@ -63,7 +54,7 @@ classdef StatManager < BaseStorage
         end
 
         function s = struct(obj, varargin)
-            s = struct@BaseStorage(obj, varargin{:}, 'max_index', obj.AcquisitionConfig.NumStatistics);
+            s = struct@BaseStorage(obj, obj.AcquisitionConfig.NumStatistics, varargin{:});
         end
     end
 

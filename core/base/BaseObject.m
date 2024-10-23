@@ -1,14 +1,16 @@
 classdef BaseObject < handle
     %BASEOBJECT Base class for all classes in the framework.
-    % Provides basic functionality of converting to and from structures and logging
-    % through a CurrentLabel property.
+    % Provides basic functionality of:
+    % 1. converting to and from structures
+    % 2. configure the property
+    % 3. logging
 
     methods
         % Converts the object to a structure, iterating over the fields of the object
         function s = struct(obj, fields)
             arguments
                 obj
-                fields (1, :) string = obj.getPropList()
+                fields (1, :) string = obj.prop()
             end
             s = struct();
             for field = fields
@@ -19,17 +21,46 @@ classdef BaseObject < handle
                 end
             end
         end
-    end
-   
-    methods (Access = protected, Hidden)
-        % Returns a list of properties of the object as a row vector of string
-        function list = getPropList(obj, options)
+
+        % Returns a list of visible properties as a row vector of string
+        function list = prop(obj, options)
             arguments
                 obj
-                options.excluded = string.empty
+                options.excluded (1, :) string = string.empty
             end
             list = string(properties(obj))';
             list = list(~ismember(list, options.excluded));
+        end
+    end
+   
+    methods (Access = protected, Hidden)
+        % Configure the properties
+        function configProp(obj, varargin)
+            if nargin == 2
+                args = varargin{1};
+                if isa(args, "struct")
+                    args = namedargs2cell(args);
+                elseif isa(args, "BaseObject")
+                    args = namedargs2cell(args.struct());
+                else
+                    obj.error("Unreconginized configuration input.")
+                end
+            elseif rem(length(varargin), 2) == 0
+                args = varargin;
+            else
+                obj.error("Multiple configuration input must be in pairs.")
+            end
+            for i = 1:2:length(args)
+                if isprop(obj, args{i})
+                    try
+                        obj.(args{i}) = args{i + 1};
+                    catch me
+                        obj.warn2("Error occurs during setting property '%s'\n\t%s", args{i}, me.message)
+                    end
+                else
+                    obj.warn("%s is not a valid property.", args{i})
+                end
+            end
         end
 
         % Returns the current status label of the object, will be used in
@@ -62,6 +93,30 @@ classdef BaseObject < handle
         function error(obj, info, varargin)
             error("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                 obj.getStatusLabel(), sprintf(info, varargin{:}))
+        end
+    end
+
+    methods (Static)
+        % Converts a structure to an object, iterating over the fields of the structure
+        function obj = struct2obj(s, obj, options)
+            arguments
+                s (1, 1) struct
+                obj (1, 1) BaseObject = BaseObject()
+                options.prop_list (1, :) string = obj.prop()
+                options.verbose (1, 1) logical = true
+            end
+            for field = options.prop_list
+                if isfield(s, field)
+                    try
+                        obj.(field) = s.(field);
+                    catch me
+                        obj.warn2("Error occurs during setting property '%s'\n\t%s", field, me.message)
+                    end
+                end
+            end
+            if options.verbose
+                obj.info("Object loaded from structure.")
+            end
         end
     end
 

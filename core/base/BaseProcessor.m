@@ -8,7 +8,7 @@ classdef BaseProcessor < BaseRunner
                 config (1, 1) BaseObject = BaseObject()
             end
             obj@BaseRunner(config)
-            obj.applyConfig()  % Apply config (loading files, etc.)
+            obj.applyConfig()
         end
 
         function config(obj, varargin)

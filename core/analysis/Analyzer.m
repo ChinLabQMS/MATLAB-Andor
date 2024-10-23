@@ -1,7 +1,7 @@
 classdef Analyzer < BaseProcessor
 
     properties (SetAccess = protected)
-        LatCalib = struct()
+        LatCalib
     end
 
     properties (SetAccess = immutable)

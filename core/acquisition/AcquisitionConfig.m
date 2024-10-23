@@ -1,13 +1,14 @@
 classdef AcquisitionConfig < BaseObject
     
-    properties (SetAccess = {?BaseRunner, ?AcquisitionConfig})
+    properties (SetAccess = {?BaseObject})
         SequenceTable {SequenceRegistry.mustBeValidSequence} = SequenceRegistry.Full4Analysis
         NumAcquisitions (1, 1) double = 20
         NumStatistics (1, 1) double = 2000
         Refresh (1, 1) double = 0.01
         Timeout (1, 1) double = Inf
     end
-
+    
+    % Properties that updates with SequenceTable
     properties (SetAccess = protected)
         ActiveCameras
         ActiveSequence
@@ -19,7 +20,8 @@ classdef AcquisitionConfig < BaseObject
         AnalysisOutVars = struct()
         AnalysisOutData = struct()
     end
-
+    
+    % Class properties that control the live acquisition behaviors
     properties (Constant)
         Acquisition_AbortAtEnd = true
         Acquisition_DropBadFrame = true
@@ -60,6 +62,11 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods (Access = protected, Hidden)
+        % Override the default getPropList method from BaseObject
+        function list = getPropList(~)
+            list = ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"];
+        end
+
         function updateProp(obj)
             active_cameras = unique(obj.SequenceTable.Camera);
             obj.ActiveCameras = string(active_cameras(active_cameras ~= "--inactive--"))';
@@ -92,9 +99,8 @@ classdef AcquisitionConfig < BaseObject
     end
     
     methods (Static)
-        function obj = struct2obj(s)
-            obj = BaseRunner.struct2obj(s, AcquisitionConfig(), ...
-                "prop_list", ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"]);
+        function obj = struct2obj(s, varargin)
+            obj = BaseRunner.struct2obj(s, AcquisitionConfig(), varargin{:});
         end
     end
 

@@ -68,10 +68,6 @@ classdef SequenceRegistry < BaseObject %#ok<*AGROW>
     end
 
     methods (Static)
-        function list = getSequenceList()
-            list = SequenceRegistry().getPropList();
-        end
-
         function mustBeValidSequence(sequence_table)
             arguments
                 sequence_table (:, 5) table

@@ -3,10 +3,10 @@ classdef Acquisitor < BaseRunner
     properties (SetAccess = immutable)
         CameraManager
         LayoutManager
-        DataManager
-        StatManager
         Preprocessor
         Analyzer
+        DataManager
+        StatManager
     end
 
     properties (SetAccess = protected)
@@ -50,15 +50,15 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
-                options.abort_at_end (1, 1) logical = obj.Config.Acquisition_AbortAtEnd
-                options.drop_bad_frame (1, 1) logical = obj.Config.Acquisition_DropBadFrame
-                options.verbose_start (1, 1) logical = obj.Config.Acquisition_VerboseStart
-                options.verbose_acquire (1, 1) logical = obj.Config.Acquisition_VerboseAcquire
-                options.verbose_preprocess (1, 1) logical = obj.Config.Acquisition_VerbosePreprocess
-                options.verbose_analysis (1, 1) logical = obj.Config.Acquisition_VerboseAnalysis
-                options.verbose_layout (1, 1) logical = obj.Config.Acquisition_VerboseLayout
-                options.verbose_storage (1, 1) logical = obj.Config.Acquisition_VerboseStorage
-                options.verbose (1, 1) logical = obj.Config.Acquisition_Verbose
+                options.abort_at_end (1, 1) logical = AcquisitionConfig.Acquisition_AbortAtEnd
+                options.drop_bad_frame (1, 1) logical = AcquisitionConfig.Acquisition_DropBadFrame
+                options.verbose_start (1, 1) logical = AcquisitionConfig.Acquisition_VerboseStart
+                options.verbose_acquire (1, 1) logical = AcquisitionConfig.Acquisition_VerboseAcquire
+                options.verbose_preprocess (1, 1) logical = AcquisitionConfig.Acquisition_VerbosePreprocess
+                options.verbose_analysis (1, 1) logical = AcquisitionConfig.Acquisition_VerboseAnalysis
+                options.verbose_layout (1, 1) logical = AcquisitionConfig.Acquisition_VerboseLayout
+                options.verbose_storage (1, 1) logical = AcquisitionConfig.Acquisition_VerboseStorage
+                options.verbose (1, 1) logical = AcquisitionConfig.Acquisition_Verbose
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
