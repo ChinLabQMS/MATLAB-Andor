@@ -2,8 +2,8 @@ classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class for Andor cameras.
 
     properties (SetAccess = protected, Hidden)
-        CameraIndex = nan
-        CameraHandle = nan
+        CameraIndex
+        CameraHandle
     end
 
     methods
@@ -36,7 +36,7 @@ classdef AndorCamera < Camera
             if ret == atmcd.DRV_SUCCESS
                 num_available = 1;
                 if first ~= 1 || last ~= obj.Config.NumSubFrames
-                    obj.error("Subframes acquired (first: %d, last: %d) does not match configuration.", ...
+                    obj.error("Number of subframes acquired (first: %d, last: %d) does not match configuration.", ...
                         first, last)
                 end
             elseif ret == atmcd.DRV_NO_NEW_DATA
@@ -90,7 +90,7 @@ classdef AndorCamera < Camera
 
     methods (Access = protected, Hidden)
         function initCamera(obj)
-            if isnan(obj.CameraIndex)
+            if isempty(obj.CameraIndex)
                 % Find all connected cameras
                 [ret, num_cameras] = GetAvailableCameras();
                 CheckWarning(ret)
@@ -151,7 +151,7 @@ classdef AndorCamera < Camera
                     end
                 end
                 warning('on', 'backtrace')
-                obj.error('Camera with serial number %d initialization failed.', obj.ID)
+                obj.error('Camera with serial number %d initialization failed, number of tested cameras = %d.', obj.ID, length(missing_camera))
             end             
             % Basic config
             [ret] = SetTemperature(-70);
@@ -178,7 +178,7 @@ classdef AndorCamera < Camera
             [ret] = AndorShutDown;
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
-                obj.error('Unable to close.')
+                obj.error('Failed to close camera.')
             end
         end
         
@@ -232,7 +232,7 @@ classdef AndorCamera < Camera
         end
 
         function startAcquisitionCamera(obj)
-            obj.abortAcquisitionCamera()
+            obj.abortAcquisition()
             [ret] = StartAcquisition();
             CheckWarning(ret)
         end
@@ -263,7 +263,7 @@ classdef AndorCamera < Camera
         end
 
         function setToCurrent(obj)
-            if ~isnan(obj.CameraHandle)
+            if ~isempty(obj.CameraHandle)
                 [ret] = SetCurrentCamera(obj.CameraHandle);
                 CheckWarning(ret)
             else

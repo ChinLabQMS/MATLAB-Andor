@@ -1,5 +1,9 @@
 classdef Analyzer < BaseProcessor
 
+    properties (SetAccess = {?BaseObject})
+        LatCalibFilePath = "calibration/LatCalib_20241002.mat"
+    end
+
     properties (SetAccess = protected)
         LatCalib
     end
@@ -9,33 +13,32 @@ classdef Analyzer < BaseProcessor
     end
     
     methods
-        function obj = Analyzer(preprocessor, config)
+        function obj = Analyzer(preprocessor)
             arguments
-                preprocessor (1, 1) Preprocessor = Preprocessor()
-                config (1, 1) AnalysisConfig = AnalysisConfig()
+                preprocessor = Preprocessor()
             end
-            obj@BaseProcessor(config)
+            obj@BaseProcessor()
             obj.Preprocessor = preprocessor;
         end
 
-        function res = analyze(obj, signal, processes, options, options2)
+        function res = analyze(obj, signal, info, options)
             arguments
                 obj
-                signal (:, :) double
-                processes (1, 1) struct
-                options.camera (1, 1) string
-                options.label (1, 1) string
-                options.config (1, 1) {mustBeA(options.config, ["struct", "BaseObject"])}
-                options2.verbose (1, 1) logical = false
+                signal
+                info.processes
+                info.camera
+                info.label
+                info.config
+                options.verbose = false
             end
             timer = tic;
             res = struct();
-            options.lattice = obj.LatCalib;
-            for p = string(fields(processes))'
-                res = processes.(p).Func(res, signal, options, processes.(p).Args{:});
+            info.lattice = obj.LatCalib;
+            for p = string(fields(info.processes))'
+                res = info.processes.(p).Func(res, signal, info, info.processes.(p).Args{:});
             end
-            if options2.verbose
-                obj.info("[%s %s] Analysis completed in %.3f s.", options.camera, options.label, toc(timer))
+            if options.verbose
+                obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))
             end
         end
 
@@ -47,8 +50,8 @@ classdef Analyzer < BaseProcessor
     end
 
     methods (Access = protected, Hidden)
-        function applyConfig(obj)
-            obj.LatCalib = load(obj.Config.LatCalibFilePath);
+        function init(obj)
+            obj.LatCalib = load(obj.LatCalibFilePath);
             obj.info("Lattice calibration file loaded.")
         end
     end

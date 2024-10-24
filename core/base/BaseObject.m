@@ -10,7 +10,7 @@ classdef BaseObject < handle
         function s = struct(obj, fields)
             arguments
                 obj
-                fields (1, :) string = obj.prop()
+                fields = obj.prop()
             end
             s = struct();
             for field = fields
@@ -26,7 +26,7 @@ classdef BaseObject < handle
         function list = prop(obj, options)
             arguments
                 obj
-                options.excluded (1, :) string = string.empty
+                options.excluded = string.empty
             end
             list = string(properties(obj))';
             list = list(~ismember(list, options.excluded));
@@ -100,12 +100,12 @@ classdef BaseObject < handle
         % Converts a structure to an object, iterating over the fields of the structure
         function obj = struct2obj(s, obj, options)
             arguments
-                s (1, 1) struct
-                obj (1, 1) BaseObject = BaseObject()
-                options.prop_list (1, :) string = obj.prop()
-                options.verbose (1, 1) logical = true
+                s
+                obj = BaseObject()
+                options.prop = obj.prop()
+                options.verbose = true
             end
-            for field = options.prop_list
+            for field = options.prop
                 if isfield(s, field)
                     try
                         obj.(field) = s.(field);

@@ -29,7 +29,7 @@ classdef CameraManager < BaseObject
         function init(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.prop()
+                cameras = obj.prop()
             end
             for camera = cameras
                 obj.(camera).init()
@@ -51,7 +51,7 @@ classdef CameraManager < BaseObject
         function abortAcquisition(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.prop()
+                cameras = obj.prop()
             end
             for camera = cameras
                 obj.(camera).abortAcquisition()
@@ -62,7 +62,7 @@ classdef CameraManager < BaseObject
     methods (Static)
         function obj = struct2obj(data, options)
             arguments
-                data (1, 1) struct
+                data
                 options.test_mode = true
             end
             args = {'test_mode', options.test_mode};

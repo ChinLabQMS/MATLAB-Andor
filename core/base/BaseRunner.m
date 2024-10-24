@@ -9,7 +9,7 @@ classdef BaseRunner < BaseObject
     methods
         function obj = BaseRunner(config)
             arguments
-                config (1, 1) BaseObject = BaseObject()
+                config = BaseObject()
             end
             obj.Config = config;
         end

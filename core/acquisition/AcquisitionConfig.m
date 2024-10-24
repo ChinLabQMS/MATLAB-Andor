@@ -2,36 +2,25 @@ classdef AcquisitionConfig < BaseObject
     
     properties (SetAccess = {?BaseObject})
         SequenceTable {SequenceRegistry.mustBeValidSequence} = SequenceRegistry.Full4Analysis
-        NumAcquisitions (1, 1) double = 20
-        NumStatistics (1, 1) double = 2000
-        Refresh (1, 1) double = 0.01
-        Timeout (1, 1) double = Inf
+        NumAcquisitions = 20
+        NumStatistics = 2000
+        Refresh = 0.01
+        Timeout = Inf
+        DropBadFrames = true
+        AbortAtEnd = true
     end
     
     % Properties that updates with SequenceTable
     properties (SetAccess = protected)
+        ImageList
         ActiveCameras
         ActiveSequence
         ActiveAcquisition
         ActiveAnalysis
-        ImageList
-        AcquisitionParams = struct()
-        AnalysisProcesses = struct()
-        AnalysisOutVars = struct()
-        AnalysisOutData = struct()
-    end
-    
-    % Class properties that control the live acquisition behaviors
-    properties (Constant)
-        Acquisition_AbortAtEnd = true
-        Acquisition_DropBadFrame = true
-        Acquisition_VerboseStart = false
-        Acquisition_VerboseAcquire = true
-        Acquisition_VerbosePreprocess = false
-        Acquisition_VerboseAnalysis = false
-        Acquisition_VerboseLayout = true
-        Acquisition_VerboseStorage = false
-        Acquisition_Verbose = true
+        AcquisitionParams
+        AnalysisProcesses
+        AnalysisOutVars
+        AnalysisOutData
     end
 
     methods
@@ -55,6 +44,11 @@ classdef AcquisitionConfig < BaseObject
             obj.updateProp()
         end
 
+        % Override the default prop method from BaseObject
+        function list = prop(~)
+            list = ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"];
+        end
+
         function disp(obj)
             disp@BaseObject(obj)
             disp(obj.SequenceTable)
@@ -62,11 +56,6 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods (Access = protected, Hidden)
-        % Override the default getPropList method from BaseObject
-        function list = getPropList(~)
-            list = ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"];
-        end
-
         function updateProp(obj)
             active_cameras = unique(obj.SequenceTable.Camera);
             obj.ActiveCameras = string(active_cameras(active_cameras ~= "--inactive--"))';

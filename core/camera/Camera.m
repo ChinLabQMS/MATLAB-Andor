@@ -6,8 +6,8 @@ classdef Camera < BaseRunner
     end
 
     properties (SetAccess = protected)
-        Initialized (1, 1) logical = false
-        NumExpectedFrames (1, 1) double = 0
+        Initialized = false
+        NumExpectedFrames = 0
     end
 
     properties (Access = private)

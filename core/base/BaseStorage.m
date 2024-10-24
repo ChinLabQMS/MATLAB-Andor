@@ -1,12 +1,12 @@
 classdef BaseStorage < BaseObject
-    % BASESTORAGE Base class for storage objects. 
+    %BASESTORAGE Base class for storage objects. 
     % This class is used to store data/analysis results, providing a common
     % interface for saving/loading data and exporting to other formats, as well
     % as for checking the current index and memory usage of the storage object.
     % Only the properties that are storing data should be visible to the user.
 
     properties (SetAccess = immutable)
-        AcquisitionConfig (1, 1) AcquisitionConfig
+        AcquisitionConfig
     end
 
     properties (SetAccess = protected)
@@ -23,7 +23,7 @@ classdef BaseStorage < BaseObject
     methods
         function obj = BaseStorage(config)
             arguments
-                config (1, 1) AcquisitionConfig = AcquisitionConfig()
+                config = AcquisitionConfig()
             end
             obj.AcquisitionConfig = config;
         end

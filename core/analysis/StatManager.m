@@ -1,4 +1,5 @@
 classdef StatManager < BaseStorage
+    % STATMANAGER Class to store analysis results
 
     methods
         function obj = StatManager(config)
