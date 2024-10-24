@@ -11,10 +11,6 @@ classdef LayoutManager < BaseObject
         SmallAxes5 (1, 1) AxesRunner
     end
 
-    properties (Dependent, Hidden)
-        AxesList (1, :) string
-    end
-
     methods
         function obj = LayoutManager(app, config)
             arguments
@@ -28,18 +24,22 @@ classdef LayoutManager < BaseObject
                 config.SmallAxes5 = AxesConfig("style", "Line")
             end
             % Bound the fields to axes
-            for field = obj.getPropList()
-                if isprop(app, field)
-                    obj.(field) = AxesRunner(app.(field), config.(field));
+            for p = obj.prop()
+                if isprop(app, p)
+                    obj.(p) = AxesRunner(app.(p), config.(p));
                 else
-                    obj.warn("Field %s is not a valid property of app.", field)
+                    obj.warn("Field %s is not a valid property of app.", p)
                 end
             end
         end
 
         % Clear all line plots
-        function init(obj)
-            for field = obj.getPropList()
+        function init(obj, fields)
+            arguments
+                obj
+                fields = obj.prop()
+            end
+            for field = fields
                 if obj.(field).Config.Style == "Line"
                     obj.(field).clear()
                 end
@@ -47,25 +47,21 @@ classdef LayoutManager < BaseObject
         end
         
         % Update axes content
-        function update(obj, Live, names, options)
+        function update(obj, Live, fields, options)
             arguments
                 obj
                 Live (1, 1) struct
-                names = obj.getPropList()
+                fields = obj.prop()
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
-            for field = names
+            for field = fields
                 obj.(field).update(Live)
             end
             drawnow
             if options.verbose
                 obj.info("Layout rendered in %.3f s.", toc(timer))
             end
-        end
-
-        function list = get.AxesList(obj)
-            list = obj.getPropList();
         end
     end
 

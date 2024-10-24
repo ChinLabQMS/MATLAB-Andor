@@ -3,10 +3,21 @@ classdef Acquisitor < BaseRunner
     properties (SetAccess = immutable)
         CameraManager
         LayoutManager
-        DataManager
-        StatManager
         Preprocessor
         Analyzer
+        DataManager
+        StatManager
+    end
+
+    % Class properties that control the live acquisition behaviors
+    properties (Constant)
+        Acquire_VerboseStart = false
+        Acquire_VerboseAcquire = true
+        Acquire_VerbosePreprocess = false
+        Acquire_VerboseAnalysis = false
+        Acquire_VerboseLayout = true
+        Acquire_VerboseStorage = false
+        Acquire_Verbose = true
     end
 
     properties (SetAccess = protected)
@@ -20,7 +31,7 @@ classdef Acquisitor < BaseRunner
             arguments
                 config (1, 1) AcquisitionConfig = AcquisitionConfig()
                 cameras (1, 1) CameraManager = CameraManager()
-                layouts = LayoutManager().empty()
+                layouts = []
                 preprocessor (1, 1) Preprocessor = Preprocessor()
                 analyzer (1, 1) Analyzer = Analyzer(preprocessor)
                 data (1, 1) DataManager = DataManager(config, cameras)
@@ -29,10 +40,10 @@ classdef Acquisitor < BaseRunner
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
             obj.LayoutManager = layouts;
-            obj.DataManager = data;
-            obj.StatManager = stat;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
+            obj.DataManager = data;
+            obj.StatManager = stat;
         end
 
         % Initialize acquisition
@@ -50,15 +61,13 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
-                options.abort_at_end (1, 1) logical = obj.Config.Acquisition_AbortAtEnd
-                options.drop_bad_frame (1, 1) logical = obj.Config.Acquisition_DropBadFrame
-                options.verbose_start (1, 1) logical = obj.Config.Acquisition_VerboseStart
-                options.verbose_acquire (1, 1) logical = obj.Config.Acquisition_VerboseAcquire
-                options.verbose_preprocess (1, 1) logical = obj.Config.Acquisition_VerbosePreprocess
-                options.verbose_analysis (1, 1) logical = obj.Config.Acquisition_VerboseAnalysis
-                options.verbose_layout (1, 1) logical = obj.Config.Acquisition_VerboseLayout
-                options.verbose_storage (1, 1) logical = obj.Config.Acquisition_VerboseStorage
-                options.verbose (1, 1) logical = obj.Config.Acquisition_Verbose
+                options.verbose_start = obj.Acquire_VerboseStart
+                options.verbose_acquire = obj.Acquire_VerboseAcquire
+                options.verbose_preprocess = obj.Acquire_VerbosePreprocess
+                options.verbose_analysis = obj.Acquire_VerboseAnalysis
+                options.verbose_layout = obj.Acquire_VerboseLayout
+                options.verbose_storage = obj.Acquire_VerboseStorage
+                options.verbose = obj.Acquire_Verbose
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
@@ -94,7 +103,7 @@ classdef Acquisitor < BaseRunner
                     processes = obj.Config.AnalysisProcesses.(camera).(label);
                     % Generate analysis statistics
                     analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                        signal.(camera).(label), processes, 'camera', camera, 'label', label, 'config', config, ...
+                        signal.(camera).(label), 'processes', processes, 'camera', camera, 'label', label, 'config', config, ...
                         "verbose", options.verbose_analysis);
                 end
             end
@@ -105,13 +114,13 @@ classdef Acquisitor < BaseRunner
                                              'Lattice', obj.Analyzer.LatCalib));
                 obj.LayoutManager.update(Live, 'verbose', options.verbose_layout)
             end
-            if good || ~options.drop_bad_frame
+            if good || ~obj.Config.DropBadFrames
                 obj.DataManager.add(raw, "verbose", options.verbose_storage);
                 obj.StatManager.add(analysis, "verbose", options.verbose_storage);
             else
                 obj.warn("Bad acquisition detected, data dropped.")
             end
-            if options.abort_at_end
+            if obj.Config.AbortAtEnd
                 obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
             end
             if options.verbose

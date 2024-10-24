@@ -1,5 +1,24 @@
 classdef BkgStatGenerator < BaseProcessor
-    %BKGSTATGENERATOR Generate background statistics for image preprocessing
+    %BKGSTATGENERATOR Generate background statistics for image pre-processing
+
+    properties (SetAccess = {?BaseObject})
+        DataDir = "data/2024/09 September/20240926 camera readout noise/"
+        Full_1MHz = "clean_bg_1MHz.mat"
+        Full_3MHz = "clean_bg_3MHz.mat"
+        Full_5MHz = "clean_bg_5MHz.mat"
+        Cropped_1MHz = "clean_bg_1MHz_cropped.mat"
+        Cropped_3MHz = "clean_bg_3MHz_cropped.mat"
+        Cropped_5MHz = "clean_bg_5MHz_cropped.mat"
+    end
+
+    properties (Constant)
+        CameraList = ["Andor19330", "Andor19331"]
+        ImageLabel = ["Image", "Image"]
+        SettingList = ["Full_1MHz", "Full_3MHz", "Full_5MHz", ...
+                       "Cropped_1MHz", "Cropped_3MHz", "Cropped_5MHz"]
+        GetBkgStat_FilterFFTThres = 7.7
+        GetBkgStat_RemoveOutlierThres = 15
+    end
 
     properties (SetAccess = protected)
         BkgData
@@ -7,32 +26,15 @@ classdef BkgStatGenerator < BaseProcessor
     end
     
     methods
-        function obj = BkgStatGenerator(config)
-            arguments
-                config (1, 1) BkgStatGeneratorConfig = BkgStatGeneratorConfig()
-            end
-            obj@BaseProcessor(config)
+        function obj = BkgStatGenerator(varargin)
+            obj@BaseProcessor(varargin{:})
         end
 
         function process(obj)
-            for field = obj.Config.SettingList
-                obj.BkgStat.(field) = obj.getBkgStat(obj.BkgData.(field));               
+            for field = obj.SettingList
+                obj.BkgStat.(field) = getBkgStat(obj, obj.BkgData.(field));
             end
             obj.info("BkgStat generated.")
-        end
-
-        function save(obj, filename)
-            arguments
-                obj
-                filename (1, 1) string = sprintf("calibration/BkgStat_%s.mat", datetime("now", "Format","uuuuMMdd"))
-            end
-            if isempty(obj.BkgStat)
-                obj.error("No BkgStat available, please init first.")
-            end
-            data = obj.BkgStat;
-            data.Config = obj.Config.struct();
-            save(filename, "-struct", "data")
-            obj.info("BkgStat saved as [%s].", filename)
         end
 
         function plot(obj, setting_str, camera)
@@ -42,55 +44,64 @@ classdef BkgStatGenerator < BaseProcessor
             stat = obj.BkgStat.(setting_str).(camera);
             plotStat(stat, obj.BkgData.(setting_str).AcquisitionConfig.NumAcquisitions)
         end
-    end
 
-    methods (Access = protected, Hidden)
-        function applyConfig(obj)
-            for field = obj.Config.SettingList
-                obj.BkgData.(field) = load(fullfile(obj.Config.DataPath, obj.Config.(field))).Data;
+        function save(obj, filename)
+            arguments
+                obj
+                filename = sprintf("calibration/BkgStat_%s.mat", datetime("now", "Format","uuuuMMdd"))
             end
-            obj.info("All data loaded.")
+            if isempty(obj.BkgStat)
+                obj.error("No BkgStat available, please process first.")
+            end
+            data = obj.BkgStat;
+            data.Config = obj.struct(obj.prop("excluded", ["BkgStat", "BkgData"]));
+            save(filename, "-struct", "data")
+            obj.info("BkgStat saved as '%s'.", filename)
         end
     end
 
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
+        function init(obj)
+            for field = obj.SettingList
+                obj.BkgData.(field) = load(fullfile(obj.DataDir, obj.(field))).Data;
+            end
+            obj.info("All data loaded.")
+        end
+
         function stat = getBkgStat(obj, data)
-            label = obj.Config.ImageLabel;
-            for camera = obj.Config.CameraList
-                images = obj.removeOutliers(data.(camera).(label));
+            for i = 1:length(obj.CameraList)
+                camera = obj.CameraList(i);
+                label = obj.ImageLabel(i);
+                [images, num_outliers, num_elements] = removeOutliers(double(data.(camera).(label)), ...
+                    BkgStatGenerator.GetBkgStat_RemoveOutlierThres);
+                obj.info("[%s %s] Number of pixels disposed: %d, percentage in data: %.6f%%", ...
+                    camera, label, num_outliers, num_outliers/num_elements*100)
                 mean_image = mean(images, 3, 'omitmissing');
                 var_image = var(images, 0, 3, 'omitmissing');
                 mean_fft = abs(fftshift(fft2(mean_image)));
-                mask = log(mean_fft) > 7.7;
-                mean_new = abs(ifft2(ifftshift( fftshift(fft2(mean_image)).* mask )));
-                
+                mask = log(mean_fft) > BkgStatGenerator.GetBkgStat_FilterFFTThres;
+                mean_new = abs(ifft2(ifftshift( fftshift(fft2(mean_image)).* mask )));                
                 stat.(camera).Mean = mean_image;
                 stat.(camera).Var = var_image;
                 stat.(camera).SmoothMean = mean_new;
                 stat.(camera).NoiseVar = mean(var_image,'all');
             end
         end
-
-        function new_images = removeOutliers(obj, images, threshold)
-            arguments
-                obj
-                images (:, :, :) double
-                threshold (1, 1) double = obj.Config.RemoveOutlierThres
-            end        
-            median_image = median(images, 3);
-            median_dev = median(abs(images-median_image), 'all');
-            norm_median_dev = abs(images-median_image)/median_dev;
-        
-            new_images = images;
-            outliers = norm_median_dev > threshold;
-            new_images(outliers) = nan;
-        
-            num_outliers = sum(outliers, 'all');
-            num_elements = numel(new_images);
-            obj.info("Number of pixels disposed: %d, percentage in data: %.6f%%", num_outliers, num_outliers/num_elements*100)
-        end
     end
 
+end
+
+function [new_images, num_outliers, num_elements] = removeOutliers(images, threshold)
+    median_image = median(images, 3);
+    median_dev = median(abs(images-median_image), 'all');
+    norm_median_dev = abs(images-median_image)/median_dev;
+
+    new_images = images;
+    outliers = norm_median_dev > threshold;
+    new_images(outliers) = nan;
+
+    num_outliers = sum(outliers, 'all');
+    num_elements = numel(new_images);
 end
 
 function plotStat(stat, num_images)

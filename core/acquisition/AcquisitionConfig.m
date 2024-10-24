@@ -1,35 +1,26 @@
 classdef AcquisitionConfig < BaseObject
     
-    properties (SetAccess = {?BaseRunner, ?AcquisitionConfig})
+    properties (SetAccess = {?BaseObject})
         SequenceTable {SequenceRegistry.mustBeValidSequence} = SequenceRegistry.Full4Analysis
-        NumAcquisitions (1, 1) double = 20
-        NumStatistics (1, 1) double = 2000
-        Refresh (1, 1) double = 0.01
-        Timeout (1, 1) double = Inf
+        NumAcquisitions = 20
+        NumStatistics = 2000
+        Refresh = 0.01
+        Timeout = Inf
+        DropBadFrames = true
+        AbortAtEnd = true
     end
-
+    
+    % Properties that updates with SequenceTable
     properties (SetAccess = protected)
+        ImageList
         ActiveCameras
         ActiveSequence
         ActiveAcquisition
         ActiveAnalysis
-        ImageList
-        AcquisitionParams = struct()
-        AnalysisProcesses = struct()
-        AnalysisOutVars = struct()
-        AnalysisOutData = struct()
-    end
-
-    properties (Constant)
-        Acquisition_AbortAtEnd = true
-        Acquisition_DropBadFrame = true
-        Acquisition_VerboseStart = false
-        Acquisition_VerboseAcquire = true
-        Acquisition_VerbosePreprocess = false
-        Acquisition_VerboseAnalysis = false
-        Acquisition_VerboseLayout = true
-        Acquisition_VerboseStorage = false
-        Acquisition_Verbose = true
+        AcquisitionParams
+        AnalysisProcesses
+        AnalysisOutVars
+        AnalysisOutData
     end
 
     methods
@@ -51,6 +42,11 @@ classdef AcquisitionConfig < BaseObject
         function set.SequenceTable(obj, sequence_table)
             obj.SequenceTable = sequence_table;
             obj.updateProp()
+        end
+
+        % Override the default prop method from BaseObject
+        function list = prop(~)
+            list = ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"];
         end
 
         function disp(obj)
@@ -92,9 +88,8 @@ classdef AcquisitionConfig < BaseObject
     end
     
     methods (Static)
-        function obj = struct2obj(s)
-            obj = BaseRunner.struct2obj(s, AcquisitionConfig(), ...
-                "prop_list", ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"]);
+        function obj = struct2obj(s, varargin)
+            obj = BaseRunner.struct2obj(s, AcquisitionConfig(), varargin{:});
         end
     end
 

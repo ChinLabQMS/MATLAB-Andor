@@ -7,33 +7,29 @@ classdef CameraManager < BaseObject
         Zelux (1, 1) Camera
     end
 
-    properties (Dependent, Hidden)
-        CameraList
-    end
-
     methods
-        function obj = CameraManager(config)
+        function obj = CameraManager(options)
             arguments
-                config.Andor19330 = AndorCameraConfig()
-                config.Andor19331 = AndorCameraConfig()
-                config.Zelux = ZeluxCameraConfig()
-                config.test_mode = false
+                options.Andor19330 = AndorCameraConfig()
+                options.Andor19331 = AndorCameraConfig()
+                options.Zelux = ZeluxCameraConfig()
+                options.test_mode = false
             end
-            if config.test_mode
-                obj.Andor19330 = Camera("Andor19330", config.Andor19330);
-                obj.Andor19331 = Camera("Andor19331", config.Andor19331);
-                obj.Zelux = Camera("Zelux", config.Zelux);
+            if options.test_mode
+                obj.Andor19330 = Camera("Andor19330", options.Andor19330);
+                obj.Andor19331 = Camera("Andor19331", options.Andor19331);
+                obj.Zelux = Camera("Zelux", options.Zelux);
             else
-                obj.Andor19330 = AndorCamera(19330, config.Andor19330);
-                obj.Andor19331 = AndorCamera(19331, config.Andor19331);
-                obj.Zelux = ZeluxCamera(0, config.Zelux);
+                obj.Andor19330 = AndorCamera(19330, options.Andor19330);
+                obj.Andor19331 = AndorCamera(19331, options.Andor19331);
+                obj.Zelux = ZeluxCamera(0, options.Zelux);
             end
         end
 
         function init(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.getPropList()
+                cameras = obj.prop()
             end
             for camera = cameras
                 obj.(camera).init()
@@ -41,13 +37,13 @@ classdef CameraManager < BaseObject
         end
 
         function close(obj)
-            for camera = obj.getPropList()
+            for camera = obj.prop()
                 obj.(camera).close()
             end
         end
 
         function config(obj, varargin)
-            for camera = obj.getPropList()
+            for camera = obj.prop()
                 obj.(camera).config(varargin{:})
             end
         end
@@ -55,22 +51,18 @@ classdef CameraManager < BaseObject
         function abortAcquisition(obj, cameras)
             arguments
                 obj
-                cameras (1, :) string = obj.getPropList()
+                cameras = obj.prop()
             end
             for camera = cameras
                 obj.(camera).abortAcquisition()
             end
-        end
-
-        function list = get.CameraList(obj)
-            list = obj.getPropList();
         end
     end
 
     methods (Static)
         function obj = struct2obj(data, options)
             arguments
-                data (1, 1) struct
+                data
                 options.test_mode = true
             end
             args = {'test_mode', options.test_mode};
@@ -84,7 +76,7 @@ classdef CameraManager < BaseObject
                 args = [args, {'Zelux', ZeluxCameraConfig.struct2obj(data.Zelux.Config)}];
             end
             obj = CameraManager(args{:});
-            obj.info("Loaded from struct.")
+            obj.info("New object created from structure.")
         end
     end
 

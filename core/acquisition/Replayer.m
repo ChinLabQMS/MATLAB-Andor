@@ -1,28 +1,33 @@
 classdef Replayer < BaseProcessor
 
     properties (SetAccess = immutable, Hidden)
+        AcquisitionConfig
+        CameraManager
         LayoutManager
         Preprocessor
         Analyzer
     end
 
     properties (SetAccess = protected, Hidden)
-        AcquisitionConfig
         DataManager
         StatManager
-        CameraManager
         CurrentIndex
     end
 
     methods
-        function obj = Replayer(layouts, preprocessor, analyzer, config)
+        function obj = Replayer(acq_config, cameras, layouts, ...
+                preprocessor, analyzer, config)
             arguments
+                acq_config (1, 1) AcquisitionConfig = AcquisitionConfig()
+                cameras (1, 1) CameraManager = CameraManager("test_mode", 1)
                 layouts = []
                 preprocessor (1, 1) Preprocessor = Preprocessor()
                 analyzer (1, 1) Analyzer = Analyzer(preprocessor)
                 config (1, 1) ReplayerConfig = ReplayerConfig()
             end
             obj@BaseProcessor(config)
+            obj.AcquisitionConfig = acq_config;
+            obj.CameraManager = cameras;
             obj.LayoutManager = layouts;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
@@ -79,8 +84,11 @@ classdef Replayer < BaseProcessor
     methods (Access = protected, Hidden)
         % Override the default behavior in BaseProcessor
         function applyConfig(obj)
-            [obj.DataManager, obj.AcquisitionConfig, obj.CameraManager] = DataManager.struct2obj( ...
-                load(obj.Config.DataPath, "Data").Data, "test_mode", obj.Config.TestMode); %#ok<PROP>
+            obj.DataManager = DataManager.struct2obj( ...
+                load(obj.Config.DataPath, "Data").Data, ...
+                obj.AcquisitionConfig, ...
+                obj.CameraManager, ...
+                "test_mode", obj.Config.TestMode); %#ok<PROP>
             obj.StatManager = StatManager(obj.AcquisitionConfig); %#ok<CPROP>
             obj.StatManager.init()
             obj.CurrentIndex = 0;

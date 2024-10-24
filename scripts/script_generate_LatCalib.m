@@ -2,7 +2,7 @@
 clear; clc;
 p = LatCaliberator;
 
-%% Pre-calibration, with no existing calibration file
+%% Manual pre-calibration, with no existing calibration file
 
 % Config data path
 % - for initial calibration, set LatCalibFilePath to []

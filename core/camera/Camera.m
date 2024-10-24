@@ -1,13 +1,13 @@
 classdef Camera < BaseRunner
     %CAMERA Base class for camera objects. Also simulate a real camera.
     
-    properties (SetAccess = immutable, Hidden)
+    properties (SetAccess = immutable)
         ID
     end
 
     properties (SetAccess = protected)
-        Initialized (1, 1) logical = false
-        NumExpectedFrames (1, 1) double = 0
+        Initialized = false
+        NumExpectedFrames = 0
     end
 
     properties (Access = private)
@@ -21,7 +21,7 @@ classdef Camera < BaseRunner
     methods
         function obj = Camera(id, config)
             arguments
-                id = "Andor19330"
+                id = "Test"
                 config = AndorCameraConfig()
             end
             obj@BaseRunner(config)
@@ -46,7 +46,8 @@ classdef Camera < BaseRunner
             temp = nan;
             status = sprintf("Not implemented for this class %s", class(obj));
         end
-
+    
+        % Close the connection upon delete
         function delete(obj)
             obj.close()
         end
@@ -76,14 +77,15 @@ classdef Camera < BaseRunner
         end
 
         function config(obj, varargin)
-            config@BaseRunner(obj, varargin{:})
             obj.abortAcquisition()
+            config@BaseRunner(obj, varargin{:})
             obj.applyConfig()
         end
 
         function startAcquisition(obj, options)
             arguments
                 obj
+                options.label = "Test"
                 options.verbose (1, 1) logical = false
             end
             obj.checkInitialized()
@@ -92,10 +94,12 @@ classdef Camera < BaseRunner
                 obj.NumExpectedFrames = obj.NumExpectedFrames + 1;
             else
                 obj.abortAcquisition()
-                obj.error("Too many start commands before retriving data, MaxQueuedFrames = %d.", obj.Config.MaxQueuedFrames)
+                obj.error("[%s] Too many start commands before retriving data, MaxQueuedFrames = %d.", ...
+                    options.label, obj.Config.MaxQueuedFrames)
             end
             if options.verbose
-                obj.info("Acquisition started for frame number = %d.", obj.NumExpectedFrames)
+                obj.info("[%s] Acquisition started for frame number = %d.", ...
+                    options.label, obj.NumExpectedFrames)
             end
         end
         
@@ -108,7 +112,7 @@ classdef Camera < BaseRunner
         function [image, status] = acquire(obj, options)
             arguments
                 obj
-                options.label (1, 1) string = "Image"
+                options.label (1, 1) string = "Test"
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 10
                 options.flag_immediate (1, 1) logical = false
@@ -120,10 +124,10 @@ classdef Camera < BaseRunner
             if obj.NumExpectedFrames == 0
                 obj.error("[%s] Expected number of frame is 0, please start acquisition before retriving data.", options.label)
             end
-            num_available = obj.getNumberNewImages();
             status = "good";
+            num_available = obj.getNumberNewImages();
             if num_available > obj.NumExpectedFrames
-                status = "delayed"; %#ok<*NASGU>
+                status = "delayed";
                 obj.warn2("[%s] More than expected images are available, check if analysis falls behind acquisition.", options.label)
             elseif num_available == obj.NumExpectedFrames && options.flag_immediate
                 status = "immediate";
@@ -175,7 +179,7 @@ classdef Camera < BaseRunner
 
         function applyConfig(obj)
             for label = string(fields(obj.ExampleImage)')
-                if label.endsWith("Config")
+                if label == "Config"
                     continue
                 end
                 if ~isequal(size(obj.ExampleImage.(label), [1, 2]), [obj.Config.XPixels, obj.Config.YPixels])

@@ -1,13 +1,7 @@
 classdef DataManager < BaseStorage
     % DATAMANAGER Class for storing acquired data.
 
-    properties (SetAccess = protected)
-        Andor19330
-        Andor19331
-        Zelux
-    end
-
-    properties (SetAccess = immutable, Hidden)
+    properties (SetAccess = immutable)
         CameraManager
     end
 
@@ -26,7 +20,7 @@ classdef DataManager < BaseStorage
             obj.CurrentIndex = 0;
             sequence = obj.AcquisitionConfig.ActiveSequence;
             num_acq = obj.AcquisitionConfig.NumAcquisitions;
-            for camera = obj.getPropList()
+            for camera = obj.prop()
                 if ~ismember(camera, obj.AcquisitionConfig.ActiveCameras)
                     obj.(camera) = [];
                     continue
@@ -82,19 +76,30 @@ classdef DataManager < BaseStorage
     end
 
     methods (Static)
-        function [data, config, cameras] = struct2obj(data_struct, options)
+        function [obj, acq_config, cameras] = struct2obj(data, acq_config, cameras, options)
             arguments
-                data_struct (1, 1) struct
+                data (1, 1) struct
+                acq_config = []
+                cameras = []
                 options.test_mode (1, 1) logical = true
             end
-            config = AcquisitionConfig.struct2obj(data_struct.AcquisitionConfig);
-            cameras = CameraManager.struct2obj(data_struct, "test_mode", options.test_mode);
-            data = DataManager(config, cameras);
-            for camera = config.ActiveCameras
-                data.(camera) = data_struct.(camera);
+            if isempty(acq_config)
+                acq_config = AcquisitionConfig.struct2obj(data.AcquisitionConfig);
+            else
+                acq_config.configProp(data.AcquisitionConfig);
             end
-            data.CurrentIndex = config.NumAcquisitions;
-            data.info("Loaded from structure.")
+            if isempty(cameras)
+                cameras = CameraManager.struct2obj(data, "test_mode", options.test_mode);
+            else
+                for camera = cameras.prop()
+                    cameras.(camera).config(data.(camera).Config);
+                end
+            end
+            obj = DataManager(acq_config, cameras);
+            for camera = acq_config.ActiveCameras
+                obj.(camera) = data.(camera);
+            end
+            obj.CurrentIndex = acq_config.NumAcquisitions;
         end
     end
 
