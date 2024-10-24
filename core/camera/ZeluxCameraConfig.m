@@ -2,7 +2,7 @@ classdef ZeluxCameraConfig < BaseObject
     % Configuration file for ZeluxCamera
     
     properties (SetAccess = {?BaseObject})
-        Exposure (1, 1) double = 0.0001
+        Exposure (1, 1) double = 0.000694
         ExternalTrigger (1, 1) logical = true
         XPixels (1, 1) double {mustBePositive, mustBeInteger} = 1440
         YPixels (1, 1) double {mustBePositive, mustBeInteger} = 1080

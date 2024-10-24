@@ -117,7 +117,7 @@
             end
             if options.plot_diagnostic
                 figure
-                Lat.imagesc(y_range, x_range, signal_modified, "title", sprintf("%s: Signal (modified)", Lat.ID))
+                Lattice.imagesc(y_range, x_range, signal_modified, "title", sprintf("%s: Signal (modified)", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
@@ -161,7 +161,7 @@
             if options.plot_diagnosticV
                 plotFFT(signal_fft, peak_init, peak_pos, all_peak_fit, Lat.ID)
                 figure
-                Lat.imagesc(y_range, x_range, signal, "title", sprintf("%s: Signal", Lat.ID))
+                Lattice.imagesc(y_range, x_range, signal, "title", sprintf("%s: Signal", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
@@ -263,7 +263,7 @@
             if options.plot_diagnostic
                 empty_image = zeros(length(x_range), length(y_range));
                 figure
-                Lat.imagesc(y_range, x_range, empty_image, "title", 'Similarity between images from different cameras')
+                Lattice.imagesc(y_range, x_range, empty_image, "title", 'Similarity between images from different cameras')
                 hold on
                 scatter(best_center(2), best_center(1), 100, "red")
                 scatter(sites_corr(:, 2), sites_corr(:, 1), 50, site_scores, 'filled')
@@ -271,17 +271,17 @@
 
                 figure
                 subplot(1, 3, 1)
-                Lat2.imagesc(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
+                Lattice.imagesc(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
                 Lat2.plot(options.sites)
                 Lat2.plotV()
                 subplot(1, 3, 2)
-                Lat.imagesc(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
+                Lattice.imagesc(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
                 viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
                     'EnhanceVisibility', false, 'LineWidth', 0.5);
                 subplot(1, 3, 3)
-                Lat.imagesc(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
+                Lattice.imagesc(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
                 viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
@@ -417,6 +417,16 @@
     end
 
     methods (Static)
+        function Lat = struct2obj(s, ID, options)
+            arguments
+                s (1, 1) struct
+                ID (1, 1) string = s.ID
+                options.verbose (1, 1) logical = true
+            end
+            Lat = BaseRunner.struct2obj(s, Lattice(ID), "prop_list", ["K", "V", "R"], ...
+                'verbose', options.verbose);
+        end
+
         function lat_corr = prepareSite(format, options)
             arguments
                 format (1, 1) string = "hex"
@@ -451,16 +461,6 @@
             title(options.title)
         end
 
-        function Lat = struct2obj(s, ID, options)
-            arguments
-                s (1, 1) struct
-                ID (1, 1) string = s.ID
-                options.verbose (1, 1) logical = true
-            end
-            Lat = BaseRunner.struct2obj(s, Lattice(ID), "prop_list", ["K", "V", "R"], ...
-                'verbose', options.verbose);
-        end
-
         function checkDiff(Lat, Lat2)
             V1 = [Lat.V; Lat.V3];
             V2 = [Lat2.V; Lat2.V3];
@@ -468,13 +468,15 @@
             fprintf('\t R_1 = (%7.2f, %7.2f),\t R_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
                     Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat.R(1) - Lat2.R(1), Lat.R(2) - Lat2.R(2))
             for i = 1:3
-                fprintf('(%d)\t V_1 = (%7.2f, %7.2f),\t V_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
-                    i, V1(i, 1), V1(i, 2), V2(i, 1), V2(i, 2), V1(i, 1) - V2(i, 1), V1(i, 2) - V2(i, 2)) 
+                cos_theta = max(min(dot(V1(i, :),V2(i, :))/(norm(V1(i, :))*norm(V2(i, :))), 1), -1);
+                theta_deg = real(acosd(cos_theta));
+                fprintf('(%d)\t V_1 = (%7.2f, %7.2f),\t V_2 = (%7.2f, %7.2f),\tAngle<V_1, V_2> = %7.2f deg\n', ...
+                    i, V1(i, 1), V1(i, 2), V2(i, 1), V2(i, 2), theta_deg)
             end
             for i = 1:3
                 norm1 = norm(V1(i, :));
                 norm2 = norm(V2(i, :));
-                fprintf('(%d)\t|V11| = %14.2f px,\t|V12| = %14.2f px,\tDiff = %14.2f px (%5.3f%%)\n', ...
+                fprintf('(%d)\t|V11| = %14.2f px,\t|V12| = %14.2f px,\tDiff = %9.2f px (%5.3f%%)\n', ...
                     i, norm1, norm2, norm1 - norm2, 200*(norm1 - norm2)/(norm1 + norm2))
             end
         end
