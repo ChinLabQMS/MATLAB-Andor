@@ -1,7 +1,7 @@
 classdef AndorCamera < Camera
     %ANDORCAMERA AndorCamera class for Andor cameras.
 
-    properties (SetAccess = protected, Hidden)
+    properties (SetAccess = protected)
         CameraIndex
         CameraHandle
     end
@@ -84,7 +84,11 @@ classdef AndorCamera < Camera
                 otherwise
                     status = sprintf('Unknown status (%d)', ret);
             end
-            obj.info('Current temperature = %g C, Status = %s', temperature, status)
+            if is_stable
+                obj.info('Current temperature = %g C, Status = %s', temperature, status)
+            else
+                obj.warn('Current temperature = %g C, Status = %s', temperature, status)
+            end
         end
     end
 
@@ -253,7 +257,7 @@ classdef AndorCamera < Camera
         end
 
         function [image, status] = acquireImage(obj, label)
-            [ret, image_data] = GetImages16(1, obj.Config.NumSubFrames, obj.Config.YPixels*obj.Config.XPixels);
+            [ret, image_data] = GetImages(1, obj.Config.NumSubFrames, obj.Config.YPixels*obj.Config.XPixels);
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
                 obj.error("[%s] Unable to acquire image.", label)

@@ -1,5 +1,6 @@
 classdef Analyzer < BaseProcessor
-
+    
+    % Configurable properties through config method
     properties (SetAccess = {?BaseObject})
         LatCalibFilePath = "calibration/LatCalib_20241002.mat"
     end

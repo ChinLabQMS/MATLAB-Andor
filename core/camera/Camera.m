@@ -1,5 +1,6 @@
 classdef Camera < BaseRunner
-    %CAMERA Base class for camera objects. Also simulate a real camera.
+    %CAMERA Base class for camera objects. Also simulate a real camera with
+    % pre-loaded data.
     
     properties (SetAccess = immutable)
         ID
@@ -155,7 +156,8 @@ classdef Camera < BaseRunner
             end
             obj.NumExpectedFrames = obj.NumExpectedFrames - 1;
             if any(image(:) == obj.Config.MaxPixelValue)
-                obj.warn("[%s] Image is saturated.", options.label)
+                obj.warn("[%s] Image is saturated, max pixel value = %d.", ...
+                    options.label, obj.Config.MaxPixelValue)
             end
             if options.verbose
                 obj.info("[%s] Acquisition completed in %4.2f s.", options.label, toc(timer))

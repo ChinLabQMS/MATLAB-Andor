@@ -5,12 +5,20 @@ classdef BaseObject < handle
     % 2. configure the property
     % 3. logging
 
+    properties (SetAccess = immutable, Hidden)
+        ConfigurableProp
+    end
+
     methods
+        function obj = BaseObject()
+            obj.ConfigurableProp = obj.prop('filter_setaccess', true);
+        end
+
         % Converts the object to a structure, iterating over the fields of the object
         function s = struct(obj, fields)
             arguments
                 obj
-                fields = obj.prop()
+                fields = string(properties(obj))' % Default is all visible properties
             end
             s = struct();
             for field = fields
@@ -22,14 +30,21 @@ classdef BaseObject < handle
             end
         end
 
-        % Returns a list of visible properties as a row vector of string
+        % Returns a list of properties as a row vector of string
         function list = prop(obj, options)
             arguments
                 obj
-                options.excluded = string.empty
+                options.filter_setaccess = false
             end
-            list = string(properties(obj))';
-            list = list(~ismember(list, options.excluded));
+            prop_list = metaclass(obj).PropertyList;
+            list = string({prop_list.Name});
+            if options.filter_setaccess
+                f = @(p)(~p.Dependent) && (~p.Hidden) && ((iscell(p.SetAccess) || (p.SetAccess == "public")));
+            else
+                f = @(p)(~p.Dependent) && (~p.Hidden);
+            end
+            idx = arrayfun(f, prop_list);
+            list = list(idx);
         end
     end
    
@@ -48,17 +63,19 @@ classdef BaseObject < handle
             elseif rem(length(varargin), 2) == 0
                 args = varargin;
             else
-                obj.error("Multiple configuration input must be in pairs.")
+                obj.error("Multiple configuration inputs must be in pairs.")
             end
             for i = 1:2:length(args)
-                if ismember(args{i}, obj.prop())
+                if ismember(args{i}, obj.ConfigurableProp)
                     try
                         obj.(args{i}) = args{i + 1};
                     catch me
                         obj.warn2("Error occurs during setting property '%s'\n\t%s", args{i}, me.message)
                     end
+                elseif isprop(obj, args{i})
+                    obj.warn("%s is not a configurable property.", args{i})
                 else
-                    obj.warn("%s is not a valid property.", args{i})
+                    obj.warn("%s is not a property of class.", args{i})
                 end
             end
         end
@@ -102,18 +119,16 @@ classdef BaseObject < handle
             arguments
                 s
                 obj = BaseObject()
-                options.prop = obj.prop()
+                options.prop = obj.ConfigurableProp
                 options.verbose = true
             end
+            args = struct();
             for field = options.prop
                 if isfield(s, field)
-                    try
-                        obj.(field) = s.(field);
-                    catch me
-                        obj.warn2("Error occurs during setting property '%s'\n\t%s", field, me.message)
-                    end
+                    args.(field) = s.(field);
                 end
             end
+            obj.configProp(args)
             if options.verbose
                 obj.info("Object loaded from structure.")
             end

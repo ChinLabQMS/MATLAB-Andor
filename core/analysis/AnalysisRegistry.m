@@ -8,11 +8,6 @@ classdef AnalysisRegistry < BaseObject
     
     methods
         function obj = AnalysisRegistry(out_vars, out_data, func)
-            arguments
-                out_vars (1, :) string
-                out_data (1, :) string
-                func (1, 1) function_handle
-            end
             obj.OutputVars = out_vars;
             obj.OutputData = out_data;
             obj.FuncHandle = func;
@@ -20,9 +15,15 @@ classdef AnalysisRegistry < BaseObject
     end
 
     enumeration
-        FitCenter (["XCenter", "YCenter", "XWidth", "YWidth"], [], @fitCenter)
-        FitGauss  (["GaussX", "GaussY", "GaussXWid", "GaussYWid"], [], @fitGauss)
-        CalibLatR (["LatX", "LatY"], [], @calibLatR)
+        FitCenter (["XCenter", "YCenter", "XWidth", "YWidth"], ...
+                   [], ...
+                   @fitCenter)
+        FitGauss  (["GaussX", "GaussY", "GaussXWid", "GaussYWid"], ...
+                   [], ...
+                   @fitGauss)
+        CalibLatR (["LatX", "LatY"], ...
+                   [], ...
+                   @calibLatR)
     end
 
     methods (Static)
@@ -59,9 +60,15 @@ end
 %% Registered functions in AnalysisRegistry
 % Format: res = func(res, signal, info, options)
 
-function res = fitCenter(res, signal, info)
+function res = fitCenter(res, signal, info, options)
+    arguments
+        res 
+        signal 
+        info 
+        options.first_only = true
+    end
     assert(all(isfield(info, "config")))
-    signal = getSignalSum(signal, getNumFrames(info.config));
+    signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
 end
 
@@ -77,9 +84,9 @@ end
 
 function res = calibLatR(res, signal, info, options)
     arguments
-        res (1, 1) struct
-        signal (:, :) double
-        info (1, 1) struct
+        res
+        signal
+        info
         options.first_only = true
     end
     assert(all(isfield(info, ["camera", "config", "lattice"])))

@@ -2,13 +2,13 @@ classdef LayoutManager < BaseObject
     %LAYOUTMANAGER Manage layout of axes for visualization
 
     properties (SetAccess = immutable)
-        BigAxes1 (1, 1) AxesRunner
-        BigAxes2 (1, 1) AxesRunner
-        SmallAxes1 (1, 1) AxesRunner
-        SmallAxes2 (1, 1) AxesRunner
-        SmallAxes3 (1, 1) AxesRunner
-        SmallAxes4 (1, 1) AxesRunner
-        SmallAxes5 (1, 1) AxesRunner
+        BigAxes1
+        BigAxes2
+        SmallAxes1
+        SmallAxes2
+        SmallAxes3
+        SmallAxes4
+        SmallAxes5
     end
 
     methods
@@ -50,9 +50,9 @@ classdef LayoutManager < BaseObject
         function update(obj, Live, fields, options)
             arguments
                 obj
-                Live (1, 1) struct
+                Live
                 fields = obj.prop()
-                options.verbose (1, 1) logical = false
+                options.verbose = false
             end
             timer = tic;
             for field = fields

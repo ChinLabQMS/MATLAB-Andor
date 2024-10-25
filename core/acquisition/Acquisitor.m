@@ -21,21 +21,22 @@ classdef Acquisitor < BaseRunner
     end
 
     properties (SetAccess = protected)
-        Timer (1, 1) uint64
-        RunNumber (1, 1) double = 0
+        Timer
+        RunNumber = 0
+        Live
     end
 
     methods
         function obj = Acquisitor(config, cameras, layouts, ...
                                   preprocessor, analyzer, data, stat)
             arguments
-                config (1, 1) AcquisitionConfig = AcquisitionConfig()
-                cameras (1, 1) CameraManager = CameraManager()
+                config = AcquisitionConfig()
+                cameras = CameraManager()
                 layouts = []
-                preprocessor (1, 1) Preprocessor = Preprocessor()
-                analyzer (1, 1) Analyzer = Analyzer(preprocessor)
-                data (1, 1) DataManager = DataManager(config, cameras)
-                stat (1, 1) StatManager = StatManager(config)
+                preprocessor = Preprocessor()
+                analyzer = Analyzer(preprocessor)
+                data = DataManager(config, cameras)
+                stat = StatManager(config)
             end
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
@@ -61,23 +62,20 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
-                options.verbose_start = obj.Acquire_VerboseStart
-                options.verbose_acquire = obj.Acquire_VerboseAcquire
-                options.verbose_preprocess = obj.Acquire_VerbosePreprocess
-                options.verbose_analysis = obj.Acquire_VerboseAnalysis
-                options.verbose_layout = obj.Acquire_VerboseLayout
-                options.verbose_storage = obj.Acquire_VerboseStorage
-                options.verbose = obj.Acquire_Verbose
+                options.verbose_start = Acquisitor.Acquire_VerboseStart
+                options.verbose_acquire = Acquisitor.Acquire_VerboseAcquire
+                options.verbose_preprocess = Acquisitor.Acquire_VerbosePreprocess
+                options.verbose_analysis = Acquisitor.Acquire_VerboseAnalysis
+                options.verbose_layout = Acquisitor.Acquire_VerboseLayout
+                options.verbose_storage = Acquisitor.Acquire_VerboseStorage
+                options.verbose = Acquisitor.Acquire_Verbose
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
+            obj.Live = struct('Info', struct('RunNumber', obj.RunNumber, ...
+                                         'Lattice', obj.Analyzer.LatCalib), ...
+                              'Raw', [], 'Signal', [], 'Background', [], 'Analysis', []);
             sequence_table = obj.Config.ActiveSequence;
-            % Raw data, processed data (remove background), analysis
-            raw = struct();
-            signal = struct();
-            background = struct();
-            analysis = struct();
-            % Check the status of the acquisition
             good = true;
             for i = 1:height(sequence_table)
                 type = string(sequence_table.Type(i));
@@ -90,33 +88,29 @@ classdef Acquisitor < BaseRunner
                 if type == "Acquire" || type == "Start+Acquire"
                     args = obj.Config.AcquisitionParams.(camera).(label);
                     % Acquire raw images
-                    [raw.(camera).(label), status] = obj.CameraManager.(camera).acquire( ...
+                    [obj.Live.Raw.(camera).(label), status] = obj.CameraManager.(camera).acquire( ...
                         'refresh', obj.Config.Refresh, 'timeout', obj.Config.Timeout, ...
                         'label', label, 'verbose', options.verbose_acquire, args{:});
                     good = good && (status == "good");
                     % Preprocess raw images
-                    [signal.(camera).(label), background.(camera).(label)] = obj.Preprocessor.process( ...
-                        raw.(camera).(label), 'camera', camera, 'label', label, 'config', config, ...
+                    [obj.Live.Signal.(camera).(label), obj.Live.Background.(camera).(label)] = obj.Preprocessor.process( ...
+                        obj.Live.Raw.(camera).(label), 'camera', camera, 'label', label, 'config', config, ...
                         "verbose", options.verbose_preprocess);
                 end
                 if type == "Analysis"
                     processes = obj.Config.AnalysisProcesses.(camera).(label);
                     % Generate analysis statistics
-                    analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                        signal.(camera).(label), 'processes', processes, 'camera', camera, 'label', label, 'config', config, ...
+                    obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
+                        obj.Live.Signal.(camera).(label), 'processes', processes, 'camera', camera, 'label', label, 'config', config, ...
                         "verbose", options.verbose_analysis);
                 end
             end
             if ~isempty(obj.LayoutManager)
-                Live = struct('Raw', raw, 'Signal', signal, ...
-                              'Background', background, 'Analysis', analysis, ...
-                              'Info', struct('RunNumber', obj.RunNumber, ...
-                                             'Lattice', obj.Analyzer.LatCalib));
-                obj.LayoutManager.update(Live, 'verbose', options.verbose_layout)
+                obj.LayoutManager.update(obj.Live, 'verbose', options.verbose_layout)
             end
             if good || ~obj.Config.DropBadFrames
-                obj.DataManager.add(raw, "verbose", options.verbose_storage);
-                obj.StatManager.add(analysis, "verbose", options.verbose_storage);
+                obj.DataManager.add(obj.Live.Raw, "verbose", options.verbose_storage);
+                obj.StatManager.add(obj.Live.Analysis, "verbose", options.verbose_storage);
             else
                 obj.warn("Bad acquisition detected, data dropped.")
             end

@@ -1,6 +1,7 @@
 # List of untracked files to ignore
 data/
 calibration/
+resources/
 .ipynb_checkpoints/
 *.mat
 *.asv

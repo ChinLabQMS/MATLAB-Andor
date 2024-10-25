@@ -44,11 +44,6 @@ classdef AcquisitionConfig < BaseObject
             obj.updateProp()
         end
 
-        % Override the default prop method from BaseObject
-        function list = prop(~)
-            list = ["SequenceTable", "NumAcquisitions", "NumStatistics", "Refresh", "Timeout"];
-        end
-
         function disp(obj)
             disp@BaseObject(obj)
             disp(obj.SequenceTable)

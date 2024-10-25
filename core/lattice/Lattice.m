@@ -12,9 +12,7 @@
     end
 
     properties (Dependent, Hidden)
-        V1
-        V2
-        V3
+        V_norm
     end
     
     methods
@@ -278,13 +276,13 @@
                 Lattice.imagesc(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
-                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
+                viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
                     'EnhanceVisibility', false, 'LineWidth', 0.5);
                 subplot(1, 3, 3)
                 Lattice.imagesc(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
                 Lat.plot(options.sites)
                 Lat.plotV()
-                viscircles(R_init(2:-1:1), 0.5*norm(Lat.V1), 'Color', 'w', ...
+                viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
                     'EnhanceVisibility', false, 'LineWidth', 0.5);
             end
             if options.debug  % Reset to initial R
@@ -312,11 +310,11 @@
                 "x_lim", options.x_lim, "y_lim", options.y_lim, "remove_origin", options.add_origin);
             % Use a different radius to display origin
             if options.add_origin
-                radius = [repmat(options.norm_radius * norm(Lat.V1), size(corr, 1), 1);
-                    options.origin_radius * norm(Lat.V1)];
+                radius = [repmat(options.norm_radius * Lat.V_norm, size(corr, 1), 1);
+                    options.origin_radius * Lat.V_norm];
                 corr = [corr; Lat.convert2Real([0, 0])];
             else
-                radius = options.norm_radius * norm(Lat.V1);
+                radius = options.norm_radius * Lat.V_norm;
             end
             h = viscircles(options.ax, corr(:, 2:-1:1), radius, ...
                 'Color', options.color, 'EnhanceVisibility', false, 'LineWidth', options.line_width);
@@ -336,10 +334,10 @@
             end
             cObj = onCleanup(@()preserveHold(ishold(options.ax), options.ax)); % Preserve original hold state
             hold(options.ax,'on');
-            quiver(options.ax, options.origin(2), options.origin(1), options.scale * Lat.V1(2), options.scale * Lat.V1(1), "off", ...
+            quiver(options.ax, options.origin(2), options.origin(1), options.scale * Lat.V(1, 2), options.scale * Lat.V(1, 1), "off", ...
                 "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)
             axis image
-            quiver(options.ax, options.origin(2), options.origin(1), options.scale * Lat.V2(2), options.scale * Lat.V2(1), "off", ...
+            quiver(options.ax, options.origin(2), options.origin(1), options.scale * Lat.V(2, 2), options.scale * Lat.V(2, 1), "off", ...
                 "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID), "MaxHeadSize", 10)
             legend()
         end
@@ -374,9 +372,9 @@
                 fprintf('%s: Details unset\n', Lat.getStatusLabel())
                 return
             end
-            v1 = Lat.V1;
-            v2 = Lat.V2;
-            v3 = Lat.V3;
+            v1 = Lat.V(1, :);
+            v2 = Lat.V(2, :);
+            v3 = V1 + V2;
             fprintf('%s: \n\tR  = (%7.2f, %7.2f) px\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', v1(1), v1(2), norm(v1))
             fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', v2(1), v2(2), norm(v2))
@@ -384,29 +382,9 @@
             fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(v1*v2'/(norm(v1)*norm(v2))))
             fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(v1*v3'/(norm(v1)*norm(v3))))
         end
-        
-        function val = get.V1(Lat)
-            if isempty(Lat.V)
-                val = [];
-                return
-            end
-            val = Lat.V(1,:);
-        end
 
-        function val = get.V2(Lat)
-            if isempty(Lat.V)
-                val = [];
-                return
-            end
-            val = Lat.V(2,:);
-        end
-
-        function val = get.V3(Lat)
-            if isempty(Lat.V)
-                val = [];
-                return
-            end
-            val = Lat.V1 + Lat.V2;
+        function val = get.V_norm(Lat)
+            val = mean([norm(Lat.V(1, :)), norm(Lat.V(2, :))]);
         end
     end
     
@@ -462,8 +440,8 @@
         end
 
         function checkDiff(Lat, Lat2)
-            V1 = [Lat.V; Lat.V3];
-            V2 = [Lat2.V; Lat2.V3];
+            V1 = [Lat.V; Lat.V(1, :) + Lat.V(2, :)];
+            V2 = [Lat2.V; Lat2.V(1, :) + Lat2.V(2, :)];
             fprintf('Difference between %s and %s:\n', Lat.getStatusLabel(), Lat2.getStatusLabel())
             fprintf('\t R_1 = (%7.2f, %7.2f),\t R_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
                     Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat.R(1) - Lat2.R(1), Lat.R(2) - Lat2.R(2))
