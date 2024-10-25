@@ -36,7 +36,7 @@ classdef Acquisitor < BaseRunner
                 preprocessor = Preprocessor()
                 analyzer = Analyzer(preprocessor)
                 data = DataManager(config, cameras)
-                stat = StatManager(config)
+                stat = StatManager(config, cameras)
             end
             obj@BaseRunner(config);
             obj.CameraManager = cameras;
@@ -50,12 +50,14 @@ classdef Acquisitor < BaseRunner
         % Initialize acquisition
         function init(obj)
             obj.CameraManager.init(obj.Config.ActiveCameras)
-            obj.LayoutManager.init()
+            if ~isempty(obj.LayoutManager)
+                obj.LayoutManager.init()
+            end
             obj.DataManager.init()
             obj.StatManager.init()
             obj.Timer = tic;
             obj.RunNumber = 0;
-            obj.info("Acquisition initialized.\n")
+            obj.info2("Acquisition initialized.")
         end
 
         % Perform single acquisition according to the active sequence
@@ -118,7 +120,7 @@ classdef Acquisitor < BaseRunner
                 obj.CameraManager.abortAcquisition(obj.Config.ActiveCameras)
             end
             if options.verbose
-                obj.info("Sequence completed in %.3f s.\n", toc(timer))
+                obj.info2("Sequence completed in %.3f s.", toc(timer))
             end
         end
 

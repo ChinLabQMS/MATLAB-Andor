@@ -17,7 +17,7 @@ disp(p)
 
 %% Generate background statistics
 p.process()
-disp(p.BkgStat)
+disp(p.BkgSummary)
 
 %% Plot some diagnostic figures
 p.plot("Full_1MHz", "Andor19330")

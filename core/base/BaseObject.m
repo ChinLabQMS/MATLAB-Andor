@@ -11,7 +11,7 @@ classdef BaseObject < handle
 
     methods
         function obj = BaseObject()
-            obj.ConfigurableProp = obj.prop('filter_setaccess', true);
+            obj.ConfigurableProp = obj.prop("type", "configurable");
         end
 
         % Converts the object to a structure, iterating over the fields of the object
@@ -34,14 +34,19 @@ classdef BaseObject < handle
         function list = prop(obj, options)
             arguments
                 obj
-                options.filter_setaccess = false
+                options.type = "non-dependent_visible"
             end
             prop_list = metaclass(obj).PropertyList;
             list = string({prop_list.Name});
-            if options.filter_setaccess
-                f = @(p)(~p.Dependent) && (~p.Hidden) && ((iscell(p.SetAccess) || (p.SetAccess == "public")));
-            else
-                f = @(p)(~p.Dependent) && (~p.Hidden);
+            switch options.type
+                case "configurable"
+                    f = @(p)(~p.Dependent) && (~p.Hidden) && ...
+                    ((iscell(p.SetAccess) || (p.SetAccess == "public")));
+                case "configurable_constant"
+                    f = @(p)(~p.Dependent) && (~p.Hidden) && ((iscell(p.SetAccess) ...
+                    || (p.SetAccess == "public")) || (p.SetAccess == "none"));
+                case "non-dependent_visible"
+                    f = @(p)(~p.Dependent) && (~p.Hidden);
             end
             idx = arrayfun(f, prop_list);
             list = list(idx);
@@ -65,10 +70,12 @@ classdef BaseObject < handle
             else
                 obj.error("Multiple configuration inputs must be in pairs.")
             end
+            names = "";
             for i = 1:2:length(args)
                 if ismember(args{i}, obj.ConfigurableProp)
                     try
                         obj.(args{i}) = args{i + 1};
+                        names = names + " " + args{i};
                     catch me
                         obj.warn2("Error occurs during setting property '%s'\n\t%s", args{i}, me.message)
                     end
@@ -78,6 +85,9 @@ classdef BaseObject < handle
                     obj.warn("%s is not a property of class.", args{i})
                 end
             end
+            if names ~= ""
+                obj.info("Properties configured:%s.", names)
+            end
         end
 
         % Returns the current status label of the object, will be used in
@@ -86,11 +96,17 @@ classdef BaseObject < handle
             label = string(class(obj));
         end
     end
-
+    
+    % Methods for logging
     methods (Access = protected, Sealed)
         % Logs a message with the current time and the class name
         function info(obj, info, varargin)
             fprintf("[%s] %s: %s\n", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
+                obj.getStatusLabel(), sprintf(info, varargin{:}))
+        end
+
+        function info2(obj, info, varargin)
+            cprintf('blue', "[%s] %s: %s\n", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...
                 obj.getStatusLabel(), sprintf(info, varargin{:}))
         end
 

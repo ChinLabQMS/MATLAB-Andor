@@ -1,5 +1,5 @@
 classdef BkgStatGenerator < BaseProcessor
-    %BKGSTATGENERATOR Generate background statistics for image pre-processing
+    %BKGSTATGENERATOR Generate background statistics for image preprocessing
 
     properties (SetAccess = {?BaseObject})
         DataDir = "data/2024/09 September/20240926 camera readout noise/"
@@ -23,6 +23,7 @@ classdef BkgStatGenerator < BaseProcessor
     properties (SetAccess = protected)
         BkgData
         BkgStat
+        BkgSummary
     end
     
     methods
@@ -31,9 +32,10 @@ classdef BkgStatGenerator < BaseProcessor
         end
 
         function process(obj)
-            for field = obj.SettingList
-                obj.BkgStat.(field) = getBkgStat(obj, obj.BkgData.(field));
+            for setting = obj.SettingList
+                obj.BkgStat.(setting) = getBkgStat(obj, obj.BkgData.(setting));
             end
+            obj.BkgSummary = getBkgSummary(obj, obj.BkgStat);
             obj.info("BkgStat generated.")
         end
 
@@ -54,7 +56,8 @@ classdef BkgStatGenerator < BaseProcessor
                 obj.error("No BkgStat available, please process first.")
             end
             data = obj.BkgStat;
-            data.Config = obj.struct(obj.prop("excluded", ["BkgStat", "BkgData"]));
+            data.Config = obj.struct(obj.prop("type", "configurable_constant"));
+            data.Summary = obj.BkgSummary;
             save(filename, "-struct", "data")
             obj.info("BkgStat saved as '%s'.", filename)
         end
@@ -80,11 +83,31 @@ classdef BkgStatGenerator < BaseProcessor
                 var_image = var(images, 0, 3, 'omitmissing');
                 mean_fft = abs(fftshift(fft2(mean_image)));
                 mask = log(mean_fft) > BkgStatGenerator.GetBkgStat_FilterFFTThres;
-                mean_new = abs(ifft2(ifftshift( fftshift(fft2(mean_image)).* mask )));                
+                mean_new = abs(ifft2(ifftshift( fftshift(fft2(mean_image)).* mask )));
+                diff = mean_new - mean_image;
                 stat.(camera).Mean = mean_image;
                 stat.(camera).Var = var_image;
                 stat.(camera).SmoothMean = mean_new;
-                stat.(camera).NoiseVar = mean(var_image,'all');
+                stat.(camera).Diff = diff;
+                stat.(camera).MeanVar = mean(var_image(:), "all", "omitmissing");
+                stat.(camera).DiffVar = var(images - mean_new, 0, "all", "omitmissing");
+            end
+        end
+
+        function summary = getBkgSummary(obj, stat)
+            summary = table('Size',[length(obj.SettingList) * length(obj.CameraList), 4], ...
+                'VariableTypes', ["string", "string", "doublenan", "doublenan"], ...
+                'VariableNames',["Setting", "Camera", "MeanVar", "DiffVar"]);
+            i = 1;
+            for setting = obj.SettingList
+                for camera = obj.CameraList
+                    new.Setting = setting;
+                    new.Camera = camera;
+                    new.MeanVar = stat.(setting).(camera).MeanVar;
+                    new.DiffVar = stat.(setting).(camera).DiffVar;
+                    summary(i, :) = struct2table(new);
+                    i = i + 1;
+                end
             end
         end
     end
@@ -105,7 +128,6 @@ function [new_images, num_outliers, num_elements] = removeOutliers(images, thres
 end
 
 function plotStat(stat, num_images)
-    diff = stat.SmoothMean-stat.Mean;
     v = var(stat.Var, 0, 'all');
     v_predicted = 2*mean(stat.Var, 'all')^2/(num_images-1);
 
@@ -133,15 +155,15 @@ function plotStat(stat, num_images)
     title('SmoothMean')
 
     subplot(3,3,5)
-    imagesc(diff)
+    imagesc(stat.Diff)
     daspect([1 1 1])
     colorbar
     title('Diff: SmoothMean-Mean')
 
     subplot(3,3,6)
-    histogram(diff,'EdgeColor','none')
+    histogram(stat.Diff,'EdgeColor','none')
     legend('diff')
-    title(sprintf('Diff: Mean = %g', mean(diff, 'all')))
+    title(sprintf('Diff: Mean = %g', mean(stat.Diff, 'all')))
 
     subplot(3,3,7)
     histogram(stat.Var(:), 100)
@@ -155,6 +177,6 @@ function plotStat(stat, num_images)
     title('Histogram of Mean/SmoothMean')
 
     subplot(3,3,9)
-    surf(diff,'EdgeColor','none')
+    surf(stat.Diff,'EdgeColor','none')
     title('Diff')
 end

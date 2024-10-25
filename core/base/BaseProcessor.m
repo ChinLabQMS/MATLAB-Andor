@@ -1,4 +1,4 @@
-classdef BaseProcessor < BaseObject
+classdef (Abstract) BaseProcessor < BaseObject
     %BASEPROCESSOR: Base class for all processors. The default behavior is to
     % init the processor upon configuration.
     % Good to have main method packaged to static method if initiating an
@@ -16,11 +16,8 @@ classdef BaseProcessor < BaseObject
         end
     end
 
-    methods (Access = protected, Hidden)
-        function init(obj)
-            % Implement for each subclass
-            obj.info("Processor initialized.")
-        end
+    methods (Access = protected, Abstract)
+        init(obj)
     end
 
 end

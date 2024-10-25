@@ -1,7 +1,7 @@
 classdef ZeluxCamera < Camera
     %ZELUXCAMERA Zelux camera class.
     
-    properties (SetAccess = protected, Hidden)
+    properties (SetAccess = protected)
         CameraSDK
         CameraHandle
         FrameIndex

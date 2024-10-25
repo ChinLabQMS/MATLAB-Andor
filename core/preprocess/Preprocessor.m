@@ -2,16 +2,16 @@ classdef Preprocessor < BaseProcessor
     %PREPROCESSOR Preprocess raw images for further analysis
 
     properties (SetAccess = {?BaseObject})        
-        BackgroundFilePath = 'calibration/BkgStat_20240930.mat'
+        BackgroundFilePath = 'calibration/BkgStat_20241025.mat'
     end
 
     properties (Constant)
         Process_Verbose = false
         Process_CameraList = ["Andor19330", "Andor19331"]
         BackgroundSubtraction_VarName = "SmoothMean"
-        OutlierRemoval_NumMaxPixels = 20
+        OutlierRemoval_NumMaxPixels = 50
         OutlierRemoval_NumMinPixels = 0
-        OutlierRemoval_DiffThres = 50
+        OutlierRemoval_DiffThres = 40
         OutlierRemoval_Warning = true
         OffsetCorrection_RegionWidth = 100
         OffsetCorrection_Warning = true
@@ -39,6 +39,7 @@ classdef Preprocessor < BaseProcessor
                 options.camera_list = Preprocessor.Process_CameraList
             end
             timer = tic;
+            assert(all(isfield(info, ["camera", "label", "config"])))
             if ~ismember(info.camera, options.camera_list)
                 signal = raw;
                 leakage = zeros(size(signal));

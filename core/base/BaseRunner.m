@@ -1,4 +1,4 @@
-classdef BaseRunner < BaseObject
+classdef (Abstract) BaseRunner < BaseObject
     %BASERUNNER Base class for all runners in the framework.
     % Provides basic functionality of setting and displaying configuration.
 

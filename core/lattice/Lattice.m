@@ -372,15 +372,15 @@
                 fprintf('%s: Details unset\n', Lat.getStatusLabel())
                 return
             end
-            v1 = Lat.V(1, :);
-            v2 = Lat.V(2, :);
-            v3 = V1 + V2;
+            V1 = Lat.V(1, :);
+            V2 = Lat.V(2, :);
+            V3 = V1 + V2;
             fprintf('%s: \n\tR  = (%7.2f, %7.2f) px\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
-            fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', v1(1), v1(2), norm(v1))
-            fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', v2(1), v2(2), norm(v2))
-            fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', v3(1), v3(2), norm(v3))
-            fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(v1*v2'/(norm(v1)*norm(v2))))
-            fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(v1*v3'/(norm(v1)*norm(v3))))
+            fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', V1(1), V1(2), norm(V1))
+            fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', V2(1), V2(2), norm(V2))
+            fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', V3(1), V3(2), norm(V3))
+            fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(V1*V2'/(norm(V1)*norm(V2))))
+            fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
         end
 
         function val = get.V_norm(Lat)
