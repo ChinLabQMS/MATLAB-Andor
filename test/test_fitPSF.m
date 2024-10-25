@@ -5,7 +5,9 @@ DataPath = 'calibration/20240903_align_lattice_and_DMD_sparse_exp=1.45s_both_upp
 Data = load(DataPath, "Data").Data;
 
 %% Preprocess the data
-Signal = Preprocessor().processData(Data);
+p = Preprocessor;
+Signal = p.processData(Data);
+
 
 %% Visualize a sample image
 
@@ -23,6 +25,7 @@ Lattice.imagesc(psf)
 
 %%
 [fit_result, GOF, x, y, z] = fitGauss2D(psf);
+[fit_result2, GOF2] = fitRadialGauss2D(psf);
 
 function [average_psf, centroids] = fitPSF(image, thresh_percent, crop_size)
     arguments
@@ -68,4 +71,7 @@ function [average_psf, centroids] = fitPSF(image, thresh_percent, crop_size)
     
     % Display average psf
     average_psf = mean(cropped_spots,3);
+    figure
+    imshow(average_psf,[],'InitialMagnification','fit');
+    title('Average PSF')
 end
