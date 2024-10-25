@@ -23,17 +23,22 @@ Lattice.imagesc(dmd)
 %% Test pre-calibration
 
 dmd_coor = [742, 741; 842, 741; 742, 891];
-zelux_coor = [571, 646; 722, 501; 792, 870];
+zelux_coor_naive = findcenter(mean_Zelux);
+zelux_coor = zelux_coor_naive(:, [2, 1]);
+%zelux_coor = order_points_by_internal_distances(zelux_coor_naive);
+%disp(order_points_by_internal_distances(dmd_coor));
+
+
 V1_zelux = [-23.20, -1.28];
 V2_zelux = [10.54, 20.42];
 V_zelux = [V1_zelux;V2_zelux];
 
-[R_zelux, R_dmd,V_dmd] = correlate_frames(V1_zelux, V2_zelux, zelux_coor, dmd_coor);
+[R_zelux, R_dmd,V_dmd] = correlate_frames(V1_zelux, V2_zelux, zelux_coor, dmd_coor)
+testcoor = ((zelux_coor_naive(2) - R_zelux)/V_zelux)* V_dmd + R_dmd; 
+%disp(zelux_coor_naive(2))testcoor);
 
-text = (([792, 870] - R_zelux)/V_zelux)* V_dmd + R_dmd; 
-disp(text);
+%% Transform index
 
-%Transform index
 % Assume mean_zelux is an n*m array
 % Assume R_zelux is a 1x2 vector, e.g., [Rx, Ry]
 % Assume V_zelux is a 2x2 transformation matrix
@@ -78,5 +83,23 @@ subplot(1, 3, 1)
 Lattice.imagesc(new_zelux)
 subplot(1, 3, 2)
 Lattice.imagesc(dmd)
+
+function points_ordered = order_points_by_internal_distances(points)
+    N = size(points, 1);  % Number of points
+    distances = zeros(N, 1);
+    
+    % Calculate the sum of distances between each point and the others
+    for i = 1:N
+        for j = 1:N
+            if i ~= j
+                distances(i) = distances(i) + norm(points(i,:) - points(j,:));
+            end
+        end
+    end
+    
+    % Sort the points based on the sum of distances (ascending order)
+    [~, order] = sort(distances);
+    points_ordered = points(order, :);
+end
 
 
