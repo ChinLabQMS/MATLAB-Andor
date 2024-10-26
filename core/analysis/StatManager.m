@@ -41,4 +41,10 @@ classdef StatManager < BaseStorage
         end
     end
 
+    methods (Static)
+        function [obj, acq_config, cameras] = struct2obj(stat, varargin)
+            [obj, acq_config, cameras] = BaseStorage.struct2obj(stat, varargin{:}, 'class_name', 'StatManager');
+        end
+    end
+
 end

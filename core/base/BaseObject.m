@@ -142,6 +142,8 @@ classdef BaseObject < handle
             for field = options.prop
                 if isfield(s, field)
                     args.(field) = s.(field);
+                else
+                    obj.warn("Property %s does not exist in structure.", field)
                 end
             end
             obj.configProp(args)

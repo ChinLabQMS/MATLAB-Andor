@@ -140,15 +140,15 @@ classdef Acquisitor < BaseRunner
     end
 
     methods (Static)
-        function [acquisitor, config, cameras] = struct2obj(data_struct, layout, preprocessor, analyzer, options)
+        function [acquisitor, config, cameras] = struct2obj(data, layout, preprocessor, analyzer, options)
             arguments
-                data_struct (1, 1) struct
+                data
                 layout = []
-                preprocessor (1, 1) Preprocessor = Preprocessor()
-                analyzer (1, 1) Analyzer = Analyzer()
-                options.test_mode (1, 1) logical = false
+                preprocessor = Preprocessor()
+                analyzer = Analyzer()
+                options.test_mode = false
             end
-            [data, config, cameras] = DataManager.struct2obj(data_struct, "test_mode", options.test_mode);
+            [data, config, cameras] = DataManager.struct2obj(data, "test_mode", options.test_mode);
             acquisitor = Acquisitor(config, cameras, layout, preprocessor, analyzer, data);
             acquisitor.info("Loaded from structure.")
         end

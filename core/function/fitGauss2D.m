@@ -1,10 +1,11 @@
-function [fit_result, GOF, x, y, z] = fitGauss2D(signal, options)
+function [fit_result, GOF, x, y, z] = fitGauss2D(signal, x_range, y_range, options)
 %FIT2DGAUSSIAN Fit a 2D gaussian on the 2D signal data. It wraps up the
 % built-in fit function with properly-guessed initial parameters for the fit
 % to converge.
 % 
 % [fit_result, x, y, z, output] = fitGauss2D(signal)
-% [fit_result, x, y, z, output] = fitGauss2D(signal, Name, Value)
+% [fit_result, x, y, z, output] = fitGauss2D(signal, x_range, y_range)
+% [fit_result, x, y, z, output] = fitGauss2D(_, Name, Value)
 % 
 %Available name-value pairs:
 % "x_range": default is 1:size(signal, 1)
@@ -16,17 +17,10 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, options)
 
     arguments
         signal (:, :, :) double
-        options.x_range = 1: size(signal, 1)
-        options.y_range = 1: size(signal, 2)
+        x_range = 1: size(signal, 1)
+        y_range = 1: size(signal, 2)
         options.offset = 'c'
         options.cross_term logical = false
-    end
-
-    if isscalar(options.x_range)
-        options.x_range = 1:options.x_range;
-    end
-    if isscalar(options.y_range)
-        options.y_range = 1:options.y_range;
     end
     
     % Define 2D Gaussian fit type
@@ -81,10 +75,10 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, options)
 
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal);
-    x_diff = options.x_range(2) - options.x_range(1);
-    y_diff = options.y_range(2) - options.y_range(1);
+    x_diff = x_range(2) - x_range(1);
+    y_diff = y_range(2) - y_range(1);
 
-    [y, x, z] = prepareSurfaceData(options.y_range, options.x_range, signal);
+    [y, x, z] = prepareSurfaceData(y_range, x_range, signal);
     [max_signal, max_index] = max(signal(:));
     min_signal = min(signal(:));
     diff = max_signal - min_signal;
@@ -92,9 +86,9 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, options)
     max_y = y(max_index);
 
     % Initial guess for the fit parameters
-    upper = [5*diff, x_size, y_size, options.x_range(end), options.y_range(end), ...
+    upper = [5*diff, x_size, y_size, x_range(end), y_range(end), ...
              max_signal, max_signal/x_size, max_signal/y_size, Inf];
-    lower = [0, 0.1*x_diff, 0.1*y_diff, options.x_range(1), options.y_range(1), ...
+    lower = [0, 0.1*x_diff, 0.1*y_diff, x_range(1), y_range(1), ...
              min_signal-0.1*diff, -max_signal/x_size, -max_signal/y_size, -Inf];    
     start = [diff, x_size/10, y_size/10, max_x, max_y, ...
              min_signal, 0, 0, 0];

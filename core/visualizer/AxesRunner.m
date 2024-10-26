@@ -80,8 +80,8 @@ classdef AxesRunner < BaseRunner
                 case "None"
                 case "Lattice"
                     Lat = info.Lattice.(obj.Config.CameraName);
-                    obj.AddonHandle = Lat.plot(Lattice.prepareSite("hex", "latr", 20), ...
-                        'ax', obj.AxesHandle, 'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
+                    obj.AddonHandle = Lat.plot(obj.AxesHandle, Lattice.prepareSite("hex", "latr", 20), ...
+                        'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
                 case "Lattice All"
             end
         end

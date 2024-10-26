@@ -2,7 +2,7 @@ function [signal_sum, x_frame, y_size] = getSignalSum(signal, num_frames, option
 arguments
     signal 
     num_frames 
-    options.first_only = false 
+    options.first_only = false
 end
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal, [1, 2]);

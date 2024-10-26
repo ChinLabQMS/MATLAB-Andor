@@ -21,6 +21,7 @@ classdef (Abstract) BaseStorage < BaseObject
     properties (SetAccess = protected)
         CurrentIndex = 0
         MaxIndex
+        Timestamp
     end
 
     properties (Dependent, Hidden)
@@ -46,7 +47,7 @@ classdef (Abstract) BaseStorage < BaseObject
             end
             if options.check_incomplete && (obj.CurrentIndex < obj.MaxIndex)
                 if options.completed_only
-                    obj.warn("Incomplete dataset, only %d / %d, Only completed data is saved.", ...
+                    obj.warn("Incomplete dataset, only %d / %d, only completed data is saved.", ...
                         obj.CurrentIndex, obj.MaxIndex)
                 else
                     obj.warn("Incomplete dataset, only %d / %d.", ...
@@ -54,6 +55,10 @@ classdef (Abstract) BaseStorage < BaseObject
                 end
             end
             s.AcquisitionConfig = obj.AcquisitionConfig.struct();
+            s.Timestamp = obj.Timestamp;
+            if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
+                s.Timestamp = s.Timestamp(1: obj.CurrentIndex);
+            end
             for camera = obj.ConfigurableProp
                 if isempty(obj.(camera))
                     continue
@@ -75,6 +80,7 @@ classdef (Abstract) BaseStorage < BaseObject
         function init(obj)
             obj.CurrentIndex = 0;
             obj.initMaxIndex();
+            obj.Timestamp = NaT(obj.MaxIndex, 1);
             for camera = obj.ConfigurableProp
                 obj.(camera) = [];
             end
@@ -116,6 +122,7 @@ classdef (Abstract) BaseStorage < BaseObject
                 return
             end
             obj.CurrentIndex = obj.CurrentIndex + 1;
+            obj.Timestamp(obj.CurrentIndex) = datetime;
             for camera = string(fields(new))'
                 for label = string(fields(new.(camera)))'
                     if obj.CurrentIndex > obj.MaxIndex
