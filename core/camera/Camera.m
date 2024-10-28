@@ -78,17 +78,20 @@ classdef Camera < BaseRunner
         end
 
         function config(obj, varargin)
-            obj.abortAcquisition()
             config@BaseRunner(obj, varargin{:})
-            obj.applyConfig()
+            if obj.Initialized
+                obj.abortAcquisition()
+                obj.applyConfig()
+            end
         end
 
-        function startAcquisition(obj, options)
+        function startAcquisition(obj, info, options)
             arguments
                 obj
-                options.label = "Test"
+                info = struct('label', 'Test')
                 options.verbose (1, 1) logical = false
             end
+            assert(all(isfield(info, "label")))
             obj.checkInitialized()
             if obj.NumExpectedFrames < obj.Config.MaxQueuedFrames
                 obj.startAcquisitionCamera()  % Start acquisition
@@ -96,11 +99,11 @@ classdef Camera < BaseRunner
             else
                 obj.abortAcquisition()
                 obj.error("[%s] Too many start commands before retriving data, MaxQueuedFrames = %d.", ...
-                    options.label, obj.Config.MaxQueuedFrames)
+                    info.label, obj.Config.MaxQueuedFrames)
             end
             if options.verbose
                 obj.info("[%s] Acquisition started for frame number = %d.", ...
-                    options.label, obj.NumExpectedFrames)
+                    info.label, obj.NumExpectedFrames)
             end
         end
         
@@ -110,10 +113,10 @@ classdef Camera < BaseRunner
             obj.NumExpectedFrames = 0;
         end
 
-        function [image, status] = acquire(obj, options)
+        function [image, status] = acquire(obj, info, options)
             arguments
                 obj
-                options.label (1, 1) string = "Test"
+                info = struct('label', "Test")
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 10
                 options.flag_immediate (1, 1) logical = false
@@ -121,18 +124,19 @@ classdef Camera < BaseRunner
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
+            assert(all(isfield(info, "label")))
             obj.checkInitialized()
             if obj.NumExpectedFrames == 0
-                obj.error("[%s] Expected number of frame is 0, please start acquisition before retriving data.", options.label)
+                obj.error("[%s] Expected number of frame is 0, please start acquisition before retriving data.", info.label)
             end
             status = "good";
             num_available = obj.getNumberNewImages();
             if num_available > obj.NumExpectedFrames
                 status = "delayed";
-                obj.warn2("[%s] More than expected images are available, check if analysis falls behind acquisition.", options.label)
+                obj.warn2("[%s] More than expected images are available, check if analysis falls behind acquisition.", info.label)
             elseif num_available == obj.NumExpectedFrames && options.flag_immediate
                 status = "immediate";
-                obj.warn2("[%s] Image is immediately available upon acquire.", options.label)
+                obj.warn2("[%s] Image is immediately available upon acquisition.", info.label)
             else
                 while toc(timer) < options.timeout && (num_available < obj.NumExpectedFrames)
                     num_available = obj.getNumberNewImages();
@@ -142,25 +146,25 @@ classdef Camera < BaseRunner
                 if elapsed >= options.timeout
                     image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
                     status = "timeout";
-                    obj.warn2("[%s] Acquisition timed out.", options.label)
+                    obj.warn2("[%s] Acquisition timed out.", info.label)
                     obj.abortAcquisitionCamera()
                     return
                 elseif elapsed < options.min_wait
                     status = "short";
-                    obj.warn2("[%s] Elapsed time too short for this acquisition.", options.label)
+                    obj.warn2("[%s] Elapsed time too short for this acquisition.", info.label)
                 end
             end
-            [image, new_status] = obj.acquireImage(options.label);
+            [image, new_status] = obj.acquireImage(info.label);
             if status == "good" && new_status ~= "good"
                 status = new_status;
             end
             obj.NumExpectedFrames = obj.NumExpectedFrames - 1;
             if any(image(:) == obj.Config.MaxPixelValue)
                 obj.warn("[%s] Image is saturated, max pixel value = %d.", ...
-                    options.label, obj.Config.MaxPixelValue)
+                    info.label, obj.Config.MaxPixelValue)
             end
             if options.verbose
-                obj.info("[%s] Acquisition completed in %4.2f s.", options.label, toc(timer))
+                obj.info("[%s] Acquisition completed in %4.2f s.", info.label, toc(timer))
             end
         end
     end
@@ -186,9 +190,9 @@ classdef Camera < BaseRunner
                 end
                 if ~isequal(size(obj.ExampleImage.(label), [1, 2]), [obj.Config.XPixels, obj.Config.YPixels])
                     obj.warn("[%s] Example image size does not match current camera configuration.", label)
-                    obj.ExampleImage = struct.empty;
-                    break
+                    obj.ExampleImage = struct.empty;                 
                 end
+                break
             end
         end
 

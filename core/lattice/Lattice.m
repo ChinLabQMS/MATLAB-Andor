@@ -6,13 +6,17 @@
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
-        CalibV_RFit = 7
+        CalibV_RFitFFT = 7
+        CalibV_CalibR = true
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
+        CalibO_CalibR = true
         CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
         CalibO_DistanceMetric = "cosine"
-        CalibO_Verbose = false
+        CalibO_NumScores = 5
+        CalibO_VerboseStep = false
+        CalibO_Verbose = true
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false
     end
@@ -112,7 +116,7 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function varargout = calibrateR(Lat, signal, x_range, y_range, optionsR)
+        function stat = calibrateR(Lat, signal, x_range, y_range, optionsR)
             arguments
                 Lat
                 signal
@@ -131,9 +135,11 @@
             end
             % Update Lat.R
             Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
-            % Use 4 equal size sub-area to get uncertainty
-            if optionsR.bootstrapping && nargout == 1
-                varargout{1} = getSubStat(Lat, signal_modified, x_range, y_range);
+            % Use 4 equal size sub-area to get statistics
+            if optionsR.bootstrapping
+                stat = getSubStat(Lat, signal_modified, x_range, y_range);
+            else
+                stat = [];
             end
             if optionsR.plot_diagnosticR
                 figure
@@ -143,14 +149,27 @@
             end
         end
         
+        % Calibrate lattice center (R) by FFT phase with cropped signal
+        function stat = calibrateRCrop(Lat, signal, crop_R, varargin)
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
+            stat = Lat.calibrateR(signal, x_range, y_range, varargin{:});
+        end
+
+        % Calibrate lattice center (R) by FFT phase with cropped signal,
+        % crop radius is in the unit of lattice spacing
+        function stat = calibrateRCropSite(Lat, signal, crop_R_site, varargin)
+            stat = calibrateRCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:});
+        end
+        
         % Calibrate lattice vectors with FFT, then lattice centers
-        function varargout = calibrate(Lat, signal, x_range, y_range, optionsV, optionsR)
+        function stat = calibrate(Lat, signal, x_range, y_range, optionsV, optionsR)
             arguments
                 Lat
                 signal
                 x_range {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
-                optionsV.R_fit = Lat.CalibV_RFit
+                optionsV.R_fit = Lat.CalibV_RFitFFT
+                optionsV.calib_R = Lat.CalibV_CalibR
                 optionsV.warning_rsquared = Lat.CalibV_WarnRSquared
                 optionsV.warning_latnorm_thres = Lat.CalibV_WarnLatNormThres                
                 optionsV.plot_diagnosticV = Lat.CalibV_PlotDiagnostic
@@ -159,7 +178,7 @@
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
             end
-            LatInit = Lat.struct(["K", "V", "R"]);
+            LatInit = Lat.struct();
             signal_fft = abs(fftshift(fft2(signal)));
             xy_size = size(signal);
             % Start from initial calibration, find FFT peaks
@@ -174,8 +193,12 @@
             % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             % Re-calibrate lattice centers to snap it into grid
-            argsR = namedargs2cell(optionsR);
-            Lat.calibrateR(signal, x_range, y_range, argsR{:})
+            if optionsV.calib_R
+                argsR = namedargs2cell(optionsR);
+                stat = Lat.calibrateR(signal, x_range, y_range, argsR{:});
+            else
+                stat = [];
+            end
             % Compute lattice vector norm changes
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
             if any(VDis > optionsV.warning_latnorm_thres)
@@ -189,9 +212,19 @@
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
-            if nargout == 1  % return new FFT peak positions
-                varargout{1} = peak_pos;
-            end
+        end
+
+        % Calibrate lattice vectors with FFT, then lattice centers with
+        % cropped signal
+        function stat = calibrateCrop(Lat, signal, crop_R, varargin)
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
+            stat = Lat.calibrate(signal, x_range, y_range, varargin{:});
+        end
+
+        % Calibrate lattice vectors with FFT, then lattice centers with
+        % cropped signal, crop radius is in the unit of lattice spacing
+        function stat = calibrateCropSite(Lat, signal, crop_R_site, varargin)
+            stat = calibrateCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:});
         end
 
         % Convert coordinates in Lat space to Lat2 space
@@ -235,7 +268,7 @@
         end
         
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
-        function varargout = calibrateO(Lat, Lat2, signal, signal2, ...
+        function best_transformed = calibrateO(Lat, Lat2, signal, signal2, ...
                 x_range, y_range, x_range2, y_range2, options)
             arguments
                 Lat
@@ -246,13 +279,21 @@
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 x_range2 {mustBeValidRange(signal2, 1, x_range2)} = 1:size(signal2, 1)
                 y_range2 {mustBeValidRange(signal2, 2, y_range2)} = 1:size(signal2, 2)
+                options.calib_R = Lat.CalibO_CalibR
                 options.sites = Lat.CalibO_Sites
                 options.metric = Lat.CalibO_DistanceMetric
                 options.debug = Lat.CalibO_Debug
+                options.verbose_step = Lat.CalibO_VerboseStep
                 options.verbose = Lat.CalibO_Verbose
+                options.num_scores = Lat.CalibO_NumScores
                 options.plot_diagnosticO = Lat.CalibO_PlotDiagnostic
             end
-            Lat.info("Current lattice center = (%4.3f px, %4.3f px).", Lat.R(1), Lat.R(2))
+            Lat.checkInitialized()
+            Lat2.checkInitialized()
+            if options.calib_R
+                Lat.calibrateR(signal, x_range, y_range);
+                Lat2.calibrateR(signal2, x_range2, y_range2);
+            end
             R_init = Lat.R;
             num_sites = size(options.sites, 1);
             score = table('Size', [num_sites, 3], ...
@@ -270,22 +311,19 @@
                     best_score = score.SignalDist(i);
                     best_transformed = transformed;
                 end
-                if options.verbose
-                    Lat.info("Trying site (%3d, %3d) at (%5.2f px, %5.2f px), score is %4.3f.", ...
+                if options.verbose_step
+                    Lat.info("Trying site (%3d, %3d) at (%5.2f px, %5.2f px), score is %7.3f.", ...
                         score.Site(i, 1), score.Site(i, 2), score.Center(i, 1), score.Center(i, 2), score.SignalDist(i))
                 end
             end
-            [min_val, min_idx] = mink(score.SignalDist, 2);
+            options.num_scores = min(options.num_scores, num_sites);
+            [min_val, min_idx] = mink(score.SignalDist, options.num_scores);
             best = score(min_idx(1), :);
-            best2 = score(min_idx(2), :);
             Lat.R = best.Center;
-            Lat.info("Lattice center is cross-calibrated to %s.", Lat2.ID)
-            Lat.info("Min dist is %4.3f at site (%d, %d) = (%4.3f px, %4.3f px).", ...
-                min_val(1), best.Site(1), best.Site(2), best.Center(1), best.Center(2))
-            Lat.info("Min2 dist is %4.3f at site (%d, %d) = (%4.3f px, %4.3f px).", ...
-                min_val(2), best2.Site(1), best2.Site(2), best2.Center(1), best2.Center(2))
-            if nargout == 1
-                varargout{1} = best_transformed;
+            if options.verbose
+                Lat.info("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
+                    Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist)
+                Lat.info("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)))
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
@@ -312,8 +350,26 @@
             end
         end
 
+        % Calibrate the origin of Lat to Lat2 based on signal overlapping,
+        % with cropped signal
+        function best_transformed = calibrateOCrop(Lat, Lat2, signal, signal2, ...
+                crop_R, crop_R2, varargin)
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
+            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R2);
+            best_transformed = Lat.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:});
+        end
+
+        % Calibrate the origin of Lat to Lat2 based on signal overlapping,
+        % with cropped signal, crop radius is in the unit of lattice
+        % spacing
+        function best_transformed = calibrateOCropSite(Lat, Lat2, signal, signal2, ...
+                crop_R_site, crop_R2_site, varargin)
+            best_transformed = calibrateOCrop(Lat, Lat2, signal, signal2, ...
+                crop_R_site * Lat.V_norm, crop_R2_site * Lat2.V_norm, varargin{:});
+        end
+
         % Overlaying the lattice sites
-        function varargout = plot(Lat, varargin, options1, options2)
+        function varargout = plot(Lat, varargin, opt1, opt2)
             arguments
                 Lat
             end
@@ -321,15 +377,15 @@
                 varargin
             end
             arguments
-                options1.filter = true
-                options1.x_lim = [1, 1440]
-                options1.y_lim = [1, 1440]
-                options1.full_range = false
-                options2.color = "r"
-                options2.norm_radius = 0.1
-                options2.add_origin = true
-                options2.origin_radius = 0.5
-                options2.line_width = 0.5
+                opt1.filter = true
+                opt1.x_lim = [1, 1440]
+                opt1.y_lim = [1, 1440]
+                opt1.full_range = false
+                opt2.color = "r"
+                opt2.norm_radius = 0.1
+                opt2.add_origin = true
+                opt2.origin_radius = 0.5
+                opt2.line_width = 0.5
             end
             if isempty(varargin)
                 ax = gca();
@@ -343,19 +399,20 @@
             else
                 Lat.error("Unsupported number of input positional arguments.")
             end
-            options1.remove_origin = options2.add_origin;
-            args = namedargs2cell(options1);
+            Lat.checkInitialized()
+            opt1.remove_origin = opt2.add_origin;
+            args = namedargs2cell(opt1);
             corr = Lat.convert2Real(sites, args{:});
             % Use a different radius to display origin
-            if options2.add_origin
-                radius = [repmat(options2.norm_radius * Lat.V_norm, size(corr, 1), 1);
-                          options2.origin_radius * Lat.V_norm];
+            if opt2.add_origin
+                radius = [repmat(opt2.norm_radius * Lat.V_norm, size(corr, 1), 1);
+                          opt2.origin_radius * Lat.V_norm];
                 corr = [corr; Lat.convert2Real([0, 0])];
             else
-                radius = options2.norm_radius * Lat.V_norm;
+                radius = opt2.norm_radius * Lat.V_norm;
             end
             h = viscircles(ax, corr(:, 2:-1:1), radius, ...
-                'Color', options2.color, 'EnhanceVisibility', false, 'LineWidth', options2.line_width);
+                'Color', opt2.color, 'EnhanceVisibility', false, 'LineWidth', opt2.line_width);
             % Output the handle to the group of circles
             if nargout == 1
                 varargout{1} = h;
@@ -370,6 +427,7 @@
                 options.origin = Lat.R
                 options.scale = 1
             end
+            Lat.checkInitialized()
             cObj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
             hold(ax,'on');
             quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(1, 2), options.scale * Lat.V(1, 1), "off", ...
@@ -382,18 +440,13 @@
         
         % Convert the current K vector to an expected FFT peak location
         function peak_pos = convert2FFTPeak(Lat, xy_size)
-            if ~isempty(Lat.K)
-                peak_pos = convertK2FFTPeak(xy_size, Lat.K);
-            else
-                Lat.error("Lattice vector is not initialized.")
-            end
+            Lat.checkInitialized()
+            peak_pos = convertK2FFTPeak(xy_size, Lat.K);
         end
         
         % Convert FFT phase to lattice center R
         function R = convertFFTPhase2R(Lat, signal, x_range, y_range)
-            if isempty(Lat.K)
-                Lat.error("Please calibrate lattice vector before calibrating center.")
-            end
+            Lat.checkInitialized()
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);
@@ -406,8 +459,8 @@
 
         % Display lattice calibration details
         function disp(Lat)
-            if isempty(Lat.V)
-                fprintf('%s: Details unset\n', Lat.getStatusLabel())
+            if isempty(Lat.K)
+                fprintf('%s: Not initialized.\n', Lat.getStatusLabel())
                 return
             end
             V1 = Lat.V(1, :);
@@ -424,9 +477,19 @@
         function val = get.V_norm(Lat)
             val = mean([norm(Lat.V(1, :)), norm(Lat.V(2, :))]);
         end
+
+        function s = struct(Lat)
+            s = struct@BaseObject(Lat, ["K", "V", "R", "ID"]);
+        end
     end
     
     methods (Access = protected, Hidden)
+        function checkInitialized(Lat)
+            if isempty(Lat.K)
+                Lat.error("Lattice details are not initialized.")
+            end
+        end
+
         function label = getStatusLabel(Lat)
             label = sprintf("%s (%s)", class(Lat), Lat.ID);
         end
@@ -556,10 +619,12 @@ function res = getSubStat(Lat, signal, x_range, y_range)
     for i = 1:length(s)
         res.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
     end
+    res.R1 = Lat.R(1);
     res.R1_Mean = mean(res.R_Sub(:, 1));
     res.R1_Max = max(res.R_Sub(:, 1));
     res.R1_Min = min(res.R_Sub(:, 1));
     res.R1_Std = std(res.R_Sub(:, 1));
+    res.R2 = Lat.R(2);
     res.R2_Mean = mean(res.R_Sub(:, 2));
     res.R2_Max = max(res.R_Sub(:, 2));
     res.R2_Min = min(res.R_Sub(:, 2));

@@ -1,12 +1,14 @@
 classdef (Abstract) BaseProcessor < BaseObject
-    %BASEPROCESSOR: Base class for all processors. The default behavior is to
-    % init the processor upon configuration.
-    % Good to have main method packaged to static method if initiating an
-    % object is not preferred.
+    %BASEPROCESSOR Base class for all processors. 
+    % The default behavior is to init the processor upon configuration.
 
     methods
-        function obj = BaseProcessor(varargin)
-            obj.configProp(varargin{:})
+        function obj = BaseProcessor()
+            % Dummy initialization to make sure all the set methods are
+            % invoked for configurable property upon initiating object
+            for p = obj.ConfigurableProp
+                obj.(p) = obj.(p);
+            end
             obj.init()
         end
 
@@ -17,6 +19,7 @@ classdef (Abstract) BaseProcessor < BaseObject
     end
 
     methods (Access = protected, Abstract)
+        % Initialize the processor after configuration
         init(obj)
     end
 

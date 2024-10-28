@@ -13,13 +13,12 @@ classdef (Abstract) BaseStorage < BaseObject
     
     % Handle to track acquisition settings
     properties (SetAccess = immutable)
-        StorageType
         AcquisitionConfig
         CameraManager
     end
 
     properties (SetAccess = protected)
-        CurrentIndex = 0
+        CurrentIndex
         MaxIndex
         Timestamp
     end
@@ -37,7 +36,15 @@ classdef (Abstract) BaseStorage < BaseObject
             obj.AcquisitionConfig = config;
             obj.CameraManager = cameras;
         end
-    
+
+        function usage = get.MemoryUsage(obj)
+            obj.checkInitialized()
+            s = obj.struct("check_incomplete", false, "completed_only", false); %#ok<NASGU>
+            usage = whos('s').bytes / 1024^2;
+        end
+    end
+
+    methods (Sealed)    
         % Override struct in BaseObject
         function s = struct(obj, options)
             arguments
@@ -45,12 +52,13 @@ classdef (Abstract) BaseStorage < BaseObject
                 options.check_incomplete = true
                 options.completed_only = true
             end
+            obj.checkInitialized()
             if options.check_incomplete && (obj.CurrentIndex < obj.MaxIndex)
                 if options.completed_only
-                    obj.warn("Incomplete dataset, only %d / %d, only completed data is saved.", ...
+                    obj.warn("Incomplete dataset (%d / %d), only completed data is saved.", ...
                         obj.CurrentIndex, obj.MaxIndex)
                 else
-                    obj.warn("Incomplete dataset, only %d / %d.", ...
+                    obj.warn("Incomplete dataset (%d / %d).", ...
                         obj.CurrentIndex, obj.MaxIndex)
                 end
             end
@@ -114,13 +122,15 @@ classdef (Abstract) BaseStorage < BaseObject
         function add(obj, new, options)
             arguments
                 obj
-                new
+                new = []
                 options.verbose = false
             end
             timer = tic;
             if isempty(new)
+                obj.warn("New data to add is empty.")
                 return
             end
+            obj.checkInitialized()
             obj.CurrentIndex = obj.CurrentIndex + 1;
             obj.Timestamp(obj.CurrentIndex) = datetime;
             for camera = string(fields(new))'
@@ -135,10 +145,29 @@ classdef (Abstract) BaseStorage < BaseObject
                 obj.info('New data added to index %d in %.3f s', obj.CurrentIndex, toc(timer))
             end
         end
-        
-        function usage = get.MemoryUsage(obj)
-            s = obj.struct("check_incomplete", false, "completed_only", false); %#ok<NASGU>
-            usage = whos('s').bytes / 1024^2;
+
+        function config(obj, data, options)
+            arguments
+                obj
+                data
+                options.config_cameras = true
+                options.config_acq = true
+            end
+            if options.config_acq
+                obj.AcquisitionConfig.config(data.AcquisitionConfig)
+            end
+            if options.config_cameras
+                obj.CameraManager.config(data)
+            end
+            obj.initMaxIndex()
+            for camera = obj.ConfigurableProp
+                if isfield(data, camera) || isprop(data, camera)
+                    obj.(camera) = data.(camera);
+                else
+                    obj.(camera) = [];
+                end
+            end
+            obj.CurrentIndex = obj.MaxIndex;
         end
     end
 
@@ -151,33 +180,32 @@ classdef (Abstract) BaseStorage < BaseObject
         addNew(obj, new_data, camera, label)
     end
 
+    methods (Access = protected, Sealed, Hidden)
+        function checkInitialized(obj)
+            if isempty(obj.CurrentIndex)
+                obj.error("Storage is not initialized.")
+            end
+        end
+    end
+
     methods (Static)
-        function [obj, acq_config, cameras] = struct2obj(data, acq_config, cameras, options)
+        function [obj, acq_config, cameras] = struct2obj(class_name, data, acq_config, cameras, options)
             arguments
-                data (1, 1) struct
+                class_name
+                data
                 acq_config = []
                 cameras = []
-                options.class_name
-                options.test_mode (1, 1) logical = true
+                options.test_mode = true
             end
             if isempty(acq_config)
                 acq_config = AcquisitionConfig.struct2obj(data.AcquisitionConfig);
-            else
-                acq_config.configProp(data.AcquisitionConfig);
             end
             if isempty(cameras)
                 cameras = CameraManager.struct2obj(data, "test_mode", options.test_mode);
-            else
-                for camera = cameras.prop()
-                    cameras.(camera).config(data.(camera).Config);
-                end
             end
-            obj = feval(options.class_name, acq_config, cameras);
-            obj.initMaxIndex()
-            for camera = acq_config.ActiveCameras
-                obj.(camera) = data.(camera);
-            end
-            obj.CurrentIndex = obj.MaxIndex;
+            obj = feval(class_name, acq_config, cameras);
+            obj.config(data)
+            obj.info("Object created from structure.")
         end
     end
 

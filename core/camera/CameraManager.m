@@ -8,6 +8,8 @@ classdef CameraManager < BaseObject
     end
 
     methods
+        % When initiating in test mode, it creates cameras handle using 
+        % 'Camera' class. When not in test mode, it creates actual cameras.
         function obj = CameraManager(options)
             arguments
                 options.Andor19330 = AndorCameraConfig()
@@ -25,33 +27,34 @@ classdef CameraManager < BaseObject
                 obj.Zelux = ZeluxCamera(0, options.Zelux);
             end
         end
-
+        
+        % Initialize selected cameras
         function init(obj, cameras)
             arguments
                 obj
-                cameras = obj.prop()
+                cameras = obj.VisibleProp
             end
             for camera = cameras
                 obj.(camera).init()
             end
         end
-
-        function close(obj)
-            for camera = obj.prop()
-                obj.(camera).close()
+    
+        % Configure cameras with a structure (similar to Data)
+        function config(obj, data)
+            for camera = obj.VisibleProp
+                if (isfield(data, camera) || isprop(data, camera)) && isfield(data.(camera), "Config")
+                    obj.(camera).config(data.(camera).Config)
+                else
+                    obj.warn("Unable to configure camera [%s], not existing in data.", camera)
+                end
             end
         end
-
-        function config(obj, varargin)
-            for camera = obj.prop()
-                obj.(camera).config(varargin{:})
-            end
-        end
-
+        
+        % Abort acquisitions in selected cameras
         function abortAcquisition(obj, cameras)
             arguments
                 obj
-                cameras = obj.prop()
+                cameras = obj.VisibleProp
             end
             for camera = cameras
                 obj.(camera).abortAcquisition()
@@ -76,7 +79,7 @@ classdef CameraManager < BaseObject
                 args = [args, {'Zelux', ZeluxCameraConfig.struct2obj(data.Zelux.Config)}];
             end
             obj = CameraManager(args{:});
-            obj.info("New object created from structure.")
+            obj.info("Object created from structure.")
         end
     end
 

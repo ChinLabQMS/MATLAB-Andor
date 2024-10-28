@@ -1,6 +1,7 @@
 classdef (Abstract) BaseRunner < BaseObject
     %BASERUNNER Base class for all runners in the framework.
     % Provides basic functionality of setting and displaying configuration.
+    % The default behavior is to only configure the attached Config
 
     properties (SetAccess = immutable)
         Config
@@ -16,7 +17,8 @@ classdef (Abstract) BaseRunner < BaseObject
         
         % Change the configuration in obj.Config
         function config(obj, varargin)
-            obj.Config.configProp(varargin{:})
+            names = obj.Config.configProp(varargin{:});
+            obj.info("Configured [%s]", names)
         end
 
         function disp(obj)

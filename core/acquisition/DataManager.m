@@ -40,7 +40,7 @@ classdef DataManager < BaseStorage
 
     methods (Static)
         function [obj, acq_config, cameras] = struct2obj(data, varargin)
-            [obj, acq_config, cameras] = BaseStorage.struct2obj(data, varargin{:}, 'class_name', 'DataManager');
+            [obj, acq_config, cameras] = BaseStorage.struct2obj('DataManager', data, varargin{:});
         end
     end
 

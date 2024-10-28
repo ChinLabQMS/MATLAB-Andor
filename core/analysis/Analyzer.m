@@ -1,6 +1,6 @@
 classdef Analyzer < BaseProcessor
+    %ANALYZER Live analyzer
     
-    % Configurable properties through config method
     properties (SetAccess = {?BaseObject})
         LatCalibFilePath = "calibration/LatCalib_20241002.mat"
     end
@@ -8,31 +8,22 @@ classdef Analyzer < BaseProcessor
     properties (SetAccess = protected)
         LatCalib
     end
-
-    properties (SetAccess = immutable)
-        Preprocessor
-    end
     
     methods
-        function obj = Analyzer(preprocessor)
-            arguments
-                preprocessor = Preprocessor()
-            end
-            obj@BaseProcessor()
-            obj.Preprocessor = preprocessor;
+        function set.LatCalibFilePath(obj, path)
+            obj.LatCalibFilePath = path;
+            obj.loadLatCalibFile()
         end
 
         function res = analyze(obj, signal, info, options)
             arguments
                 obj
                 signal
-                info.processes
-                info.camera
-                info.label
-                info.config
+                info
                 options.verbose = false
             end
             timer = tic;
+            assert(all(isfield(info, ["camera", "label", "config", "processor"])))
             res = struct();
             info.lattice = obj.LatCalib;
             for p = string(fields(info.processes))'
@@ -42,16 +33,24 @@ classdef Analyzer < BaseProcessor
                 obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))
             end
         end
+    end
 
-        function analysis = analyzeSingleData(obj, data)
+    methods (Access = protected)
+        function analysis = analyzeSingleLabel(obj, signal, info, options)
         end
 
-        function analysis = analyzeData(obj, data)
+        function analysis = analyzeSingleData(obj, data, options)
+        end
+
+        function analysis = analyzeData(obj, data, options)
         end
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
+        function init(~)
+        end
+
+        function loadLatCalibFile(obj)
             obj.LatCalib = load(obj.LatCalibFilePath);
             obj.info("Lattice calibration file loaded.")
         end

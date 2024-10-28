@@ -44,7 +44,7 @@ classdef AndorCameraConfig < BaseObject
 
     methods (Static)
         function obj = struct2obj(s, varargin)
-            obj = BaseRunner.struct2obj(s, AndorCameraConfig(), varargin{:});
+            obj = BaseObject.struct2obj(s, AndorCameraConfig(), varargin{:});
         end
     end
     

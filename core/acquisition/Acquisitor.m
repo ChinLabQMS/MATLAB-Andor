@@ -1,4 +1,4 @@
-classdef Acquisitor < BaseRunner
+classdef Acquisitor < BaseObject
 
     properties (SetAccess = immutable)
         CameraManager
@@ -38,7 +38,6 @@ classdef Acquisitor < BaseRunner
                 data = DataManager(config, cameras)
                 stat = StatManager(config, cameras)
             end
-            obj@BaseRunner(config);
             obj.CameraManager = cameras;
             obj.LayoutManager = layouts;
             obj.Preprocessor = preprocessor;
@@ -64,13 +63,13 @@ classdef Acquisitor < BaseRunner
         function acquire(obj, options)
             arguments
                 obj
-                options.verbose_start = Acquisitor.Acquire_VerboseStart
-                options.verbose_acquire = Acquisitor.Acquire_VerboseAcquire
-                options.verbose_preprocess = Acquisitor.Acquire_VerbosePreprocess
-                options.verbose_analysis = Acquisitor.Acquire_VerboseAnalysis
-                options.verbose_layout = Acquisitor.Acquire_VerboseLayout
-                options.verbose_storage = Acquisitor.Acquire_VerboseStorage
-                options.verbose = Acquisitor.Acquire_Verbose
+                options.verbose_start = obj.Acquire_VerboseStart
+                options.verbose_acquire = obj.Acquire_VerboseAcquire
+                options.verbose_preprocess = obj.Acquire_VerbosePreprocess
+                options.verbose_analysis = obj.Acquire_VerboseAnalysis
+                options.verbose_layout = obj.Acquire_VerboseLayout
+                options.verbose_storage = obj.Acquire_VerboseStorage
+                options.verbose = obj.Acquire_Verbose
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;

@@ -1,7 +1,7 @@
-classdef AcquisitionConfig < BaseObject
+classdef AcquisitionConfig < BaseProcessor
     
     properties (SetAccess = {?BaseObject})
-        SequenceTable {SequenceRegistry.mustBeValidSequence} = SequenceRegistry.Full4Analysis
+        SequenceTable = SequenceRegistry.Full4Analysis
         NumAcquisitions = 20
         NumStatistics = 2000
         Refresh = 0.01
@@ -24,10 +24,6 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods
-        function obj = AcquisitionConfig()
-            obj.SequenceTable = obj.SequenceTable;
-        end
-
         function contents = parseAnalysis2Content(obj, index_str)
             res = split(index_str, ": ");
             [camera, label] = res{:};
@@ -40,6 +36,10 @@ classdef AcquisitionConfig < BaseObject
         end
 
         function set.SequenceTable(obj, sequence_table)
+            arguments
+                obj
+                sequence_table {SequenceRegistry.mustBeValidSequence}
+            end
             obj.SequenceTable = sequence_table;
             obj.updateProp()
         end
@@ -51,13 +51,14 @@ classdef AcquisitionConfig < BaseObject
     end
 
     methods (Access = protected, Hidden)
+        function init(~)
+        end
+
         function updateProp(obj)
-            active_cameras = unique(obj.SequenceTable.Camera);
-            obj.ActiveCameras = string(active_cameras(active_cameras ~= "--inactive--"))';
-            obj.ActiveSequence = obj.SequenceTable( ...
-                obj.SequenceTable.Camera ~= "--inactive--" & ~(obj.SequenceTable.Type == "Analysis" & obj.SequenceTable.Note == ""), :);
-            obj.ActiveAcquisition = obj.ActiveSequence((obj.ActiveSequence.Type == "Acquire") | (obj.ActiveSequence.Type == "Start+Acquire"), :);
-            obj.ActiveAnalysis = obj.ActiveSequence(obj.ActiveSequence.Type == "Analysis" & obj.ActiveSequence.Note ~= "", :);
+            obj.ActiveCameras = SequenceRegistry.getActiveCameras(obj.SequenceTable);
+            obj.ActiveSequence = SequenceRegistry.getActiveSequence(obj.SequenceTable);
+            obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(obj.SequenceTable);
+            obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(obj.SequenceTable);
             
             active_acquisition = obj.ActiveAcquisition;
             num_images = height(active_acquisition);
@@ -84,7 +85,7 @@ classdef AcquisitionConfig < BaseObject
     
     methods (Static)
         function obj = struct2obj(s, varargin)
-            obj = BaseRunner.struct2obj(s, AcquisitionConfig(), varargin{:});
+            obj = BaseObject.struct2obj(s, AcquisitionConfig(), varargin{:});
         end
     end
 

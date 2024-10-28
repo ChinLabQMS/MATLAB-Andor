@@ -15,7 +15,7 @@ classdef ZeluxCameraConfig < BaseObject
     
     methods (Static)
         function obj = struct2obj(s, varargin)
-            obj = BaseRunner.struct2obj(s, ZeluxCameraConfig(), varargin{:});
+            obj = BaseObject.struct2obj(s, ZeluxCameraConfig(), varargin{:});
         end
     end
 
