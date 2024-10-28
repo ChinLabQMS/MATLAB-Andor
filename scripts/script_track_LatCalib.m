@@ -1,6 +1,6 @@
 %% Create a Calibrator object
-clear; clc;
-p = LatCaliberator;
+clear; clc; close all
+p = LatCalibrator;
 
 %% Config DataPath
 
@@ -10,3 +10,6 @@ p.config( ...
 
 %%
 res = p.trackCalib();
+
+%%
+errorbar(res.Andor19330.R1, res.Andor19330.R1_Std)

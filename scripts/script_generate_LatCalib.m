@@ -1,6 +1,6 @@
 %% Create a Calibrator object
 clear; clc;
-p = LatCaliberator;
+p = LatCalibrator;
 
 %% Manual pre-calibration, with no existing calibration file
 

@@ -1,8 +1,14 @@
-classdef LatCaliberator < LatAnalyzer
+classdef LatCalibrator < BaseAnalyzer
     %LATCALIBERATOR Calibrator for 
     % 1. Getting initial lattice calibration
     % 2. Re-calibrate to a different dataset
     % 3. Analyze calibration drifts over time
+
+    properties (SetAccess = {?BaseObject})
+        LatCalibFilePath = "calibration/LatCalib_20241028.mat"
+        CameraList = ["Andor19330", "Andor19331", "Zelux"]
+        ImageLabel = ["Image", "Image", "Lattice"]
+    end
 
     properties (Constant)
         CalibRInit_PlotDiagnostic = true
@@ -16,17 +22,27 @@ classdef LatCaliberator < LatAnalyzer
         CalibO_Label2 = "Image"
         CalibO_SignalIndex = 1
         CalibO_CalibR = true
-        CalibO_Sites = Lattice.prepareSite('hex', 'latr', 5)
+        CalibO_Sites = Lattice.prepareSite('hex', 'latr', 3)
         CalibO_Verbose = true
         CalibO_VerboseStep = false
-        Recalib_CalibO = false
+        Recalib_CalibO = true
+        TrackCalib_CropRSite = 20
         TrackCalib_CalibOFirst = true
         TrackCalib_CalibOEnd = true
         TrackCalib_CalibOEvery = true
-        TrackCalib_CropRSite = 15 % In the unit of lattice spacing
+    end
+
+    properties (SetAccess = protected)
+        Stat
+        LatCalib
     end
     
-    methods
+    methods    
+        function set.LatCalibFilePath(obj, path)
+            obj.LatCalibFilePath = path;
+            obj.loadLatCalibFile()
+        end
+
         % Plot FFT pattern of images acquired by specified camera
         function plotFFT(obj, camera)
             s = obj.Stat.(camera);
@@ -139,16 +155,15 @@ classdef LatCaliberator < LatAnalyzer
         function result = trackCalib(obj, options)
             arguments
                 obj
-                options.cropR_site = obj.TrackCalib_CropRSite
+                options.crop_R_site = obj.TrackCalib_CropRSite
                 options.calibO_first = obj.TrackCalib_CalibOFirst
                 options.calibO_end = obj.TrackCalib_CalibOEnd
-                options.calibO_every = obj.TrackCalib_CalibOEvery
+                options.calibO_every = obj.TrackCalib_CalibOEvery 
             end
             num_acq = obj.Signal.AcquisitionConfig.NumAcquisitions;
-            result(num_acq) = struct();
+            result = struct();
             if options.calibO_first
-                obj.calibrateO(1, "crop_R", options.cropR_site, "crop_R2", options.cropR_site, ...
-                    "plot_diagnosticO", false, "verbose", false);
+                obj.calibrateO(1, "plot_diagnosticO", false, "verbose", true);
             end
             for i = 1: num_acq
                 for j = 1: length(obj.CameraList)
@@ -157,22 +172,54 @@ classdef LatCaliberator < LatAnalyzer
                     signal = obj.Signal.(camera).(label)(:, :, i);
                     signal = getSignalSum(signal, getNumFrames(obj.Signal.(camera).Config));
                     Lat = obj.LatCalib.(camera);
-                    Lat.calibrateRCrop(signal, options.cropR_site)
-                    result(i).(camera) = Lat.R;
+                    Lat.calibrateRCropSite(signal, options.crop_R_site, "bootstrapping", true);
+                    result.(camera)(i) = Lat.Rstat;
                 end
                 if options.calibO_every
-
+                    obj.calibrateO(i, "calib_R", false, "crop_R_site", options.crop_R_site, ...
+                        "plot_diagnostic", false, "verbose", true)
                 end
             end
             if options.calibO_end
-                obj.calibrateO(num_acq, "crop_R", options.cropR_site, "crop_R2", options.cropR_site, ...
-                    "plot_diagnosticO", false, "verbose", false);
+                obj.calibrateO(num_acq, "calib_R", false, "plot_diagnosticO", false, "verbose", true);
             end
-            result = struct2table(result);
+            for j = 1:length(obj.CameraList)
+                camera = obj.CameraList(j);
+                result.(camera) = struct2table(result.(camera));
+            end
         end
     end
 
     methods (Access = protected, Hidden)
+        % Generate stats (cloud centers, widths, FFT pattern, ...) for lattice calibration
+        function init(obj)
+            for i = 1: length(obj.CameraList)
+                camera = obj.CameraList(i);
+                label = obj.ImageLabel(i);
+                s.MeanImage = getSignalSum(obj.Signal.(camera).(label), getNumFrames(obj.Signal.(camera).Config));
+                [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);                
+                [s.FFTImage, s.FFTX, s.FFTY] = prepareBox(s.MeanImage, [xc, yc], 2*[xw, yw]);
+                s.FFTPattern = abs(fftshift(fft2(s.FFTImage)));
+                s.Center = [xc, yc];
+                s.Width = [xw, yw];
+                obj.Stat.(camera) = s;
+            end
+            obj.info("Finish processing to get averaged images and basic statistics.")
+        end
+
+        function loadLatCalibFile(obj)
+            if ~isempty(obj.LatCalibFilePath)
+                obj.LatCalib = load(obj.LatCalibFilePath);
+                obj.info("Pre-calibration loaded from: '%s'.", obj.LatCalibFilePath)
+            else
+                obj.LatCalib = [];
+                for camera = obj.CameraList
+                    obj.LatCalib.(camera) = Lattice(camera);
+                    obj.info("Empty Lattice object created for camera %s.", camera)
+                end
+            end
+        end
+
         % If initialize calibration with manual input peak positions,
         % assuming the positions are from processed FFT image
         function calibrateInit(obj, camera, peak_init, center, opt1)

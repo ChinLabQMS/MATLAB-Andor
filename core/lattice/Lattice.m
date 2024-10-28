@@ -29,6 +29,7 @@
         K  % Momentum-space reciprocal vectors, 2x2 double
         V  % Real-space lattice vectors, 2x2 double
         R  % Real-space lattice center, 1x2 double
+        Rstat
     end
 
     properties (Dependent, Hidden)
@@ -116,7 +117,7 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function stat = calibrateR(Lat, signal, x_range, y_range, optionsR)
+        function calibrateR(Lat, signal, x_range, y_range, optionsR)
             arguments
                 Lat
                 signal
@@ -137,9 +138,9 @@
             Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
             % Use 4 equal size sub-area to get statistics
             if optionsR.bootstrapping
-                stat = getSubStat(Lat, signal_modified, x_range, y_range);
+                Lat.Rstat = getSubStat(Lat, signal_modified, x_range, y_range);
             else
-                stat = [];
+                Lat.Rstat = [];
             end
             if optionsR.plot_diagnosticR
                 figure
@@ -150,19 +151,19 @@
         end
         
         % Calibrate lattice center (R) by FFT phase with cropped signal
-        function stat = calibrateRCrop(Lat, signal, crop_R, varargin)
+        function calibrateRCrop(Lat, signal, crop_R, varargin)
             [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
-            stat = Lat.calibrateR(signal, x_range, y_range, varargin{:});
+            Lat.calibrateR(signal, x_range, y_range, varargin{:})
         end
 
         % Calibrate lattice center (R) by FFT phase with cropped signal,
         % crop radius is in the unit of lattice spacing
-        function stat = calibrateRCropSite(Lat, signal, crop_R_site, varargin)
-            stat = calibrateRCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:});
+        function calibrateRCropSite(Lat, signal, crop_R_site, varargin)
+            calibrateRCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:})
         end
         
         % Calibrate lattice vectors with FFT, then lattice centers
-        function stat = calibrate(Lat, signal, x_range, y_range, optionsV, optionsR)
+        function calibrate(Lat, signal, x_range, y_range, optionsV, optionsR)
             arguments
                 Lat
                 signal
@@ -195,9 +196,7 @@
             % Re-calibrate lattice centers to snap it into grid
             if optionsV.calib_R
                 argsR = namedargs2cell(optionsR);
-                stat = Lat.calibrateR(signal, x_range, y_range, argsR{:});
-            else
-                stat = [];
+                Lat.calibrateR(signal, x_range, y_range, argsR{:})
             end
             % Compute lattice vector norm changes
             VDis = vecnorm(Lat.V'-LatInit.V')./vecnorm(LatInit.V');
@@ -216,15 +215,15 @@
 
         % Calibrate lattice vectors with FFT, then lattice centers with
         % cropped signal
-        function stat = calibrateCrop(Lat, signal, crop_R, varargin)
+        function calibrateCrop(Lat, signal, crop_R, varargin)
             [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
-            stat = Lat.calibrate(signal, x_range, y_range, varargin{:});
+            Lat.calibrate(signal, x_range, y_range, varargin{:})
         end
 
         % Calibrate lattice vectors with FFT, then lattice centers with
         % cropped signal, crop radius is in the unit of lattice spacing
-        function stat = calibrateCropSite(Lat, signal, crop_R_site, varargin)
-            stat = calibrateCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:});
+        function calibrateCropSite(Lat, signal, crop_R_site, varargin)
+            calibrateCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:})
         end
 
         % Convert coordinates in Lat space to Lat2 space
@@ -291,8 +290,8 @@
             Lat.checkInitialized()
             Lat2.checkInitialized()
             if options.calib_R
-                Lat.calibrateR(signal, x_range, y_range);
-                Lat2.calibrateR(signal2, x_range2, y_range2);
+                Lat.calibrateR(signal, x_range, y_range)
+                Lat2.calibrateR(signal2, x_range2, y_range2)
             end
             R_init = Lat.R;
             num_sites = size(options.sites, 1);
@@ -600,15 +599,13 @@ function s = partitionSignal4(signal, x_range, y_range)
     x_idx2 = floor(length(x_range) / 2) + 1: length(x_range);
     y_idx1 = 1:floor(length(y_range) / 2);
     y_idx2 = floor(length(y_range) / 2) + 1: length(y_range);
-    x_idx = [x_idx1; x_idx1; x_idx2; x_idx2];
-    y_idx = [y_idx1; y_idx2; y_idx1; y_idx2];
-    x_range_list = x_range(x_idx);
-    y_range_list = y_range(y_idx);
+    x_idx = {x_idx1; x_idx1; x_idx2; x_idx2};
+    y_idx = {y_idx1; y_idx2; y_idx1; y_idx2};
     s(4) = struct();
     for i = 1:4
-        s(i).XRange = x_range_list(i, :);
-        s(i).YRange = y_range_list(i, :);
-        s(i).Signal = signal(x_idx(i, :), y_idx(i, :));
+        s(i).XRange = x_range(x_idx{i});
+        s(i).YRange = y_range(y_idx{i});
+        s(i).Signal = signal(x_idx{i}, y_idx{i});
     end
 end
 
