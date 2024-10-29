@@ -2,7 +2,7 @@ classdef Analyzer < BaseProcessor
     %ANALYZER Live analyzer
     
     properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241002.mat"
+        LatCalibFilePath = "calibration/LatCalib_20241028.mat"
     end
 
     properties (SetAccess = protected)
@@ -23,7 +23,7 @@ classdef Analyzer < BaseProcessor
                 options.verbose = false
             end
             timer = tic;
-            assert(all(isfield(info, ["camera", "label", "config", "processor"])))
+            assert(all(isfield(info, ["camera", "label", "config", "processes"])))
             res = struct();
             info.lattice = obj.LatCalib;
             for p = string(fields(info.processes))'

@@ -24,7 +24,7 @@ classdef LayoutManager < BaseObject
                 config.SmallAxes5 = AxesConfig("style", "Line")
             end
             % Bound the fields to axes
-            for p = obj.prop()
+            for p = obj.VisibleProp
                 if isprop(app, p)
                     obj.(p) = AxesRunner(app.(p), config.(p));
                 else
@@ -37,7 +37,7 @@ classdef LayoutManager < BaseObject
         function init(obj, fields)
             arguments
                 obj
-                fields = obj.prop()
+                fields = obj.VisibleProp
             end
             for field = fields
                 if obj.(field).Config.Style == "Line"
@@ -51,7 +51,7 @@ classdef LayoutManager < BaseObject
             arguments
                 obj
                 Live
-                fields = obj.prop()
+                fields = obj.VisibleProp
                 options.verbose = false
             end
             timer = tic;

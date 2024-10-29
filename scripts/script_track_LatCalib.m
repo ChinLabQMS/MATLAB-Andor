@@ -6,41 +6,32 @@ p = LatCalibrator;
 
 p.config("DataPath", "data/2024/10 October/20241021 DMD alignment/BIG300_anchor=64_array64_spacing=100_centered_r=20_r=10.mat")
 
-%%
+%% Generate drift report table
 res = p.trackCalib();
 
-%%
-errorbar(res.Andor19330.R1, res.Andor19330.R1_Std)
-yyaxis right
-errorbar(res.Andor19330.R2, res.Andor19330.R2_Std)
+%% Track drift in lattice frame over time
+
+ref_index = 5;
+
+figure
+subplot(2, 1, 1)
+errorbar(res.Andor19330.LatR1 - res.Andor19330.LatR1(ref_index) - 2, res.Andor19330.LatR1_Std)
+hold on
+errorbar(res.Andor19331.LatR1 - res.Andor19331.LatR1(ref_index), res.Andor19331.LatR1_Std)
+errorbar(res.Zelux.LatR1 - res.Zelux.LatR1(ref_index) - 1, res.Zelux.LatR1_Std)
 xlabel("Run Number")
 grid on
+legend(["Andor19330", "Andor19331", "Zelux"])
 
-%%
-errorbar(res.Andor19331.R1, res.Andor19331.R1_Std)
-yyaxis right
-errorbar(res.Andor19331.R2, res.Andor19331.R2_Std)
+subplot(2, 1, 2)
+errorbar(res.Andor19330.LatR2 - res.Andor19330.LatR2(ref_index) - 2, res.Andor19330.LatR2_Std)
+hold on
+errorbar(res.Andor19331.LatR2 - res.Andor19331.LatR2(ref_index), res.Andor19331.LatR2_Std)
+errorbar(res.Zelux.LatR2 - res.Zelux.LatR2(ref_index) - 1, res.Zelux.LatR2_Std)
+xlabel("Run Number")
 grid on
+legend(["Andor19330", "Andor19331", "Zelux"])
 
-%%
-LatAndor19330 = p.LatCalib.Andor19330;
-LatAndor19331 = p.LatCalib.Andor19331;
-LatZelux = p.LatCalib.Zelux;
+%% Correlation analysis
 
-R1_Andor19330 = res.Andor19330.R1;
-R2_Andor19330 = res.Andor19330.R2;
-R1Std_Andor19330 = res.Andor19330.R1_Std;
-R2Std_Andor19330 = res.Andor19331.R2_Std;
 
-R_Andor19331 = LatAndor19331.transform(LatAndor19330, [res.Andor19331.R1, res.Andor19331.R2], "round_output", false);
-R1_Andor19331 = R_Andor19331(:, 1);
-R2_Andor19331 = R_Andor19331(:, 2);
-
-R_Zelux = LatZelux.transform(LatAndor19330, [res.Zelux.R1, res.Zelux.R2], "round_output", false);
-R1_Zelux = R_Zelux(:, 1);
-R2_Zelux = R_Zelux(:, 2);
-
-%%
-errorbar(R1_Andor19330, R1Std_Andor19330)
-yyaxis right
-plot(R1_Zelux)

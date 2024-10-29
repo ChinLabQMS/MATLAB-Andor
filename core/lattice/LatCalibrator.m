@@ -170,7 +170,8 @@ classdef LatCalibrator < BaseAnalyzer
             end
             for i = 1: num_acq
                 if options.calibO_every
-                    obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, "crop_R_site", options.crop_R_site, ...
+                    obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, ...
+                        "crop_R_site", options.crop_R_site, ...
                         "plot_diagnostic", false, "verbose", false)
                 end
                 for j = 1: length(obj.CameraList)
@@ -243,7 +244,8 @@ classdef LatCalibrator < BaseAnalyzer
                 center = obj.Stat.(camera).Center;
             end
             Lat.init(center, size(obj.Stat.(camera).FFTPattern), peak_init)
-            Lat0 = Lattice.struct2obj(Lat.struct(), camera + "_manual", "verbose", false);
+            Lat0 = Lat.struct();
+            Lat0.ID = camera + "_manual";
             % Fine tune calibration with the FFT pattern
             Lat.calibrate( ...
                 obj.Stat.(camera).FFTImage, obj.Stat.(camera).FFTX, obj.Stat.(camera).FFTY, ...
@@ -259,7 +261,8 @@ classdef LatCalibrator < BaseAnalyzer
                 opt2.crop_R_site
             end
             Lat = obj.LatCalib.(camera);
-            Lat0 = Lattice.struct2obj(Lat.struct(), camera + "_previous", "verbose", false);
+            Lat0 = Lat.struct();
+            Lat0.ID = camera + "_previous";
             signal = obj.Stat.(camera).MeanImage;
             Lat.calibrateCropSite(signal, opt2.crop_R_site);
             Lattice.checkDiff(Lat0, Lat);

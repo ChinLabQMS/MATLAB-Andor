@@ -615,6 +615,9 @@ end
 function res = getSubStat(Lat, signal, x_range, y_range, if_bootstrap)
     res.R1 = Lat.R(1);
     res.R2 = Lat.R(2);
+    LatR = Lat.R / Lat.V;
+    res.LatR1 = LatR(1);
+    res.LatR2 = LatR(2);
     if ~if_bootstrap
         return
     end
@@ -622,7 +625,7 @@ function res = getSubStat(Lat, signal, x_range, y_range, if_bootstrap)
     R_Sub = nan(length(s), 2);
     for i = 1:length(s)
         R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
-    end    
+    end
     res.R1_Sub = R_Sub(:, 1)';
     res.R1_Mean = mean(R_Sub(:, 1));
     res.R1_Max = max(R_Sub(:, 1));
@@ -633,6 +636,17 @@ function res = getSubStat(Lat, signal, x_range, y_range, if_bootstrap)
     res.R2_Max = max(R_Sub(:, 2));
     res.R2_Min = min(R_Sub(:, 2));
     res.R2_Std = std(R_Sub(:, 2));
+    LatR_Sub = R_Sub / Lat.V;
+    res.LatR1_Sub = LatR_Sub(:, 1)';
+    res.LatR1_Mean = mean(LatR_Sub(:, 1));
+    res.LatR1_Max = max(LatR_Sub(:, 1));
+    res.LatR1_Min = min(LatR_Sub(:, 1));
+    res.LatR1_Std = std(LatR_Sub(:, 1));
+    res.LatR2_Sub = LatR_Sub(:, 2)';
+    res.LatR2_Mean = mean(LatR_Sub(:, 2));
+    res.LatR2_Max = max(LatR_Sub(:, 2));
+    res.LatR2_Min = min(LatR_Sub(:, 2));
+    res.LatR2_Std = std(LatR_Sub(:, 2));
 end
 
 % Generate diagnostic plots on the FFT peak fits
