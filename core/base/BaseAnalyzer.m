@@ -21,8 +21,8 @@ classdef (Abstract) BaseAnalyzer < BaseProcessor
     methods (Access = protected, Sealed, Hidden)
         function loadData(obj)
             Data = load(obj.DataPath, "Data").Data;
+            obj.info("Dataset loaded from '%s'", obj.DataPath)
             obj.Signal = Preprocessor().process(Data);
-            obj.info("Data loaded from '%s'", obj.DataPath)
         end
     end
     

@@ -22,6 +22,7 @@ classdef LatCalibrator < BaseAnalyzer
         CalibO_Label2 = "Image"
         CalibO_SignalIndex = 1
         CalibO_CalibR = true
+        CalibO_CalibR_Bootstrap = false
         CalibO_Sites = Lattice.prepareSite('hex', 'latr', 3)
         CalibO_Verbose = true
         CalibO_VerboseStep = false
@@ -87,6 +88,7 @@ classdef LatCalibrator < BaseAnalyzer
                 opt3.label2 = obj.CalibO_Label2
                 opt3.crop_R_site = obj.CalibO_CropRSite
                 opt4.calib_R = obj.CalibO_CalibR
+                opt4.calib_R_bootstrap = obj.CalibO_CalibR_Bootstrap
                 opt4.sites = obj.CalibO_Sites
                 opt4.verbose = obj.CalibO_Verbose
                 opt4.verbose_step = obj.CalibO_VerboseStep
@@ -163,21 +165,26 @@ classdef LatCalibrator < BaseAnalyzer
             num_acq = obj.Signal.AcquisitionConfig.NumAcquisitions;
             result = struct();
             if options.calibO_first
-                obj.calibrateO(1, "plot_diagnosticO", false, "verbose", true);
+                obj.calibrateO(1, "plot_diagnosticO", false, "verbose", true, ...
+                    "sites", Lattice.prepareSite('hex', 'latr', 20));
             end
             for i = 1: num_acq
+                if options.calibO_every
+                    obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, "crop_R_site", options.crop_R_site, ...
+                        "plot_diagnostic", false, "verbose", false)
+                end
                 for j = 1: length(obj.CameraList)
                     camera = obj.CameraList(j);
                     label = obj.ImageLabel(j);
+                    Lat = obj.LatCalib.(camera);
+                    if options.calibO_every && ismember(camera, [obj.CalibO_Camera, obj.CalibO_Camera2])
+                        result.(camera)(i) = Lat.Rstat;
+                        continue
+                    end
                     signal = obj.Signal.(camera).(label)(:, :, i);
                     signal = getSignalSum(signal, getNumFrames(obj.Signal.(camera).Config));
-                    Lat = obj.LatCalib.(camera);
                     Lat.calibrateRCropSite(signal, options.crop_R_site, "bootstrapping", true);
                     result.(camera)(i) = Lat.Rstat;
-                end
-                if options.calibO_every
-                    obj.calibrateO(i, "calib_R", false, "crop_R_site", options.crop_R_site, ...
-                        "plot_diagnostic", false, "verbose", true)
                 end
             end
             if options.calibO_end

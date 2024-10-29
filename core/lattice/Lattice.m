@@ -12,6 +12,7 @@
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
         CalibO_CalibR = true
+        CalibO_CalibR_Bootstrap = false
         CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
         CalibO_DistanceMetric = "cosine"
         CalibO_NumScores = 5
@@ -30,6 +31,7 @@
         V  % Real-space lattice vectors, 2x2 double
         R  % Real-space lattice center, 1x2 double
         Rstat
+        Ostat
     end
 
     properties (Dependent, Hidden)
@@ -117,32 +119,27 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function calibrateR(Lat, signal, x_range, y_range, optionsR)
+        function calibrateR(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal
                 x_range {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
-                optionsR.binarize_thres = Lat.CalibR_BinarizeThres
-                optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
-                optionsR.bootstrapping = Lat.CalibR_Bootstrapping
-                optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
+                options.binarize_thres = Lat.CalibR_BinarizeThres
+                options.min_binarize_thres = Lat.CalibR_MinBinarizeThres
+                options.bootstrapping = Lat.CalibR_Bootstrapping
+                options.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
             end
-            signal_modified = signal;
             % If the image is not directly from imaging lattice, do filtering
             if Lat.ID ~= "Zelux"
-                thres = max(optionsR.binarize_thres * max(signal(:)), optionsR.min_binarize_thres);
-                signal_modified((signal_modified < thres)) = 0;
+                signal_modified = filterSignal(signal, options.binarize_thres, options.min_binarize_thres);
+            else
+                signal_modified = signal;
             end
+            Lat.Rstat = getSubStat(Lat, signal_modified, x_range, y_range, options.bootstrapping);
             % Update Lat.R
             Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
-            % Use 4 equal size sub-area to get statistics
-            if optionsR.bootstrapping
-                Lat.Rstat = getSubStat(Lat, signal_modified, x_range, y_range);
-            else
-                Lat.Rstat = [];
-            end
-            if optionsR.plot_diagnosticR
+            if options.plot_diagnosticR
                 figure
                 imagesc2(y_range, x_range, signal_modified, "title", sprintf("%s: Signal (modified)", Lat.ID))
                 Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
@@ -267,7 +264,7 @@
         end
         
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
-        function best_transformed = calibrateO(Lat, Lat2, signal, signal2, ...
+        function calibrateO(Lat, Lat2, signal, signal2, ...
                 x_range, y_range, x_range2, y_range2, options)
             arguments
                 Lat
@@ -279,6 +276,7 @@
                 x_range2 {mustBeValidRange(signal2, 1, x_range2)} = 1:size(signal2, 1)
                 y_range2 {mustBeValidRange(signal2, 2, y_range2)} = 1:size(signal2, 2)
                 options.calib_R = Lat.CalibO_CalibR
+                options.calib_R_bootstrap = Lat.CalibO_CalibR_Bootstrap
                 options.sites = Lat.CalibO_Sites
                 options.metric = Lat.CalibO_DistanceMetric
                 options.debug = Lat.CalibO_Debug
@@ -290,16 +288,14 @@
             Lat.checkInitialized()
             Lat2.checkInitialized()
             if options.calib_R
-                Lat.calibrateR(signal, x_range, y_range)
-                Lat2.calibrateR(signal2, x_range2, y_range2)
+                Lat.calibrateR(signal, x_range, y_range, "bootstrapping", false)
+                Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", false)
             end
             R_init = Lat.R;
             num_sites = size(options.sites, 1);
-            score = table('Size', [num_sites, 3], ...
-                'VariableTypes', ["doublenan", "doublenan", "doublenan"], ...
-                'VariableNames', ["Site", "Center", "SignalDist"]);
             score.Site = options.sites;
             score.Center = Lat.convert2Real(options.sites, "filter", false);
+            score.SignalDist = nan(num_sites, 1);
             best_score = inf;
             best_transformed = [];
             for i = 1: num_sites
@@ -315,34 +311,34 @@
                         score.Site(i, 1), score.Site(i, 2), score.Center(i, 1), score.Center(i, 2), score.SignalDist(i))
                 end
             end
+            score = struct2table(score);
             options.num_scores = min(options.num_scores, num_sites);
             [min_val, min_idx] = mink(score.SignalDist, options.num_scores);
             best = score(min_idx(1), :);
             Lat.R = best.Center;
-            if options.verbose
-                Lat.info("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
-                    Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist)
-                Lat.info("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)))
+            Lat.Ostat = table2struct(best);
+            Lat.Ostat.BestTransformed = best_transformed;
+            Lat.Ostat.OriginalSignal = signal;
+            info_str = sprintf("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
+                    Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist);
+            info_str2 = sprintf("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)));
+            if options.calib_R && options.calib_R_bootstrap
+                Lat.calibrateR(signal, x_range, y_range, "bootstrapping", true)
+                Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", true)
+            end
+            if all(best.Site == [0, 0])
+                if options.verbose
+                    Lat.info("%s", info_str)
+                    Lat.info("%s", info_str2)
+                end
+            else
+                Lat.warn("%s", info_str)
+                Lat.warn("%s", info_str2)
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
-                figure
-                subplot(1, 3, 1)
-                imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
-                Lat2.plot(options.sites)
-                Lat2.plotV()
-                subplot(1, 3, 2)
-                imagesc2(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
-                Lat.plot(options.sites)
-                Lat.plotV()
-                viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
-                    'EnhanceVisibility', false, 'LineWidth', 0.5);
-                subplot(1, 3, 3)
-                imagesc2(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
-                Lat.plot(options.sites)
-                Lat.plotV()
-                viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
-                    'EnhanceVisibility', false, 'LineWidth', 0.5);
+                plotTransformation(Lat, Lat2, R_init, signal, signal2, best_transformed, ...
+                    x_range, y_range, x_range2, y_range2)
             end
             if options.debug  % Reset to initial R
                 Lat.R = R_init;
@@ -351,20 +347,19 @@
 
         % Calibrate the origin of Lat to Lat2 based on signal overlapping,
         % with cropped signal
-        function best_transformed = calibrateOCrop(Lat, Lat2, signal, signal2, ...
+        function calibrateOCrop(Lat, Lat2, signal, signal2, ...
                 crop_R, crop_R2, varargin)
             [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
             [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R2);
-            best_transformed = Lat.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:});
+            Lat.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:})
         end
 
         % Calibrate the origin of Lat to Lat2 based on signal overlapping,
         % with cropped signal, crop radius is in the unit of lattice
         % spacing
-        function best_transformed = calibrateOCropSite(Lat, Lat2, signal, signal2, ...
+        function calibrateOCropSite(Lat, Lat2, signal, signal2, ...
                 crop_R_site, crop_R2_site, varargin)
-            best_transformed = calibrateOCrop(Lat, Lat2, signal, signal2, ...
-                crop_R_site * Lat.V_norm, crop_R2_site * Lat2.V_norm, varargin{:});
+            Lat.calibrateOCrop(Lat2, signal, signal2, crop_R_site * Lat.V_norm, crop_R2_site * Lat2.V_norm, varargin{:})
         end
 
         % Overlaying the lattice sites
@@ -532,7 +527,7 @@
         function checkDiff(Lat, Lat2)
             V1 = [Lat.V; Lat.V(1, :) + Lat.V(2, :)];
             V2 = [Lat2.V; Lat2.V(1, :) + Lat2.V(2, :)];
-            fprintf('Difference between %s and %s:\n', Lat.getStatusLabel(), Lat2.getStatusLabel())
+            fprintf('Difference between %s and %s:\n', Lat.ID, Lat2.ID)
             fprintf('\t R_1 = (%7.2f, %7.2f),\t R_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
                     Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat.R(1) - Lat2.R(1), Lat.R(2) - Lat2.R(2))
             for i = 1:3
@@ -588,6 +583,13 @@ function [peak_pos, peak_info] = fitFFTPeaks(FFT, peak_init, R_fit)
     end
 end
 
+% Filter the signal with a given threshold percentage and min threshold
+function signal_modified = filterSignal(signal, binarize_thres, min_binarize_thres)
+    signal_modified = signal;
+    thres = max(binarize_thres * max(signal(:)), min_binarize_thres);
+    signal_modified((signal_modified < thres)) = 0;
+end
+
 % Partition signal into 4 equal size subareas
 function s = partitionSignal4(signal, x_range, y_range)
     arguments
@@ -610,22 +612,27 @@ function s = partitionSignal4(signal, x_range, y_range)
 end
 
 % Get statistics of the offset calibration of sub-areas
-function res = getSubStat(Lat, signal, x_range, y_range)
-    s = partitionSignal4(signal, x_range, y_range);
-    res.R_Sub = nan(length(s), 2);
-    for i = 1:length(s)
-        res.R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
-    end
+function res = getSubStat(Lat, signal, x_range, y_range, if_bootstrap)
     res.R1 = Lat.R(1);
-    res.R1_Mean = mean(res.R_Sub(:, 1));
-    res.R1_Max = max(res.R_Sub(:, 1));
-    res.R1_Min = min(res.R_Sub(:, 1));
-    res.R1_Std = std(res.R_Sub(:, 1));
     res.R2 = Lat.R(2);
-    res.R2_Mean = mean(res.R_Sub(:, 2));
-    res.R2_Max = max(res.R_Sub(:, 2));
-    res.R2_Min = min(res.R_Sub(:, 2));
-    res.R2_Std = std(res.R_Sub(:, 2));
+    if ~if_bootstrap
+        return
+    end
+    s = partitionSignal4(signal, x_range, y_range);
+    R_Sub = nan(length(s), 2);
+    for i = 1:length(s)
+        R_Sub(i, :) = Lat.convertFFTPhase2R(s(i).Signal, s(i).XRange, s(i).YRange);
+    end    
+    res.R1_Sub = R_Sub(:, 1)';
+    res.R1_Mean = mean(R_Sub(:, 1));
+    res.R1_Max = max(R_Sub(:, 1));
+    res.R1_Min = min(R_Sub(:, 1));
+    res.R1_Std = std(R_Sub(:, 1));
+    res.R2_Sub = R_Sub(:, 2)';
+    res.R2_Mean = mean(R_Sub(:, 2));
+    res.R2_Max = max(R_Sub(:, 2));
+    res.R2_Min = min(R_Sub(:, 2));
+    res.R2_Std = std(R_Sub(:, 2));
 end
 
 % Generate diagnostic plots on the FFT peak fits
@@ -661,6 +668,27 @@ function plotSimilarityMap(x_range, y_range, score, best)
     hold on
     scatter(best.Center(2), best.Center(1), 100, "red")
     scatter(score.Center(:, 2), score.Center(:, 1), 50, score.Similarity, 'filled')
+end
+
+function plotTransformation(Lat, Lat2, R_init, signal, signal2, best_transformed, ...
+                x_range, y_range, x_range2, y_range2)
+    figure
+    subplot(1, 3, 1)
+    imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
+    Lat2.plot()
+    Lat2.plotV()
+    subplot(1, 3, 2)
+    imagesc2(y_range, x_range, signal, "title", sprintf("%s: calibrated", Lat.ID))
+    Lat.plot()
+    Lat.plotV()
+    viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
+        'EnhanceVisibility', false, 'LineWidth', 0.5);
+    subplot(1, 3, 3)
+    imagesc2(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", Lat.ID, Lat2.ID))
+    Lat.plot()
+    Lat.plotV()
+    viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
+        'EnhanceVisibility', false, 'LineWidth', 0.5);
 end
 
 % Function for preserving hold behavior on exit
