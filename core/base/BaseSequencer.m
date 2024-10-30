@@ -92,12 +92,50 @@ classdef BaseSequencer < BaseObject
             end
         end
     end
-    
-    methods (Access = protected, Abstract)
-        is_good = runStep(obj, type, camera, label, note, config)
-    end
 
     methods (Access = protected)
+        function is_good = runStep(obj, type, camera, label, note, config, options)
+            arguments
+                obj
+                type
+                camera
+                label
+                note
+                config
+                options.verbose_start = obj.Run_VerboseStart
+                options.verbose_acquire = obj.Run_VerboseAcquire
+                options.verbose_preprocess = obj.Run_VerbosePreprocess
+                options.verbose_analysis = obj.Run_VerboseAnalysis
+            end
+            is_good = true;
+            info = struct('camera', camera, 'label', label, 'note', note, 'config', config, ...
+                'acquire_params', obj.AcquisitionConfig.AcquisitionParams.(camera).(label), ...
+                'processes', obj.AcquisitionConfig.AnalysisProcesses.(camera).(label));
+            if type == "Start" || type == "Start+Acquire"
+                obj.CameraManager.(camera).startAcquisition("verbose", options.verbose_start)
+            end
+            if type == "Acquire" || type == "Start+Acquire"
+                args = info.acquire_params;
+                % Acquire raw images
+                [obj.Live.Raw.(camera).(label), status] = obj.CameraManager.(camera).acquire(info, ...
+                    'refresh', obj.AcquisitionConfig.Refresh, 'timeout', obj.AcquisitionConfig.Timeout, ...
+                    'verbose', options.verbose_acquire, args{:});
+                is_good = is_good && (status == "good");
+                % Preprocess raw images
+                [obj.Live.Signal.(camera).(label), obj.Live.Background.(camera).(label)] = obj.Preprocessor.process( ...
+                    obj.Live.Raw.(camera).(label), info, ...
+                    "verbose", options.verbose_preprocess);
+            end
+            if type == "Analysis"
+                % Generate analysis statistics
+                obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
+                    obj.Live.Signal.(camera).(label), info, ...
+                    "verbose", options.verbose_analysis);
+            end
+        end
+    end
+    
+    methods (Access = protected, Hidden)
         function renderLayout(obj, verbose)
             obj.LayoutManager.update(obj.Live, 'verbose', verbose)
         end
@@ -112,9 +150,7 @@ classdef BaseSequencer < BaseObject
 
         function abortAtEnd(~)
         end
-    end
-    
-    methods (Access = protected, Hidden)
+
         % Override the default getStatusLabel method from BaseObject
         function label = getStatusLabel(obj)
             label = sprintf("%s(RunNum: %d, Index: %d)", class(obj), obj.RunNumber, obj.DataManager.CurrentIndex);
