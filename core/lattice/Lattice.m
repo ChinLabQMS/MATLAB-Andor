@@ -30,8 +30,8 @@
         K  % Momentum-space reciprocal vectors, 2x2 double
         V  % Real-space lattice vectors, 2x2 double
         R  % Real-space lattice center, 1x2 double
-        Rstat
-        Ostat
+        Rstat  % Statistics generated during calibrating lattice R
+        Ostat  % Statistics generated during cross calibrating R
     end
 
     properties (Dependent, Hidden)
@@ -83,9 +83,9 @@
             end
             % If generate lattice sites for the full range
             if options.full_range
-                corners = [options.x_lim(1), options.y_lim(1); 
-                           options.x_lim(2), options.y_lim(1); 
-                           options.x_lim(1), options.y_lim(2); 
+                corners = [options.x_lim(1), options.y_lim(1);
+                           options.x_lim(2), options.y_lim(1);
+                           options.x_lim(1), options.y_lim(2);
                            options.x_lim(2), options.y_lim(2)];
                 lat_corners = (corners - Lat.R)/Lat.V;
                 lat_xmin = ceil(min(lat_corners(:, 1)));

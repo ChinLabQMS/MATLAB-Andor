@@ -15,19 +15,20 @@ classdef Analyzer < BaseProcessor
             obj.loadLatCalibFile()
         end
 
-        function res = analyze(obj, signal, info, options)
+        function res = analyze(obj, signal, info, processes, options)
             arguments
                 obj
                 signal
-                info
+                info = struct('camera', [], 'label', [], 'config', [])
+                processes = struct([])
                 options.verbose = false
             end
             timer = tic;
-            assert(all(isfield(info, ["camera", "label", "config", "processes"])))
+            assert(all(isfield(info, ["camera", "label", "config"])))
             res = struct();
             info.lattice = obj.LatCalib;
-            for p = string(fields(info.processes))'
-                res = info.processes.(p).Func(res, signal, info, info.processes.(p).Args{:});
+            for p = string(fields(processes))'
+                res = processes.(p).Func(res, signal, info, processes.(p).Args{:});
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))

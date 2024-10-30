@@ -108,14 +108,12 @@ classdef BaseSequencer < BaseObject
                 options.verbose_analysis = obj.Run_VerboseAnalysis
             end
             is_good = true;
-            info = struct('camera', camera, 'label', label, 'note', note, 'config', config, ...
-                'acquire_params', obj.AcquisitionConfig.AcquisitionParams.(camera).(label), ...
-                'processes', obj.AcquisitionConfig.AnalysisProcesses.(camera).(label));
+            info = builtin('struct', "camera", camera, "label", label, "note", note, "config", config);            
             if type == "Start" || type == "Start+Acquire"
                 obj.CameraManager.(camera).startAcquisition("verbose", options.verbose_start)
             end
             if type == "Acquire" || type == "Start+Acquire"
-                args = info.acquire_params;
+                args = obj.AcquisitionConfig.AcquisitionParams.(camera).(label);
                 % Acquire raw images
                 [obj.Live.Raw.(camera).(label), status] = obj.CameraManager.(camera).acquire(info, ...
                     'refresh', obj.AcquisitionConfig.Refresh, 'timeout', obj.AcquisitionConfig.Timeout, ...
@@ -128,14 +126,26 @@ classdef BaseSequencer < BaseObject
             end
             if type == "Analysis"
                 % Generate analysis statistics
+                processes = obj.AcquisitionConfig.AnalysisProcesses.(camera).(label);
                 obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                    obj.Live.Signal.(camera).(label), info, ...
-                    "verbose", options.verbose_analysis);
+                    obj.Live.Signal.(camera).(label), info, processes, "verbose", options.verbose_analysis);
             end
         end
     end
     
     methods (Access = protected, Hidden)
+        function startAcquisition(obj, info, varargin)            
+        end
+        
+        function acquireImage(obj, info, varargin)            
+        end
+
+        function preprocessImage(obj, info, varargin)
+        end
+
+        function analyzeImage(obj, info, varargin)
+        end
+
         function renderLayout(obj, verbose)
             obj.LayoutManager.update(obj.Live, 'verbose', verbose)
         end
