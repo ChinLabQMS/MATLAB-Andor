@@ -1,7 +1,7 @@
 clear; clc;
 
 DataPath = 'data/2024/10 October/20241001/gray_on_black_anchor=3_triangle_side1=100_side2=150_r=20.mat';
-PatternPath = 'data/2024/10 October/20241001/anchor=3_triangle_side1=100_side2=150_r=20/r=20.bmp';
+PatternPath = 'data/2024/10 October/20241001/anchor=3_triangle_side1=100_side2=150_r=20/template_r=20.bmp';
 
 Data = load(DataPath, "Data").Data;
 Signal = Preprocessor().processData(Data);
@@ -10,11 +10,6 @@ mean_Andor19330 = mean(Signal.Andor19330.Image, 3);
 mean_Andor19331 = mean(Signal.Andor19331.Image, 3);
 mean_Zelux = mean(Signal.Zelux.DMD, 3);
 dmd = imread(PatternPath);
-
-%%
-figure
-Lattice.imagesc(mean_Andor19330)
-%Lattice.imagesc(Signal.Andor19330.Image(:, :, 1))
 
 %%
 figure
@@ -28,18 +23,13 @@ Lattice.imagesc(dmd)
 %% Test pre-calibration
 andor_coor = [259,550; 298,510; 314, 608];
 dmd_coor = [742, 741; 842, 741; 742, 891];
-zelux_coor_naive = findcenter(mean_Zelux);
-zelux_coor = zelux_coor_naive(:, [2, 1]);
-%zelux_coor = order_points_by_internal_distances(zelux_coor_naive);
-%disp(order_points_by_internal_distances(dmd_coor));
 
-%% Fitting Zelux to DMD
-V1_zelux = [-23.20, -1.28];
-V2_zelux = [10.54, 20.42];
-V_zelux = [V1_zelux;V2_zelux];
+V1_andor = [-6.01, -0.48];
+V2_andor = [2.60, 5.39];
+V_andor = [V1_andor;V2_andor];
 
-[R_zelux, R_dmd,V_dmd] = correlate_frames(V1_zelux, V2_zelux, zelux_coor, dmd_coor)
-testcoor = ((zelux_coor_naive(2) - R_zelux)/V_zelux)* V_dmd + R_dmd; 
+[R_andor, R_dmd,V_dmd] = correlate_frames(V1_andor, V2_andor, andor_coor, dmd_coor);
+%testcoor = ((zelux_coor_naive(2) - R_zelux)/V_zelux)* V_dmd + R_dmd; 
 %disp(zelux_coor_naive(2))testcoor);
 
 %% Transform index
@@ -48,14 +38,15 @@ testcoor = ((zelux_coor_naive(2) - R_zelux)/V_zelux)* V_dmd + R_dmd;
 % Assume R_zelux is a 1x2 vector, e.g., [Rx, Ry]
 % Assume V_zelux is a 2x2 transformation matrix
 
-[n, m] = size(mean_Zelux);  % Get the size of mean_zelux
-new_zelux = zeros(n, m);     % Initialize new_zelux to be the same size as mean_zelux
+[n, m] = size(mean_Andor19330);
+% Get the size of mean_zelux
+new_andor = zeros(n, m);     % Initialize new_zelux to be the same size as mean_zelux
 
 % Loop over each index (a, b) of the array
 for a = 1:n
     for b = 1:m
         % Offset the index (a, b) by R_zelux
-        new_index = ([a, b] - R_zelux)/V_zelux;  % This gives a 1x2 array
+        new_index = ([a, b] - R_andor)/V_andor;  % This gives a 1x2 array
 
         % Apply the transformation V_zelux to the offset index
         transformed_index_dmd = new_index * V_dmd + R_dmd;  % Result is a 1x2 array
@@ -70,22 +61,22 @@ for a = 1:n
         % Check if the calculated indices are within bounds of mean_zelux
         if row_idx >= 1 && row_idx <= n && col_idx >= 1 && col_idx <= m
             % Assign the value from mean_zelux to new_zelux at (a, b)
-            new_zelux(row_idx, col_idx) = mean_Zelux(a,b);
-        else
+            new_andor(row_idx, col_idx) = mean_Andor19330(a,b);
+        %else
             % If the transformed index is out of bounds, handle it (e.g., set to 0 or some default value)
-            new_zelux(row_idx, col_idx) = 0;  % or any default value
+            %new_andor(row_idx, col_idx) = 0;  % or any default value
         end
     end
 end
-disp(new_zelux(742, 891));
-disp(mean_Zelux(792, 870));
+disp(new_andor(742, 891));
+disp(mean_Andor19330(792, 870));
 
 
 
 %%
 figure
 subplot(1, 3, 1)
-Lattice.imagesc(new_zelux)
+Lattice.imagesc(new_andor)
 subplot(1, 3, 2)
 Lattice.imagesc(dmd)
 
@@ -106,5 +97,3 @@ function points_ordered = order_points_by_internal_distances(points)
     [~, order] = sort(distances);
     points_ordered = points(order, :);
 end
-
-

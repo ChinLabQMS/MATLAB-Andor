@@ -28,4 +28,3 @@ intensity = reshape(I(coor), length(x_range), length(y_range));
 %%
 figure
 imagesc(y_range, x_range, intensity)
-axis image

@@ -1,7 +1,7 @@
 clear; clc;
 
 DataPath = 'data/2024/10 October/20241001/gray_on_black_anchor=3_triangle_side1=100_side2=150_r=20.mat';
-PatternPath = 'data/2024/10 October/20241001/anchor=3_triangle_side1=100_side2=150_r=20/r=20.bmp';
+PatternPath = 'data/2024/10 October/20241001/anchor=3_triangle_side1=100_side2=150_r=20/template_r=20.bmp';
 
 Data = load(DataPath, "Data").Data;
 Signal = Preprocessor().processData(Data);
@@ -10,11 +10,6 @@ mean_Andor19330 = mean(Signal.Andor19330.Image, 3);
 mean_Andor19331 = mean(Signal.Andor19331.Image, 3);
 mean_Zelux = mean(Signal.Zelux.DMD, 3);
 dmd = imread(PatternPath);
-
-%%
-figure
-Lattice.imagesc(mean_Andor19330)
-%Lattice.imagesc(Signal.Andor19330.Image(:, :, 1))
 
 %%
 figure
@@ -33,7 +28,7 @@ zelux_coor = zelux_coor_naive(:, [2, 1]);
 %zelux_coor = order_points_by_internal_distances(zelux_coor_naive);
 %disp(order_points_by_internal_distances(dmd_coor));
 
-%% Fitting Zelux to DMD
+
 V1_zelux = [-23.20, -1.28];
 V2_zelux = [10.54, 20.42];
 V_zelux = [V1_zelux;V2_zelux];
@@ -106,5 +101,3 @@ function points_ordered = order_points_by_internal_distances(points)
     [~, order] = sort(distances);
     points_ordered = points(order, :);
 end
-
-
