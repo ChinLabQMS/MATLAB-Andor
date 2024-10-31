@@ -63,10 +63,12 @@ classdef BaseObject < handle
     methods (Access = protected, Sealed, Hidden)
         % Configure the properties
         function varagout = configProp(obj, varargin)
+            suppress_warning = false;
             if nargin == 2
                 args = varargin{1};
                 if isa(args, "struct")
                     args = namedargs2cell(args);
+                    suppress_warning = true;
                 elseif isa(args, "BaseObject")
                     args = namedargs2cell(args.struct(args.ConfigurableProp));
                 else
@@ -80,16 +82,21 @@ classdef BaseObject < handle
             names = "";
             for i = 1:2:length(args)
                 if ismember(args{i}, obj.ConfigurableProp)
+                    if isequal(obj.(args{i}), args{i + 1})
+                        continue
+                    end
                     try
                         obj.(args{i}) = args{i + 1};
                         names = names + " " + args{i};
                     catch me
                         obj.warn2("Error occurs during setting property [%s]\n\t%s", args{i}, me.message)
                     end
-                elseif isprop(obj, args{i})
-                    obj.warn("[%s] is not a configurable property.", args{i})
-                else
-                    obj.warn("[%s] is not a property of class.", args{i})
+                elseif ~suppress_warning
+                    if isprop(obj, args{i})
+                        obj.warn("[%s] is not a configurable property.", args{i})
+                    else
+                        obj.warn("[%s] is not a property of class.", args{i})
+                    end
                 end
             end
             names = strip(names);

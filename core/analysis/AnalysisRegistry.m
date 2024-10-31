@@ -28,18 +28,20 @@ classdef AnalysisRegistry < BaseObject
 
     methods (Static)
         function [processes, out_vars, out_data, num_out] = parseOutput(note)
-            processes = struct();
+            processes = {};
             args = parseString2Args(note, "output_format", "name-value");
             name = args{1};
             value = args{2};
             [~, s] = enumeration('AnalysisRegistry');
+            process_names = string.empty();
             for i = 1:length(name)
                 if ismember(name(i), s) && value(i)
-                    curr = name(i);
-                    processes.(curr).Func = AnalysisRegistry.(name(i)).FuncHandle;
-                    processes.(curr).Args = {};
+                    process_names = [process_names, name(i)]; %#ok<AGROW>
+                    processes = [processes, {{AnalysisRegistry.(name(i)).FuncHandle}}]; %#ok<AGROW>
+                elseif ~isempty(process_names)
+                    processes{end} = [processes{end}, {name(i), value(i)}];
                 else
-                    processes.(curr).Args = [processes.(curr).Args, {name(i), value(i)}];
+                    error("Parameters appears before named process.")
                 end
             end
             if nargout == 1
@@ -47,7 +49,7 @@ classdef AnalysisRegistry < BaseObject
             end
             out_vars = string.empty;
             out_data = string.empty;
-            for p = string(fields(processes))'
+            for p = process_names
                 out_vars = [out_vars, AnalysisRegistry.(p).OutputVars]; %#ok<AGROW>
                 out_data = [out_data, AnalysisRegistry.(p).OutputData]; %#ok<AGROW>
             end

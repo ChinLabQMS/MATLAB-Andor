@@ -10,9 +10,14 @@ function args = parseString2Args(note, options)
         if contains(p, "=")
             val = split(p, "=");
             if length(val) == 2
-                args.(val(1)) = str2double(val(2));
+                arg_val = str2double(val(2));
+                if isnan(arg_val)
+                    args.(val(1)) = val(2);
+                else
+                    args.(val(1)) = arg_val;
+                end
             else
-                error("Multiple '-' appears in the string.")
+                error("Multiple '=' appears in the partitioned string.")
             end
         elseif p ~= ""
             args.(p) = true;

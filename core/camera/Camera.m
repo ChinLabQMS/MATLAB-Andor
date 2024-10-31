@@ -98,7 +98,7 @@ classdef Camera < BaseRunner
                 obj.NumExpectedFrames = obj.NumExpectedFrames + 1;
             else
                 obj.abortAcquisition()
-                obj.error("[%s] Too many start commands before retriving data, MaxQueuedFrames = %d.", ...
+                obj.warn("[%s] Too many start commands before retriving data, MaxQueuedFrames = %d.", ...
                     info.label, obj.Config.MaxQueuedFrames)
             end
             if options.verbose

@@ -1,4 +1,4 @@
-classdef SequenceRegistry < BaseObject %#ok<*AGROW>
+classdef SequenceRegistry < BaseObject
     % SequenceRegistry: Registry of acquisition sequences.
 
     properties (Constant)

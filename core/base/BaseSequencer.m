@@ -12,6 +12,10 @@ classdef BaseSequencer < BaseObject
 
     properties (Constant)
         Run_Verbose = true
+        Run_VerboseStart = false
+        Run_VerboseAcquire = true
+        Run_VerbosePreprocess = false
+        Run_VerboseAnalysis = false
         Run_VerboseLayout = true
         Run_VerboseData = true
         Run_VerboseStat = false
@@ -21,6 +25,7 @@ classdef BaseSequencer < BaseObject
         Timer
         RunNumber = 0
         Live
+        BadFrameDetected = false
     end
 
     methods
@@ -49,22 +54,32 @@ classdef BaseSequencer < BaseObject
             obj.RunNumber = 0;
             obj.info2("Sequence initialized.")
         end
+
+        function config(obj, data)
+            obj.AcquisitionConfig.config(data.AcquisitionConfig)
+            obj.CameraManager.config(data)
+            obj.DataManager.config(data)
+        end
         
         function run(obj, options)
             arguments
                 obj
                 options.verbose = obj.Run_Verbose
+                options.verbose_start = obj.Run_VerboseStart
+                options.verbose_acquire = obj.Run_VerboseAcquire
+                options.verbose_preprocess = obj.Run_VerbosePreprocess
+                options.verbose_analysis = obj.Run_VerboseAnalysis
                 options.verbose_layout = obj.Run_VerboseLayout
                 options.verbose_data = obj.Run_VerboseData
                 options.verbose_stat = obj.Run_VerboseStat
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
+            obj.BadFrameDetected = false;
             obj.Live = struct('Info', struct('RunNumber', obj.RunNumber, ...
                                              'LatCalib', obj.Analyzer.LatCalib), ...
                               'Raw', [], 'Signal', [], 'Background', [], 'Analysis', []);
             sequence = obj.AcquisitionConfig.ActiveSequence;
-            good = true;
             for i = 1: height(sequence)
                 type = string(sequence.Type(i));
                 camera = string(sequence.Camera(i));
@@ -72,15 +87,31 @@ classdef BaseSequencer < BaseObject
                 note = sequence.Note(i);
                 config = obj.CameraManager.(camera).Config;
                 % Run one step
-                is_good = obj.runStep(type, camera, label, note, config);
-                good = is_good && good;
+                info = builtin('struct', "camera", camera, "label", label, "note", note, "config", config);
+                if type == "Start" || type == "Start+Acquire"
+                    obj.startAcquisition(info, "verbose", options.verbose_start)
+                end
+                if type == "Acquire" || type == "Start+Acquire"
+                    args = [obj.AcquisitionConfig.AcquisitionParams.(camera).(label), 'verbose', options.verbose_acquire];
+                    % Acquire raw images
+                    obj.acquireImage(info, args{:});
+                    % Preprocess raw images
+                    [obj.Live.Signal.(camera).(label), obj.Live.Background.(camera).(label)] = obj.Preprocessor.process( ...
+                        obj.Live.Raw.(camera).(label), info, 'verbose', options.verbose_preprocess);
+                end
+                if type == "Analysis"
+                    % Generate analysis statistics
+                    processes = obj.AcquisitionConfig.AnalysisProcess.(camera).(label);
+                    obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
+                        obj.Live.Signal.(camera).(label), info, processes, 'verbose', options.verbose_analysis);
+                end
             end
             if ~isempty(obj.LayoutManager)
                 obj.renderLayout(options.verbose_layout)
             end
-            if good || ~obj.AcquisitionConfig.DropBadFrames
+            if ~obj.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames
                 obj.addData(options.verbose_data)
-                obj.addStat(options.verbose_stat)
+                obj.StatManager.add(obj.Live.Analysis, "verbose", options.verbose_stat);
             else
                 obj.warn("Bad acquisition detected, data dropped.")
             end
@@ -92,70 +123,19 @@ classdef BaseSequencer < BaseObject
             end
         end
     end
-
-    methods (Access = protected)
-        function is_good = runStep(obj, type, camera, label, note, config, options)
-            arguments
-                obj
-                type
-                camera
-                label
-                note
-                config
-                options.verbose_start = obj.Run_VerboseStart
-                options.verbose_acquire = obj.Run_VerboseAcquire
-                options.verbose_preprocess = obj.Run_VerbosePreprocess
-                options.verbose_analysis = obj.Run_VerboseAnalysis
-            end
-            is_good = true;
-            info = builtin('struct', "camera", camera, "label", label, "note", note, "config", config);            
-            if type == "Start" || type == "Start+Acquire"
-                obj.CameraManager.(camera).startAcquisition("verbose", options.verbose_start)
-            end
-            if type == "Acquire" || type == "Start+Acquire"
-                args = obj.AcquisitionConfig.AcquisitionParams.(camera).(label);
-                % Acquire raw images
-                [obj.Live.Raw.(camera).(label), status] = obj.CameraManager.(camera).acquire(info, ...
-                    'refresh', obj.AcquisitionConfig.Refresh, 'timeout', obj.AcquisitionConfig.Timeout, ...
-                    'verbose', options.verbose_acquire, args{:});
-                is_good = is_good && (status == "good");
-                % Preprocess raw images
-                [obj.Live.Signal.(camera).(label), obj.Live.Background.(camera).(label)] = obj.Preprocessor.process( ...
-                    obj.Live.Raw.(camera).(label), info, ...
-                    "verbose", options.verbose_preprocess);
-            end
-            if type == "Analysis"
-                % Generate analysis statistics
-                processes = obj.AcquisitionConfig.AnalysisProcesses.(camera).(label);
-                obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
-                    obj.Live.Signal.(camera).(label), info, processes, "verbose", options.verbose_analysis);
-            end
-        end
-    end
     
-    methods (Access = protected, Hidden)
-        function startAcquisition(obj, info, varargin)            
-        end
-        
-        function acquireImage(obj, info, varargin)            
-        end
+    methods (Access = protected, Hidden, Abstract)
+        startAcquisition(obj, info, varargin)            
+        acquireImage(obj, info, varargin)
+    end
 
-        function preprocessImage(obj, info, varargin)
-        end
-
-        function analyzeImage(obj, info, varargin)
-        end
-
+    methods (Access = protected, Hidden)            
         function renderLayout(obj, verbose)
             obj.LayoutManager.update(obj.Live, 'verbose', verbose)
         end
 
         function addData(obj, verbose)
             obj.DataManager.add(obj.Live.Raw, "verbose", verbose);
-        end
-
-        function addStat(obj, verbose)
-            obj.StatManager.add(obj.Live.Analysis, "verbose", verbose);
         end
 
         function abortAtEnd(~)

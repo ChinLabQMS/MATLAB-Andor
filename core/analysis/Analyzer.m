@@ -20,15 +20,17 @@ classdef Analyzer < BaseProcessor
                 obj
                 signal
                 info = struct('camera', [], 'label', [], 'config', [])
-                processes = struct([])
+                processes = {}
                 options.verbose = false
             end
             timer = tic;
             assert(all(isfield(info, ["camera", "label", "config"])))
             res = struct();
             info.lattice = obj.LatCalib;
-            for p = string(fields(processes))'
-                res = processes.(p).Func(res, signal, info, processes.(p).Args{:});
+            for i = 1: length(processes)
+                func = processes{i}{1};
+                args = processes{i}(2: end);
+                res = func(res, signal, info, args{:});
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))

@@ -18,7 +18,9 @@ classdef (Abstract) BaseRunner < BaseObject
         % Change the configuration in obj.Config
         function config(obj, varargin)
             names = obj.Config.configProp(varargin{:});
-            obj.info("Configured [%s]", names)
+            if names ~= ""
+                obj.info('Properties configured [%s].', names)
+            end
         end
 
         function disp(obj)

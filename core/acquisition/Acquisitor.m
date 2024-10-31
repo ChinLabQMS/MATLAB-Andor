@@ -1,13 +1,5 @@
 classdef Acquisitor < BaseSequencer
 
-    % Class properties that control the live acquisition behaviors
-    properties (Constant)
-        Run_VerboseStart = false
-        Run_VerboseAcquire = true
-        Run_VerbosePreprocess = false
-        Run_VerboseAnalysis = false
-    end
-
     methods
         function obj = Acquisitor(varargin)
             obj@BaseSequencer(varargin{:})
@@ -27,7 +19,17 @@ classdef Acquisitor < BaseSequencer
         end
     end
 
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
+        function startAcquisition(obj, info, varargin)
+            obj.CameraManager.(info.camera).startAcquisition(varargin{:})
+        end
+        
+        function acquireImage(obj, info, varargin)
+            [obj.Live.Raw.(info.camera).(info.label), status] = obj.CameraManager.(info.camera).acquire(info, varargin{:});
+            if status ~= "good"
+                obj.BadFrameDetected = true;
+            end
+        end
     end
 
 end

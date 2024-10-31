@@ -18,7 +18,7 @@ classdef AcquisitionConfig < BaseProcessor
         ActiveAcquisition
         ActiveAnalysis
         AcquisitionParams
-        AnalysisProcesses
+        AnalysisProcess
         AnalysisOutVars
         AnalysisOutData
     end
@@ -68,7 +68,9 @@ classdef AcquisitionConfig < BaseProcessor
                 label = active_acquisition.Label(i);
                 note = active_acquisition.Note(i);
                 list_str{i} = sprintf('%s: %s', camera, label);
-                obj.AcquisitionParams.(camera).(label) = parseString2Args(note, "output_format", "cell");
+                obj.AcquisitionParams.(camera).(label) = [
+                    'refresh', obj.Refresh, 'timeout', obj.Timeout, ...
+                    parseString2Args(note, "output_format", "cell")];
             end
             obj.ImageList = list_str;
 
@@ -77,7 +79,7 @@ classdef AcquisitionConfig < BaseProcessor
                 camera = string(active_analysis.Camera(i));
                 label = active_analysis.Label(i);
                 note = active_analysis.Note(i);
-                [obj.AnalysisProcesses.(camera).(label), obj.AnalysisOutVars.(camera).(label), ...
+                [obj.AnalysisProcess.(camera).(label), obj.AnalysisOutVars.(camera).(label), ...
                     obj.AnalysisOutData.(camera).(label)] = AnalysisRegistry.parseOutput(note);
             end
         end

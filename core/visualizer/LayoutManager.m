@@ -12,21 +12,21 @@ classdef LayoutManager < BaseObject
     end
 
     methods
-        function obj = LayoutManager(app, config)
+        function obj = LayoutManager(app, options)
             arguments
                 app = []
-                config.BigAxes1 = AxesConfig("style", "Image", "func", "None")
-                config.BigAxes2 = AxesConfig("style", "Image", "func", "None")
-                config.SmallAxes1 = AxesConfig("style", "Line")
-                config.SmallAxes2 = AxesConfig("style", "Line")
-                config.SmallAxes3 = AxesConfig("style", "Line")
-                config.SmallAxes4 = AxesConfig("style", "Line")
-                config.SmallAxes5 = AxesConfig("style", "Line")
+                options.BigAxes1 = @ImageRunner
+                options.BigAxes2 = @ImageRunner
+                options.SmallAxes1 = @LineRunner
+                options.SmallAxes2 = @LineRunner
+                options.SmallAxes3 = @LineRunner
+                options.SmallAxes4 = @LineRunner
+                options.SmallAxes5 = @LineRunner
             end
             % Bound the fields to axes
             for p = obj.VisibleProp
                 if isprop(app, p)
-                    obj.(p) = AxesRunner(app.(p), config.(p));
+                    obj.(p) = options.(p)(app.(p));
                 else
                     obj.warn("Field %s is not a valid property of app.", p)
                 end
@@ -40,9 +40,7 @@ classdef LayoutManager < BaseObject
                 fields = obj.VisibleProp
             end
             for field = fields
-                if obj.(field).Config.Style == "Line"
-                    obj.(field).clear()
-                end
+                obj.(field).init()
             end
         end
         
