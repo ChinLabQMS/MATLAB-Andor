@@ -1,8 +1,8 @@
-classdef DataManager < BaseStorage
+classdef DataStorage < BaseStorage
     % DATAMANAGER Class for storing acquired data.
 
     methods
-        function obj = DataManager(varargin)
+        function obj = DataStorage(varargin)
             obj@BaseStorage(varargin{:})
         end
     end
@@ -35,12 +35,6 @@ classdef DataManager < BaseStorage
         function addNew(obj, new, camera, label)
             index = min(obj.MaxIndex, obj.CurrentIndex);
             obj.(camera).(label)(:, :, index) = new;
-        end
-    end
-
-    methods (Static)
-        function [obj, acq_config, cameras] = struct2obj(data, varargin)
-            [obj, acq_config, cameras] = BaseStorage.struct2obj('DataManager', data, varargin{:});
         end
     end
 

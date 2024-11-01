@@ -1,8 +1,8 @@
-classdef StatManager < BaseStorage
+classdef StatStorage < BaseStorage
     % STATMANAGER Class to store analysis results
 
     methods
-        function obj = StatManager(varargin)
+        function obj = StatStorage(varargin)
             obj@BaseStorage(varargin{:})
         end
     end
@@ -38,12 +38,6 @@ classdef StatManager < BaseStorage
         function addNew(obj, new, camera, label)
             index = min(obj.MaxIndex, obj.CurrentIndex);
             obj.(camera).(label)(index, :) = struct2table(new);
-        end
-    end
-
-    methods (Static)
-        function [obj, acq_config, cameras] = struct2obj(stat, varargin)
-            [obj, acq_config, cameras] = BaseStorage.struct2obj('StatManager', stat, varargin{:});
         end
     end
 

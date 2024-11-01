@@ -5,14 +5,6 @@ classdef AppConfig < BaseObject
         SequenceName = "Full4Analysis"
         TestMode = getTestMode()
         FigurePosition = getFigurePosition()
-        Acquisition_DropBadFrame = true
-        Acquisition_VerboseStart = false
-        Acquisition_VerboseAcquire = true
-        Acquisition_VerbosePreprocess = false
-        Acquisition_VerboseAnalysis = false
-        Acquisition_VerboseLayout = true
-        Acquisition_VerboseStorage = false
-        Acquisition_Verbose = true
     end
 
 end

@@ -132,7 +132,12 @@ classdef (Abstract) BaseStorage < BaseObject
             end
             obj.checkInitialized()
             obj.CurrentIndex = obj.CurrentIndex + 1;
-            obj.Timestamp(obj.CurrentIndex) = datetime;
+            if obj.CurrentIndex > obj.MaxIndex
+                obj.Timestamp = circshift(obj.Timestamp, -1, 1);
+                obj.Timestamp(end) = datetime;
+            else
+                obj.Timestamp(obj.CurrentIndex) = datetime;
+            end
             for camera = string(fields(new))'
                 for label = string(fields(new.(camera)))'
                     if obj.CurrentIndex > obj.MaxIndex
@@ -187,26 +192,5 @@ classdef (Abstract) BaseStorage < BaseObject
             end
         end
     end
-
-    % methods (Static)
-    %     function [obj, acq_config, cameras] = struct2obj(class_name, data, acq_config, cameras, options)
-    %         arguments
-    %             class_name
-    %             data
-    %             acq_config = []
-    %             cameras = []
-    %             options.test_mode = true
-    %         end
-    %         if isempty(acq_config)
-    %             acq_config = AcquisitionConfig.struct2obj(data.AcquisitionConfig);
-    %         end
-    %         if isempty(cameras)
-    %             cameras = CameraManager.struct2obj(data, "test_mode", options.test_mode);
-    %         end
-    %         obj = feval(class_name, acq_config, cameras);
-    %         obj.configData(data)
-    %         obj.info("Object created from structure.")
-    %     end
-    % end
 
 end

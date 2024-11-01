@@ -1,4 +1,5 @@
 classdef BaseSequencer < BaseObject
+    %BASESEQUENCER Base class for all sequence runner.
 
     properties (SetAccess = immutable)
         AcquisitionConfig
@@ -6,8 +7,8 @@ classdef BaseSequencer < BaseObject
         LayoutManager
         Preprocessor
         Analyzer
-        DataManager
-        StatManager
+        DataStorage
+        StatStorage
     end
 
     properties (Constant)
@@ -25,7 +26,6 @@ classdef BaseSequencer < BaseObject
         Timer
         RunNumber = 0
         Live
-        BadFrameDetected = false
     end
 
     methods
@@ -37,28 +37,16 @@ classdef BaseSequencer < BaseObject
                 layouts = []
                 preprocessor = Preprocessor()
                 analyzer = Analyzer()
-                data = DataManager(config, cameras)
-                stat = StatManager(config, cameras)
+                data = DataStorage(config, cameras)
+                stat = StatStorage(config, cameras)
             end
             obj.AcquisitionConfig = config;
             obj.CameraManager = cameras;
             obj.LayoutManager = layouts;
             obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
-            obj.DataManager = data;
-            obj.StatManager = stat;
-        end
-
-        function init(obj)
-            obj.Timer = tic;
-            obj.RunNumber = 0;
-            obj.info2("Sequence initialized.")
-        end
-
-        function config(obj, data)
-            obj.AcquisitionConfig.config(data.AcquisitionConfig)
-            obj.CameraManager.config(data)
-            obj.DataManager.config(data)
+            obj.DataStorage = data;
+            obj.StatStorage = stat;
         end
         
         function run(obj, options)
@@ -75,9 +63,9 @@ classdef BaseSequencer < BaseObject
             end
             timer = tic;
             obj.RunNumber = obj.RunNumber + 1;
-            obj.BadFrameDetected = false;
             obj.Live = struct('Info', struct('RunNumber', obj.RunNumber, ...
-                                             'LatCalib', obj.Analyzer.LatCalib), ...
+                                             'LatCalib', obj.Analyzer.LatCalib, ...
+                                             'BadFrameDetected', false), ...
                               'Raw', [], 'Signal', [], 'Background', [], 'Analysis', []);
             sequence = obj.AcquisitionConfig.ActiveSequence;
             for i = 1: height(sequence)
@@ -85,14 +73,15 @@ classdef BaseSequencer < BaseObject
                 camera = string(sequence.Camera(i));
                 label = sequence.Label(i);
                 note = sequence.Note(i);
-                config = obj.CameraManager.(camera).Config;
+                config = obj.CameraManager.(camera).Config.struct();
                 % Run one step
-                info = builtin('struct', "camera", camera, "label", label, "note", note, "config", config);
+                info = struct('camera', camera, 'config', config, 'label', label, 'note', note);
                 if type == "Start" || type == "Start+Acquire"
                     obj.startAcquisition(info, "verbose", options.verbose_start)
                 end
                 if type == "Acquire" || type == "Start+Acquire"
-                    args = [obj.AcquisitionConfig.AcquisitionParams.(camera).(label), 'verbose', options.verbose_acquire];
+                    args = [obj.AcquisitionConfig.AcquisitionParams.(camera).(label), ...
+                        {'verbose', options.verbose_acquire}];
                     % Acquire raw images
                     obj.acquireImage(info, args{:});
                     % Preprocess raw images
@@ -101,17 +90,20 @@ classdef BaseSequencer < BaseObject
                 end
                 if type == "Analysis"
                     % Generate analysis statistics
+                    if obj.AcquisitionConfig.DropBadFrames && obj.Live.Info.BadFrameDetected
+                        continue
+                    end
                     processes = obj.AcquisitionConfig.AnalysisProcess.(camera).(label);
                     obj.Live.Analysis.(camera).(label) = obj.Analyzer.analyze( ...
                         obj.Live.Signal.(camera).(label), info, processes, 'verbose', options.verbose_analysis);
                 end
             end
             if ~isempty(obj.LayoutManager)
-                obj.renderLayout(options.verbose_layout)
+                obj.LayoutManager.update(obj.Live, 'verbose', options.verbose_layout)
             end
-            if ~obj.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames
+            if ~obj.Live.Info.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames
                 obj.addData(options.verbose_data)
-                obj.StatManager.add(obj.Live.Analysis, "verbose", options.verbose_stat);
+                obj.StatStorage.add(obj.Live.Analysis, "verbose", options.verbose_stat);
             else
                 obj.warn("Bad acquisition detected, data dropped.")
             end
@@ -123,43 +115,18 @@ classdef BaseSequencer < BaseObject
             end
         end
     end
-    
+
     methods (Access = protected, Hidden, Abstract)
         startAcquisition(obj, info, varargin)            
         acquireImage(obj, info, varargin)
+        addData(obj, verbose)
+        abortAtEnd(obj)
     end
 
-    methods (Access = protected, Hidden)            
-        function renderLayout(obj, verbose)
-            obj.LayoutManager.update(obj.Live, 'verbose', verbose)
-        end
-
-        function addData(obj, verbose)
-            obj.DataManager.add(obj.Live.Raw, "verbose", verbose);
-        end
-
-        function abortAtEnd(~)
-        end
-
+    methods (Access = protected, Hidden)
         % Override the default getStatusLabel method from BaseObject
         function label = getStatusLabel(obj)
-            label = sprintf("%s(RunNum: %d, Index: %d)", class(obj), obj.RunNumber, obj.DataManager.CurrentIndex);
-        end
-    end
-
-    methods (Static)
-        function [sequencer, acq_config, cameras] = struct2obj(class_name, data_struct, layout, preprocessor, analyzer, options)
-            arguments
-                class_name
-                data_struct
-                layout = []
-                preprocessor = Preprocessor()
-                analyzer = Analyzer()
-                options.test_mode = false
-            end
-            [data, acq_config, cameras] = DataManager.struct2obj(data_struct, "test_mode", options.test_mode);
-            sequencer = feval(class_name, acq_config, cameras, layout, preprocessor, analyzer, data);
-            sequencer.info("Object created from structure.")
+            label = sprintf("%s(RunNum: %d, Index: %d)", class(obj), obj.RunNumber, obj.DataStorage.CurrentIndex);
         end
     end
 end
