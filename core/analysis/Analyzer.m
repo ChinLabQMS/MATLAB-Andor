@@ -15,16 +15,17 @@ classdef Analyzer < BaseProcessor
             obj.loadLatCalibFile()
         end
 
-        function res = analyze(obj, signal, info, processes, options)
+        function res = analyze(obj, signal, processes, info, options)
             arguments
                 obj
                 signal
-                info = struct('camera', [], 'label', [], 'config', [])
                 processes = {}
+                info.camera
+                info.label
+                info.config
                 options.verbose = false
             end
             timer = tic;
-            assert(all(isfield(info, ["camera", "label", "config"])))
             res = struct();
             info.lattice = obj.LatCalib;
             for i = 1: length(processes)
@@ -50,9 +51,6 @@ classdef Analyzer < BaseProcessor
     end
 
     methods (Access = protected, Hidden)
-        function init(~)
-        end
-
         function loadLatCalibFile(obj)
             obj.LatCalib = load(obj.LatCalibFilePath);
             obj.info("Lattice calibration file loaded.")

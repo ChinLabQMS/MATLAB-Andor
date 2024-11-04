@@ -15,7 +15,7 @@ classdef CameraManager < BaseObject
                 options.Andor19330 = AndorCameraConfig()
                 options.Andor19331 = AndorCameraConfig()
                 options.Zelux = ZeluxCameraConfig()
-                options.test_mode = false
+                options.test_mode = true
             end
             if options.test_mode
                 obj.Andor19330 = Camera("Andor19330", options.Andor19330);

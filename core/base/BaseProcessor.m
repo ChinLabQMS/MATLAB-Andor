@@ -3,13 +3,15 @@ classdef (Abstract) BaseProcessor < BaseObject
     % The default behavior is to init the processor upon configuration.
 
     methods
-        function obj = BaseProcessor()
+        function obj = BaseProcessor(varargin)
             % Dummy initialization to make sure all the set methods are
             % invoked for configurable property upon initiating object
             for p = obj.ConfigurableProp
-                obj.(p) = obj.(p);
+                if ~isempty(obj.(p))
+                    obj.(p) = obj.(p);
+                end
             end
-            obj.init()
+            obj.config(varargin{:})
         end
 
         function config(obj, varargin)
@@ -18,9 +20,10 @@ classdef (Abstract) BaseProcessor < BaseObject
         end
     end
 
-    methods (Access = protected, Abstract)
+    methods (Access = protected)
         % Initialize the processor after configuration
-        init(obj)
+        function init(~)
+        end
     end
 
 end

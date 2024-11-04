@@ -110,27 +110,9 @@ classdef BaseObject < handle
                 obj.getStatusLabel(), sprintf(info, varargin{:}));
         end
 
-        function str = sinfoCamera(obj, camera, info, varargin)
-            str = obj.sinfo("[%s] %s", camera, info, varargin{:});
-        end
-
-        function str = sinfoLabel(obj, camera, label, info, varargin)
-            str = obj.sinfo("[%s: %s] %s", camera, label, info, varargin{:});
-        end
-
         % Logs a message with the current time and the class name
         function info(obj, info, varargin)
             fprintf("%s\n", obj.sinfo(info, varargin{:}))
-        end
-        
-        % Logs a message with the current time and the class name
-        function infoCamera(obj, camera, info, varargin)
-            fprintf("%s\n", obj.sinfoCamera(camera, info, varargin{:}))
-        end
-
-        % Logs a message with the current time and the class name
-        function infoLabel(obj, camera, label, info, varargin)
-            fprintf("%s\n", obj.sinfoLabel(camera, label, info, varargin{:}))
         end
         
         % Blue font
@@ -138,29 +120,9 @@ classdef BaseObject < handle
             cprintf('blue', "%s\n", obj.sinfo(info, varargin{:}))
         end
 
-        % Blue font
-        function info2Camera(obj, camera, info, varargin)
-            cprintf('blue', "%s\n", obj.sinfoCamera(camera, info, varargin{:}))
-        end
-
-        % Blue font
-        function info2Label(obj, camera, label, info, varargin)
-            cprintf('blue', "%s\n", obj.sinfoLabel(camera, label, info, varargin{:}))
-        end
-
         % Yellow font
         function warn(obj, info, varargin)
             cprintf([179, 98, 5], "%s\n", obj.sinfo(info, varargin{:}))
-        end
-
-        % Yellow font
-        function warnCamera(obj, camera, info, varargin)
-            cprintf([179, 98, 5], "%s\n", obj.sinfoCamera(camera, info, varargin{:}))
-        end
-
-        % Yellow font
-        function warnLabel(obj, camera, label, info, varargin)
-            cprintf([179, 98, 5], "%s\n", obj.sinfoLabel(camera, label, info, varargin{:}))
         end
         
         % Logs an elevated (red) warning
@@ -168,29 +130,16 @@ classdef BaseObject < handle
             fprintf(2, "%s\n", obj.sinfo(info, varargin{:}))
         end
 
-        % Logs an elevated (red) warning
-        function warn2Camera(obj, camera, info, varargin)
-            fprintf(2, "%s\n", obj.sinfoCamera(camera, info, varargin{:}))
-        end
-
-        % Logs an elevated (red) warning
-        function warn2Label(obj, camera, label, info, varargin)
-            fprintf(2, "%s\n", obj.sinfoLabel(camera, label, info, varargin{:}))
-        end
-
         % Logs and throw an error with the current time and the class name
         function error(obj, info, varargin)
             error("%s", obj.sinfo(info, varargin{:}))
         end
-
-        % Logs and throw an error with the current time and the class name
-        function errorCamera(obj, camera, info, varargin)
-            error("%s", obj.sinfoCamera(camera, info, varargin{:}))
-        end
-
-        % Logs and throw an error with the current time and the class name
-        function errorLabel(obj, camera, label, info, varargin)
-            error("%s", obj.sinfoLabel(camera, label, info, varargin{:}))
+    
+        % Assert a certain condition being met
+        function assert(obj, condition, info, varargin)
+            if ~condition
+                obj.error(info, varargin{:})
+            end
         end
     end
 

@@ -1,10 +1,10 @@
-classdef (Abstract) BaseAnalyzer < BaseProcessor
+classdef (Abstract) DataProcessor < BaseProcessor
     %BASEANALYZER Base class for single dataset analyzer.
     % The default behavior is to reload and preprocess the dataset if new 
     % DataPath is set. The processed data is stored in Signal property.
     
     properties (SetAccess = {?BaseObject})
-        DataPath % "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat"
+        DataPath
     end
     
     properties (SetAccess = protected)

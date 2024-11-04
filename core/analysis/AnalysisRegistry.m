@@ -26,37 +26,6 @@ classdef AnalysisRegistry < BaseObject
                    @calibLatR)
     end
 
-    methods (Static)
-        function [processes, out_vars, out_data, num_out] = parseOutput(note)
-            processes = {};
-            args = parseString2Args(note, "output_format", "name-value");
-            name = args{1};
-            value = args{2};
-            [~, s] = enumeration('AnalysisRegistry');
-            process_names = string.empty();
-            for i = 1:length(name)
-                if ismember(name(i), s) && value(i)
-                    process_names = [process_names, name(i)]; %#ok<AGROW>
-                    processes = [processes, {{AnalysisRegistry.(name(i)).FuncHandle}}]; %#ok<AGROW>
-                elseif ~isempty(process_names)
-                    processes{end} = [processes{end}, {name(i), value(i)}];
-                else
-                    error("Parameters appears before named process.")
-                end
-            end
-            if nargout == 1
-                return
-            end
-            out_vars = string.empty;
-            out_data = string.empty;
-            for p = process_names
-                out_vars = [out_vars, AnalysisRegistry.(p).OutputVars]; %#ok<AGROW>
-                out_data = [out_data, AnalysisRegistry.(p).OutputData]; %#ok<AGROW>
-            end
-            num_out = length(out_vars) + length(out_data);
-        end
-    end
-
 end
 
 %% Registered functions in AnalysisRegistry

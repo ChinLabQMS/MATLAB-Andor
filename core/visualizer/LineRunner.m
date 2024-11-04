@@ -12,7 +12,7 @@ classdef LineRunner < AxesRunner
     end
     
     methods (Access = protected)
-        function updateContent(obj, data, info)
+        function updateContent(obj, data, sequencer)
             switch obj.Config.FuncName
                 case "Mean"
                     new = mean(data, "all");
@@ -21,12 +21,17 @@ classdef LineRunner < AxesRunner
                 case "Variance"
                     new = var(data(:));
                 otherwise
-                    new = reshape(data.(obj.Config.FuncName), [], 1);
+                    try
+                        new = reshape(data.(obj.Config.FuncName), [], 1);
+                    catch
+                        new = nan;
+                        obj.warnLabel(obj.Config.Content, obj.Config.FuncName, 'Not found in data.')
+                    end
             end
             if isempty(obj.GraphHandle)
-                obj.GraphHandle = plot(obj.AxesHandle, info.RunNumber, new, "LineWidth", 2);
+                obj.GraphHandle = plot(obj.AxesHandle, sequencer.RunNumber, new, "LineWidth", 2);
             else
-                obj.GraphHandle.XData = [obj.GraphHandle.XData, info.RunNumber];
+                obj.GraphHandle.XData = [obj.GraphHandle.XData, sequencer.RunNumber];
                 obj.GraphHandle.YData = [obj.GraphHandle.YData, new];
             end
         end

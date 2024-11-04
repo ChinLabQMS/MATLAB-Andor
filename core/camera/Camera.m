@@ -88,10 +88,9 @@ classdef Camera < BaseRunner
         function startAcquisition(obj, info, options)
             arguments
                 obj
-                info = struct('label', 'Test')
-                options.verbose (1, 1) logical = false
+                info.label = "Test"
+                options.verbose = false
             end
-            assert(all(isfield(info, "label")))
             obj.checkInitialized()
             if obj.NumExpectedFrames < obj.Config.MaxQueuedFrames
                 obj.startAcquisitionCamera()  % Start acquisition
@@ -113,10 +112,10 @@ classdef Camera < BaseRunner
             obj.NumExpectedFrames = 0;
         end
 
-        function [image, status] = acquire(obj, info, options)
+        function [image, is_good] = acquire(obj, info, options)
             arguments
                 obj
-                info = struct('label', "Test")
+                info.label = "Test"
                 options.refresh (1, 1) double {mustBePositive} = 0.01
                 options.timeout (1, 1) double {mustBePositive} = 10
                 options.flag_immediate (1, 1) logical = false
@@ -124,18 +123,17 @@ classdef Camera < BaseRunner
                 options.verbose (1, 1) logical = false
             end
             timer = tic;
-            assert(all(isfield(info, "label")))
             obj.checkInitialized()
             if obj.NumExpectedFrames == 0
                 obj.error("[%s] Expected number of frame is 0, please start acquisition before retriving data.", info.label)
             end
-            status = "good";
+            is_good = true;
             num_available = obj.getNumberNewImages();
             if num_available > obj.NumExpectedFrames
-                status = "delayed";
+                is_good = false;
                 obj.warn2("[%s] More than expected images are available, check if analysis falls behind acquisition.", info.label)
             elseif num_available == obj.NumExpectedFrames && options.flag_immediate
-                status = "immediate";
+                is_good = false;
                 obj.warn2("[%s] Image is immediately available upon acquisition.", info.label)
             else
                 while toc(timer) < options.timeout && (num_available < obj.NumExpectedFrames)
@@ -145,19 +143,17 @@ classdef Camera < BaseRunner
                 elapsed = toc(timer);
                 if elapsed >= options.timeout
                     image = zeros(obj.Config.XPixels, obj.Config.YPixels, "uint16");
-                    status = "timeout";
+                    is_good = false;
                     obj.warn2("[%s] Acquisition timed out.", info.label)
-                    obj.abortAcquisitionCamera()
+                    obj.abortAcquisition()
                     return
                 elseif elapsed < options.min_wait
-                    status = "short";
+                    is_good = false;
                     obj.warn2("[%s] Elapsed time too short for this acquisition.", info.label)
                 end
             end
             [image, new_status] = obj.acquireImage(info.label);
-            if status == "good" && new_status ~= "good"
-                status = new_status;
-            end
+            is_good = is_good && new_status;
             obj.NumExpectedFrames = obj.NumExpectedFrames - 1;
             if any(image(:) == obj.Config.MaxPixelValue)
                 obj.warn("[%s] Image is saturated, max pixel value = %d.", ...
@@ -204,14 +200,14 @@ classdef Camera < BaseRunner
             obj.AcquisitionStartTime = [];
         end
 
-        function [image, status] = acquireImage(obj, label)
+        function [image, is_good] = acquireImage(obj, label)
             if isfield(obj.ExampleImage, label)
                 obj.CurrentIndex = mod(obj.CurrentIndex, size(obj.ExampleImage.(label), 3)) + 1;
                 image = obj.ExampleImage.(label)(:, :, obj.CurrentIndex);
             else
                 image = randi(obj.Config.MaxPixelValue - 1, obj.Config.XPixels, obj.Config.YPixels, "uint16");
             end
-            status = "good";
+            is_good = true;
             obj.AcquisitionStartTime = obj.AcquisitionStartTime(2:end);
         end
     end

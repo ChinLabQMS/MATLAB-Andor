@@ -8,7 +8,7 @@ classdef (Abstract) AxesRunner < BaseRunner
     properties (SetAccess = protected)
         GraphHandle
         AddonHandle
-        Live = struct.empty
+        SequencerHandle
     end
 
     methods
@@ -24,22 +24,21 @@ classdef (Abstract) AxesRunner < BaseRunner
         function init(~)
         end
 
-        function update(obj, Live)
-            obj.Live = Live;
+        function update(obj, sequencer)
+            obj.SequencerHandle = sequencer;
             try
-                data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+                data = sequencer.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
             catch
-                obj.warn("[%s %s] Not found in Live.", obj.Config.CameraName, obj.Config.ImageLabel)
+                obj.warn("[%s %s] Not found in Live data.", obj.Config.CameraName, obj.Config.ImageLabel)
                 return
             end
-            info = Live.Info;
-            obj.updateContent(data, info)
+            obj.updateContent(data, sequencer)
         end
 
         function config(obj, varargin)
             config@BaseRunner(obj, varargin{:})
-            if ~isempty(obj.Live)
-                obj.update(obj.Live)
+            if ~isempty(obj.SequencerHandle)
+                obj.update(obj.SequencerHandle)
             end
         end
 

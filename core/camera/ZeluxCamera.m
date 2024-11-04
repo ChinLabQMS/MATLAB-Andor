@@ -88,16 +88,16 @@ classdef ZeluxCamera < Camera
             end
         end
 
-        function [image, status] = acquireImage(obj, label)
+        function [image, is_good] = acquireImage(obj, label)
             image_frame = obj.CameraHandle.GetPendingFrameOrNull;
             image = reshape(uint16(image_frame.ImageData.ImageData_monoOrBGR), [obj.Config.XPixels, obj.Config.YPixels]);
             OldFrameIndex = obj.FrameIndex;
             obj.FrameIndex = image_frame.FrameNumber;
             if obj.FrameIndex > OldFrameIndex + 1
                 obj.warn2('[%s] Dropped frame detected.', label)
-                status = "dropped";
+                is_good = false;
             else
-                status = "good";
+                is_good = true;
             end
         end
 

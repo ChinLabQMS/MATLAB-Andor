@@ -75,6 +75,7 @@
             arguments
                 Lat
                 sites = []
+                options.center = Lat.R
                 options.filter = false
                 options.x_lim = [1, Inf]
                 options.y_lim = [1, Inf]
@@ -101,7 +102,7 @@
                 sites = sites(~idx, :);
             end
             % Transform coordinates to real space
-            coor = sites * Lat.V + Lat.R;
+            coor = sites * Lat.V + options.center;
             % Filter lattice sites outside of a rectangular limit area
             if options.filter
                 idx = (coor(:, 1) >= options.x_lim(1)) & ...
@@ -288,8 +289,8 @@
             Lat.checkInitialized()
             Lat2.checkInitialized()
             if options.calib_R
-                Lat.calibrateR(signal, x_range, y_range, "bootstrapping", false)
-                Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", false)
+                Lat.calibrateR(signal, x_range, y_range, "bootstrapping", options.calib_R_bootstrap)
+                Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", options.calib_R_bootstrap)
             end
             R_init = Lat.R;
             num_sites = size(options.sites, 1);
@@ -322,10 +323,6 @@
             info_str = sprintf("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
                     Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist);
             info_str2 = sprintf("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)));
-            if options.calib_R && options.calib_R_bootstrap
-                Lat.calibrateR(signal, x_range, y_range, "bootstrapping", true)
-                Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", true)
-            end
             if all(best.Site == [0, 0])
                 if options.verbose
                     Lat.info("%s", info_str)
@@ -371,6 +368,7 @@
                 varargin
             end
             arguments
+                opt1.center = Lat.R
                 opt1.filter = true
                 opt1.x_lim = [1, 1440]
                 opt1.y_lim = [1, 1440]

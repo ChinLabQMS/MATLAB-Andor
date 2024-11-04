@@ -47,7 +47,9 @@ classdef Preprocessor < BaseProcessor
             arguments
                 obj
                 raw
-                info
+                info.camera
+                info.label
+                info.config
                 opt.verbose = obj.Process_Verbose
                 opt.camera_list = obj.Process_CameraList
                 opt1.var_name = obj.BackgroundSubtraction_VarName
@@ -60,7 +62,6 @@ classdef Preprocessor < BaseProcessor
                 opt3.warn_var_thres = obj.OffsetCorrection_WarnVarThres
             end
             timer = tic;
-            assert(all(isfield(info, ["camera", "label", "config"])))
             if ~ismember(info.camera, opt.camera_list)
                 signal = double(raw);
                 leakage = zeros(size(signal));
@@ -81,8 +82,8 @@ classdef Preprocessor < BaseProcessor
             Signal = Data;
             Leakage = Data;
             for label = string(fields(Data.Config.AcquisitionNote)')
-                info = struct('camera', Data.Config.CameraName, 'label', label, 'config', Data.Config);
-                [Signal.(label), Leakage.(label)] = obj.process(Data.(label), info, varargin{:});
+                info = {'camera', Data.Config.CameraName, 'label', label, 'config', Data.Config};
+                [Signal.(label), Leakage.(label)] = obj.process(Data.(label), info{:}, varargin{:});
             end
         end
 
@@ -98,9 +99,6 @@ classdef Preprocessor < BaseProcessor
     end
 
     methods (Access = protected, Hidden)
-        function init(~)
-        end
-
         function loadBackgroundFile(obj)
             obj.Background = load(obj.BackgroundFilePath);
             obj.info("Background file loaded from '%s'.", obj.BackgroundFilePath)

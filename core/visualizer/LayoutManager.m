@@ -45,16 +45,16 @@ classdef LayoutManager < BaseObject
         end
         
         % Update axes content
-        function update(obj, Live, fields, options)
+        function update(obj, sequencer, fields, options)
             arguments
                 obj
-                Live
+                sequencer
                 fields = obj.VisibleProp
                 options.verbose = false
             end
             timer = tic;
             for field = fields
-                obj.(field).update(Live)
+                obj.(field).update(sequencer)
             end
             drawnow
             if options.verbose

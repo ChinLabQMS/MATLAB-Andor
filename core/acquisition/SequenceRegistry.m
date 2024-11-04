@@ -58,6 +58,11 @@ classdef SequenceRegistry < BaseObject
                 active_sequence.Note ~= "", :);
         end
 
+        function active_projection = getActiveProjection(sequence)
+            active_sequence = SequenceRegistry.getActiveSequence(sequence);
+            active_projection = active_sequence(active_sequence.Type == "Projection", :);
+        end
+
         function mustBeValidSequence(sequence)
             arguments
                 sequence (:, 5) table
@@ -81,7 +86,7 @@ classdef SequenceRegistry < BaseObject
                         error("Invalid sequence, 'Config' is reserved for camera sequenceuration and can not be used as label.")
                     end
                     if type == "Start" || type == "Start+Acquire"
-                        started = [started, label];
+                        started = [started, label]; %#ok<AGROW>
                     end
                     if type == "Acquire" || type == "Start+Acquire"
                         if label == ""
@@ -94,7 +99,7 @@ classdef SequenceRegistry < BaseObject
                             error("Invalid sequence, label %s is acquired more than once for camera %s.", label, camera)
                         end
                         started(started == label) = [];
-                        acquired(end + 1) = label;
+                        acquired(end + 1) = label; %#ok<AGROW>
                     end
                     if type == "Analysis"
                         if ~ismember(label, acquired)
@@ -103,7 +108,7 @@ classdef SequenceRegistry < BaseObject
                         if ismember(label, analyzed)
                             error("Invalid sequence, label %s is analyzed more than once for camera %s", label, camera)
                         end
-                        analyzed(end + 1) = label;
+                        analyzed(end + 1) = label; %#ok<AGROW>
                     end
                 end
                 if ~isempty(started)
@@ -125,10 +130,10 @@ function sequence = makeSequence(cameras, labels, types, notes, empty_rows)
     end
     num_command = length(cameras) + empty_rows;
     default_camera = "--inactive--";
-    all_camera = ["Andor19330", "Andor19331", "Zelux", "--inactive--"];
+    all_camera = ["Andor19330", "Andor19331", "Zelux", "DMD", "--inactive--"];
     default_label = "";
     default_type = "Analysis";
-    all_type = ["Start+Acquire", "Start", "Acquire", "Analysis"];
+    all_type = ["Start+Acquire", "Start", "Acquire", "Analysis", "Projection"];
     default_note = "";
     Order = (1: num_command)';
     Camera = [cameras, repmat(default_camera, 1, empty_rows)]';

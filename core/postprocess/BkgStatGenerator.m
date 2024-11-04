@@ -27,6 +27,10 @@ classdef BkgStatGenerator < BaseProcessor
     end
     
     methods
+        function obj = BkgStatGenerator(varargin)
+            obj@BaseProcessor(varargin{:})
+        end
+
         function process(obj)
             for setting = obj.SettingList
                 obj.BkgStat.(setting) = getBkgStat(obj, obj.BkgData.(setting));

@@ -256,14 +256,14 @@ classdef AndorCamera < Camera
             CheckWarning(ret)
         end
 
-        function [image, status] = acquireImage(obj, label)
+        function [image, is_good] = acquireImage(obj, label)
             [ret, image_data] = GetImages(1, obj.Config.NumSubFrames, obj.Config.YPixels*obj.Config.XPixels);
             CheckWarning(ret)
             if ret ~= atmcd.DRV_SUCCESS
                 obj.error("[%s] Unable to acquire image.", label)
             end
             image = uint16(flip(transpose(reshape(image_data, obj.Config.YPixels, obj.Config.XPixels)), 1));
-            status = "good";
+            is_good = true;
         end
 
         function setToCurrent(obj)

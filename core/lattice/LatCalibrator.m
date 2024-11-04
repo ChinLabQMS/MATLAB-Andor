@@ -1,4 +1,4 @@
-classdef LatCalibrator < BaseAnalyzer
+classdef LatCalibrator < DataProcessor
     %LATCALIBERATOR Calibrator for 
     % 1. Getting initial lattice calibration
     % 2. Re-calibrate to a different dataset
@@ -26,11 +26,13 @@ classdef LatCalibrator < BaseAnalyzer
         CalibO_Sites = Lattice.prepareSite('hex', 'latr', 3)
         CalibO_Verbose = true
         CalibO_VerboseStep = false
+        CalibO_Debug = false
         Recalib_CalibO = true
         TrackCalib_CropRSite = 20
         TrackCalib_CalibOFirst = true
         TrackCalib_CalibOEnd = true
         TrackCalib_CalibOEvery = true
+        TrackCalib_DropShifted = true
     end
 
     properties (SetAccess = protected)
@@ -38,7 +40,7 @@ classdef LatCalibrator < BaseAnalyzer
         LatCalib
     end
     
-    methods    
+    methods
         function set.LatCalibFilePath(obj, path)
             obj.LatCalibFilePath = path;
             obj.loadLatCalibFile()
@@ -93,6 +95,7 @@ classdef LatCalibrator < BaseAnalyzer
                 opt4.verbose = obj.CalibO_Verbose
                 opt4.verbose_step = obj.CalibO_VerboseStep
                 opt4.plot_diagnosticO = obj.CalibO_PlotDiagnostic
+                opt4.debug = obj.CalibO_Debug
             end
             signal = getSignalSum(obj.Signal.(opt3.camera).(opt3.label)(:, :, signal_index), ...
                 getNumFrames(obj.Signal.(opt3.camera).Config), "first_only", true);
@@ -101,7 +104,7 @@ classdef LatCalibrator < BaseAnalyzer
             args = namedargs2cell(opt4);
             Lat = obj.LatCalib.(opt3.camera);
             Lat2 = obj.LatCalib.(opt3.camera2);
-            Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, opt3.crop_R_site, args{:}, 'debug', false);
+            Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, opt3.crop_R_site, args{:});
         end
         
         % Re-calibrate the lattice vectors and centers to mean image
@@ -161,25 +164,38 @@ classdef LatCalibrator < BaseAnalyzer
                 options.calibO_first = obj.TrackCalib_CalibOFirst
                 options.calibO_end = obj.TrackCalib_CalibOEnd
                 options.calibO_every = obj.TrackCalib_CalibOEvery 
+                options.drop_shifted = obj.TrackCalib_DropShifted
             end
+            obj.info('Start generating lattice offset tracking report...')
             num_acq = obj.Signal.AcquisitionConfig.NumAcquisitions;
             result = struct();
             if options.calibO_first
-                obj.calibrateO(1, "plot_diagnosticO", false, "verbose", true, ...
-                    "sites", Lattice.prepareSite('hex', 'latr', 20));
+                obj.info('Cross calibration on the first image...')
+                obj.calibrateO(1, "crop_R_site", options.crop_R_site, ...
+                    "plot_diagnosticO", false, "verbose", true, ...
+                    "sites", Lattice.prepareSite('hex', 'latr', 20))
             end
             for i = 1: num_acq
                 if options.calibO_every
                     obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, ...
                         "crop_R_site", options.crop_R_site, ...
-                        "plot_diagnostic", false, "verbose", false)
+                        "plot_diagnostic", false, "verbose", false, 'debug', true)
+                    Lat = obj.LatCalib.(obj.CalibO_Camera);
+                    Lat2 = obj.LatCalib.(obj.CalibO_Camera2);
+                    if ~isequal(Lat.Ostat.Site, [0, 0])
+                        obj.warn("RunNumber = %d, lattice shifted.", i)
+                        if options.drop_shifted
+                            continue
+                        end
+                    end
+                    result.(obj.CalibO_Camera)(i) = Lat.Rstat;
+                    result.(obj.CalibO_Camera2)(i) = Lat2.Rstat;
                 end
                 for j = 1: length(obj.CameraList)
                     camera = obj.CameraList(j);
                     label = obj.ImageLabel(j);
                     Lat = obj.LatCalib.(camera);
-                    if options.calibO_every && ismember(camera, [obj.CalibO_Camera, obj.CalibO_Camera2])
-                        result.(camera)(i) = Lat.Rstat;
+                    if options.calibO_every && ismember(camera, [obj.CalibO_Camera, obj.CalibO_Camera2])                        
                         continue
                     end
                     signal = obj.Signal.(camera).(label)(:, :, i);
@@ -195,12 +211,16 @@ classdef LatCalibrator < BaseAnalyzer
                 camera = obj.CameraList(j);
                 result.(camera) = struct2table(result.(camera));
             end
+            obj.info('Lattice offset tracking report is generated.')
         end
     end
 
     methods (Access = protected, Hidden)
         % Generate stats (cloud centers, widths, FFT pattern, ...) for lattice calibration
         function init(obj)
+            if isempty(obj.DataPath)
+                obj.error('DataPath not set!')
+            end
             for i = 1: length(obj.CameraList)
                 camera = obj.CameraList(i);
                 label = obj.ImageLabel(i);
