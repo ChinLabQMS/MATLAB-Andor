@@ -1,32 +1,43 @@
 classdef AnalysisRegistry < BaseObject
 
     properties
+        FuncHandle
         OutputVars
         OutputData
-        FuncHandle
+        TempVars
+        TempData
     end
     
     methods
-        function obj = AnalysisRegistry(out_vars, out_data, func)
+        function obj = AnalysisRegistry(func, out_vars, out_data, temp_vars, temp_data)
+            arguments
+                func
+                out_vars
+                out_data
+                temp_vars = []
+                temp_data = []
+            end
+            obj.FuncHandle = func;
             obj.OutputVars = out_vars;
             obj.OutputData = out_data;
-            obj.FuncHandle = func;
+            obj.TempVars = temp_vars;
+            obj.TempData = temp_data;
         end
     end
 
     enumeration
-        FitCenter (["XCenter", "YCenter", "XWidth", "YWidth"], ...
-                   [], ...
-                   @fitCenter)
-        FitGauss  (["GaussXC", "GaussYC", "GaussXWid", "GaussYWid"], ...
-                   [], ...
-                   @fitGauss)
-        CalibLatR (["LatX", "LatY"], ...
-                   [], ...
-                   @calibLatR)
-        FitPSF    (["SigmaX", "SigmaY", "StrehlRatio"], ...
-                   ["PSFImage"], ...
-                   @fitPSF)
+        FitCenter (@fitCenter, ...
+                   ["XCenter", "YCenter", "XWidth", "YWidth"], ...
+                   [])
+        FitGauss  (@fitGauss, ...
+                   ["GaussXC", "GaussYC", "GaussXWid", "GaussYWid"], ...
+                   [])
+        CalibLatR (@calibLatR, ...
+                   ["LatX", "LatY"], ...
+                   [])
+        FitPSF    (@fitPSF, ...
+                   ["SigmaX", "SigmaY", "StrehlRatio"], ...
+                   ["PSFImage"])
     end
 
 end
