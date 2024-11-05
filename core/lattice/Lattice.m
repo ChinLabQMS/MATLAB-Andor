@@ -399,7 +399,7 @@
             if opt2.add_origin
                 radius = [repmat(opt2.norm_radius * Lat.V_norm, size(corr, 1), 1);
                           opt2.origin_radius * Lat.V_norm];
-                corr = [corr; Lat.convert2Real([0, 0])];
+                corr = [corr; opt1.center];
             else
                 radius = opt2.norm_radius * Lat.V_norm;
             end
@@ -538,7 +538,7 @@
                 norm1 = norm(V1(i, :));
                 norm2 = norm(V2(i, :));
                 fprintf('(%d)\t|V11| = %14.2f px,\t|V12| = %14.2f px,\tDiff = %9.2f px (%5.3f%%)\n', ...
-                    i, norm1, norm2, norm1 - norm2, 200*(norm1 - norm2)/(norm1 + norm2))
+                    i, norm1, norm2, norm1 - norm2, 100*(norm1 - norm2)/norm1)
             end
         end
     end

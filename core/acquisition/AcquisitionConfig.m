@@ -187,7 +187,7 @@ end
 function params = parseProjectionNoteFull(obj, note_full)
     params = struct();
     for camera = string(fields(note_full))'
-        for label = string(field(note_full.(camera)))'
+        for label = string(fields(note_full.(camera)))'
             [params.(camera).(label)] = ...
                 parseProjectionNote(obj, note_full.(camera).(label));
         end

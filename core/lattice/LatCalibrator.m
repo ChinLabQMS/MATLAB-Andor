@@ -27,6 +27,7 @@ classdef LatCalibrator < DataProcessor
         CalibO_Verbose = true
         CalibO_VerboseStep = false
         CalibO_Debug = false
+        Recalib_ResetCenters = true
         Recalib_CalibO = true
         TrackCalib_CropRSite = 20
         TrackCalib_CalibOFirst = true
@@ -108,9 +109,10 @@ classdef LatCalibrator < DataProcessor
         end
         
         % Re-calibrate the lattice vectors and centers to mean image
-        function recalibrate(obj, opt1, opt2, opt3)
+        function recalibrate(obj, opt, opt1, opt2, opt3)
             arguments
                 obj
+                opt.reset_centers = obj.Recalib_ResetCenters
                 opt1.plot_diagnosticR = obj.CalibRInit_PlotDiagnostic
                 opt1.plot_diagnosticV = obj.CalibVInit_PlotDiagnostic
                 opt2.calibO = obj.Recalib_CalibO
@@ -126,12 +128,17 @@ classdef LatCalibrator < DataProcessor
                 opt3.verbose_step = obj.CalibO_VerboseStep
                 opt3.plot_diagnosticO = obj.CalibO_PlotDiagnostic
             end
+            if opt.reset_centers
+                for camera = obj.CameraList
+                    obj.LatCalib.(camera).init(obj.Stat.(camera).Center)
+                end
+            end
             args1 = namedargs2cell(opt1);
             for camera = obj.CameraList
                 if ~isempty(obj.LatCalib.(camera).K)
                     obj.calibrate(camera, args1{:});
                 else
-                    obj.errorCamera(camera, "Unable to recalibrate, please provide initial calibration either manually or through loading a file.")
+                    obj.error("Unable to recalibrate camera [%s], please provide initial calibration either manually or through loading a file.", camera)
                 end
             end
             if opt2.calibO

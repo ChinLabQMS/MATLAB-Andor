@@ -2,11 +2,11 @@ classdef ImageRunner < AxesRunner
 
     methods (Access = protected)
         function updateContent(obj, data, sequencer)
+            [x_size, y_size] = size(data);
             if isempty(obj.GraphHandle)
                 obj.GraphHandle = imagesc(obj.AxesHandle, data);
                 colorbar(obj.AxesHandle)
             else
-                [x_size, y_size] = size(data);
                 obj.GraphHandle.XData = [1, y_size];
                 obj.GraphHandle.YData = [1, x_size];
                 obj.GraphHandle.CData = data;
@@ -16,9 +16,20 @@ classdef ImageRunner < AxesRunner
                 case "None"
                 case "Lattice"
                     Lat = sequencer.Analyzer.LatCalib.(obj.Config.CameraName);
-                    obj.AddonHandle = Lat.plot(obj.AxesHandle, Lattice.prepareSite("hex", "latr", 20), ...
-                        'x_lim', [1, size(data, 1)], 'y_lim', [1, size(data, 2)]);
+                    obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
+                        Lattice.prepareSite("hex", "latr", 20), ...
+                        'x_lim', [1, x_size], 'y_lim', [1, y_size]);
                 case "Lattice All"
+                    Lat = sequencer.Analyzer.LatCalib.(obj.Config.CameraName);
+                    num_frames = getNumFrames(sequencer.CameraManager.(obj.Config.CameraName).Config);
+                    obj.AddonHandle = gobjects(num_frames, 1);
+                    for i = 1: num_frames
+                        obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
+                            Lattice.prepareSite("hex", "latr", 20), ...
+                            'center', Lat.R + [x_size / num_frames * (i - 1), 0], ...
+                            'x_lim', [1, x_size], 'y_lim', [1, y_size]);
+                    end
+                case "PSF"
                     
             end
         end

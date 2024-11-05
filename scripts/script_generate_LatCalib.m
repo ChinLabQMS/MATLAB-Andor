@@ -1,30 +1,26 @@
 %% Create a Calibrator object
-clear; clc;
-p = LatCalibrator;
-
-%% Manual pre-calibration, with no existing calibration file
-
-% Config data path
-% - for initial calibration, set LatCalibFilePath to []
-p.config( ...
+clear; clc; close all
+p = LatCalibrator( ...
     "LatCalibFilePath", [], ... 
-    "DataPath", "data/2024/09 September/20240930 multilayer/FK2_focused_to_major_layer.mat")
+    "DataPath", "data/2024/11 November/20241104/gray_on_black_anchor=64_array64_spacing=70_asym_r=15_r=7.mat");
 
 %% Andor19330: Plot FFT of a small box centered at atom cloud
 close all
 p.plotFFT("Andor19330")
 
 %% Andor19330: Input center of lattice and initial peak positions as [x1, y1; x2, y2]
+% Select the first and second peaks to the right, clockwise
 close all
-p.calibrate("Andor19330", [105, 204; 156, 242])
+p.calibrate("Andor19330", [82, 158; 123, 187])
 
 %% Andor19331
+% Select the second and first peaks to the right, clockwise
 close all
 p.plotFFT("Andor19331")
 
 %% Andor19331: Input the peaks that corresponds to the Andor19330 peaks under its coordinates
 close all
-p.calibrate("Andor19331", [155, 216; 116, 165])
+p.calibrate("Andor19331", [173, 313; 128, 239])
 
 %% Zelux
 close all
@@ -36,26 +32,10 @@ p.calibrate("Zelux", [656, 566; 716, 595])
 
 %% Cross-calibrate Andor19331 to Andor19330
 close all
-p.calibrateO(2, 'sites', Lattice.prepareSite('hex', 'latr', 20))
+p.calibrateO(1, 'sites', Lattice.prepareSite('hex', 'latr', 20))
 
 %% (optional) Calibrate to a different signal index by searching a smaller region
 p.calibrateO(20, 'sites', Lattice.prepareSite('hex', 'latr', 2))
 
 %% Save lattice calibration of all three cameras (default is with today's date)
-p.save()
-
-%% Re-calibrate the lattice to a new dataset
-
-close all
-% Set an initial calibration file location and new data location for re-calibration
-p.config( ...
-    "LatCalibFilePath", "calibration/LatCalib_20241028.mat", ... 
-    "DataPath", "data/2024/10 October/20241021 DMD alignment/BIG300_anchor=64_array64_spacing=100_centered_r=20_r=10.mat")
-
-%%
-p.recalibrate("calibO", true, "sites", Lattice.prepareSite('hex', 'latr', 20), ...
-    "plot_diagnosticV", false, "plot_diagnosticR", false, "plot_diagnosticO", true, "signal_index", 1)
-
-%% Save re-calibration result (default is with today's date)
-close all
 p.save()
