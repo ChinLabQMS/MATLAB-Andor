@@ -33,6 +33,7 @@ classdef (Abstract) AxesRunner < BaseRunner
                 return
             end
             obj.updateContent(data, sequencer)
+            drawnow
         end
 
         function config(obj, varargin)

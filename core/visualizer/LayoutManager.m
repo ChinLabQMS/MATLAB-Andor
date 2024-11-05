@@ -56,7 +56,6 @@ classdef LayoutManager < BaseObject
             for field = fields
                 obj.(field).update(sequencer)
             end
-            drawnow
             if options.verbose
                 obj.info("Layout rendered in %.3f s.", toc(timer))
             end
