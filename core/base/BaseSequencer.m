@@ -107,7 +107,7 @@ classdef BaseSequencer < BaseObject
                 obj.LayoutManager.update(obj, 'verbose', opt2.verbose_layout)
             end
             if (~obj.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
-                if (rem(obj.RunNumber, obj.AcquisitionConfig.SampleInterval + 1) == 1)
+                if (rem(obj.RunNumber, obj.AcquisitionConfig.SampleInterval) == 0)
                     obj.addData(opt2.verbose_data)
                 end
                 obj.addStat(opt2.verbose_stat)
