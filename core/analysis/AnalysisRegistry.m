@@ -35,6 +35,9 @@ classdef AnalysisRegistry < BaseObject
         CalibLatR (@calibLatR, ...
                    ["LatX", "LatY"], ...
                    [])
+        CalibLatO (@calibLatO, ...
+                   ["LatX", "LatY"], ...
+                   [])
         FitPSF    (@fitPSF, ...
                    ["SigmaX", "SigmaY", "StrehlRatio"], ...
                    ["PSFImage"])
@@ -52,13 +55,15 @@ function res = fitCenter(res, signal, info, options)
         info 
         options.first_only = true
     end
-    assert(all(isfield(info, "config")))
+    assert(all(isfield(info, ["camera", "label", "config"])))
+    signal = signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
 end
 
 function res = fitGauss(res, signal, info)
-    assert(all(isfield(info, "config")))
+    assert(all(isfield(info, ["camera", "label", "config"])))
+    signal = signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config));
     f = fitGauss2D(signal);
     res.GaussX = f.x0;
@@ -74,10 +79,21 @@ function res = calibLatR(res, signal, info, options)
         info
         options.first_only = true
     end
-    assert(all(isfield(info, ["camera", "config", "lattice"])))
+    assert(all(isfield(info, ["camera", "label", "config", "lattice"])))
+    signal = signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     Lat = info.lattice.(info.camera);
     Lat.calibrateR(signal)
     res.LatX = Lat.R(1);
     res.LatY = Lat.R(2);
+end
+
+function res = calibLatO(res, signal, info, options)
+    arguments
+        res
+        signal
+        info
+        options
+    end
+    
 end

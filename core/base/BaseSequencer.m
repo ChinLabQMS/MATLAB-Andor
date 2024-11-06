@@ -106,11 +106,13 @@ classdef BaseSequencer < BaseObject
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(obj, 'verbose', opt2.verbose_layout)
             end
-            if ~obj.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames
-                obj.addData(opt2.verbose_data)
+            if (~obj.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
+                if (rem(obj.RunNumber, obj.AcquisitionConfig.SampleInterval + 1) == 1)
+                    obj.addData(opt2.verbose_data)
+                end
                 obj.addStat(opt2.verbose_stat)
             else
-                obj.warn("Bad acquisition detected, data dropped.")
+                obj.warn2("Bad acquisition detected, data dropped.")
             end
             if opt1.verbose
                 obj.info2("Sequence completed in %.3f s.", toc(timer))
@@ -142,7 +144,7 @@ classdef BaseSequencer < BaseObject
         function runAnalysis(obj, camera, label, config, verbose)
             args = {obj.AcquisitionConfig.AnalysisParams.(camera).(label), ...
                 "camera", camera, "label", label, "config", config, "verbose", verbose};
-            [obj.Analysis.(camera).(label)] = obj.Analyzer.analyze(obj.Signal.(camera).(label), args{:});
+            [obj.Analysis.(camera).(label)] = obj.Analyzer.analyze(obj.Signal, args{:});
         end
 
         function addData(obj, verbose)

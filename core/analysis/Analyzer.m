@@ -2,7 +2,7 @@ classdef Analyzer < BaseProcessor
     %ANALYZER Live analyzer
     
     properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241028.mat"
+        LatCalibFilePath = "calibration/LatCalib_20241105.mat"
     end
 
     properties (SetAccess = protected)
