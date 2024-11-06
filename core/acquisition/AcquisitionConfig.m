@@ -6,6 +6,7 @@ classdef AcquisitionConfig < BaseProcessor
         NumStatistics = 2000
         Refresh = 0.01
         Timeout = Inf
+        SampleInterval = 1
         DropBadFrames = true
         AbortAtEnd = true
     end

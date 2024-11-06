@@ -151,7 +151,7 @@ classdef LatCalibrator < DataProcessor
         function save(obj, filename)
             arguments
                 obj
-                filename (1, 1) string = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
+                filename = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
             end
             for camera = obj.CameraList
                 if ~isfield(obj.LatCalib, camera)
@@ -160,6 +160,10 @@ classdef LatCalibrator < DataProcessor
             end
             Lat = obj.LatCalib;
             Lat.Config = obj.struct();
+            filename = filename.strip("right", ".mat");
+            if isfile(filename + ".mat")
+                filename = filename + sprintf("_%s", datetime("now", "Format", "HHmmss"));
+            end
             save(filename, "-struct", "Lat")
             obj.info("Lattice calibration saved as '%s'.", filename)
         end

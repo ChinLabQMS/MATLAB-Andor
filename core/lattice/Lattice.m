@@ -522,23 +522,29 @@
             end
         end
 
-        function checkDiff(Lat, Lat2)
-            V1 = [Lat.V; Lat.V(1, :) + Lat.V(2, :)];
+        function checkDiff(Lat, Lat2, label, label2)
+            arguments
+                Lat
+                Lat2
+                label = " (old)"
+                label2 = " (new)"
+            end
+            V = [Lat.V; Lat.V(1, :) + Lat.V(2, :)];
             V2 = [Lat2.V; Lat2.V(1, :) + Lat2.V(2, :)];
-            fprintf('Difference between %s and %s:\n', Lat.ID, Lat2.ID)
-            fprintf('\t R_1 = (%7.2f, %7.2f),\t R_2 = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
-                    Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat.R(1) - Lat2.R(1), Lat.R(2) - Lat2.R(2))
+            fprintf('Difference between %s%s and %s%s:\n', Lat.ID, label, Lat2.ID, label2)
+            fprintf('\t\t R = (%7.2f, %7.2f),\t R'' = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
+                    Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat2.R(1) - Lat.R(1), Lat2.R(2) - Lat.R(2))
             for i = 1:3
-                cos_theta = max(min(dot(V1(i, :),V2(i, :))/(norm(V1(i, :))*norm(V2(i, :))), 1), -1);
+                cos_theta = max(min(dot(V(i, :),V2(i, :))/(norm(V2(i, :))*norm(V(i, :))), 1), -1);
                 theta_deg = real(acosd(cos_theta));
-                fprintf('(%d)\t V_1 = (%7.2f, %7.2f),\t V_2 = (%7.2f, %7.2f),\tAngle<V_1, V_2> = %7.2f deg\n', ...
-                    i, V1(i, 1), V1(i, 2), V2(i, 1), V2(i, 2), theta_deg)
+                fprintf('(V%d)\t V = (%7.2f, %7.2f),\t V'' = (%7.2f, %7.2f),\tAngle<V, V''> = %7.2f deg\n', ...
+                    i, V(i, 1), V(i, 2), V2(i, 1), V2(i, 2), theta_deg)
             end
             for i = 1:3
-                norm1 = norm(V1(i, :));
+                norm1 = norm(V(i, :));
                 norm2 = norm(V2(i, :));
-                fprintf('(%d)\t|V11| = %14.2f px,\t|V12| = %14.2f px,\tDiff = %9.2f px (%5.3f%%)\n', ...
-                    i, norm1, norm2, norm1 - norm2, 100*(norm1 - norm2)/norm1)
+                fprintf('(V%d)\t|V| = %14.2f px,\t|V''| = %14.2f px,\tDiff = %9.2f px (%5.3f%%)\n', ...
+                    i, norm1, norm2, norm2 - norm1, 100*(norm2 - norm1)/norm1)
             end
         end
     end
