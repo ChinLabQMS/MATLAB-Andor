@@ -28,11 +28,11 @@ classdef BaseSequencer < BaseObject
     properties (SetAccess = protected)
         Timer
         RunNumber
+        BadFrameDetected
         Raw
         Signal
         Background
         Analysis
-        BadFrameDetected
     end
 
     methods

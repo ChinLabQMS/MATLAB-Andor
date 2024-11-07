@@ -12,8 +12,8 @@ classdef AnalysisRegistry < BaseObject
         function obj = AnalysisRegistry(func, out_vars, out_data, temp_vars, temp_data)
             arguments
                 func
-                out_vars
-                out_data
+                out_vars = []
+                out_data = []
                 temp_vars = []
                 temp_data = []
             end
