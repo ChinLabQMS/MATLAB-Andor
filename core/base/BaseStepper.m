@@ -12,43 +12,55 @@ classdef BaseStepper < BaseObject
     end
 
     methods
-        function obj = BaseStepper(sequencer, camera, label, note)
-            arguments
-                sequencer = []
-                camera = "Andor19330"
-                label = "Image"
-                note = ""
-            end
+        function obj = BaseStepper(sequencer, camera, label, note, varargin)
             obj.Sequencer = sequencer;
             obj.CameraName = camera;
             obj.ImageLabel = label;
             obj.OperationNote = note;
-            obj.RunParams = obj.parseRunParams(note);
+            obj.RunParams = [obj.getDefaultParams(), obj.parseRunParams(note, varargin{:})];
         end
 
-        function run(~, ~)
+        function run(~)
         end
     end
 
     methods (Access = protected)
-        function params = parseRunParams(obj, note)
-            params = obj.parseString2Args(note);
+        function params = getDefaultParams(obj)
+            params = {"label", obj.ImageLabel};
+        end
+
+        function params = parseRunParams(obj, note, options)
+            arguments
+                obj
+                note
+                options.full = true
+                options.composite_name = "Start"
+                options.process_list = ["Start", "Acquire", "Preprocess"]
+            end
+            if options.full
+                params = obj.parseString2Args(note);
+            else
+                params = obj.parseString2Processes(note, options.process_list, ...
+                "full_struct", true).(options.composite_name);
+            end
         end
     end
 
     methods (Access = protected, Hidden, Sealed)
         % Split structure of arguments by processes names, return a
         % structure of cell array
-        function processes = parseString2Processes(obj, note, process_list, options)
+        function [processes, overall] = parseString2Processes(obj, note, process_list, options)
             arguments
                 obj
                 note
                 process_list
                 options.full_struct = false
+                options.include_overall = false
             end
             args = parseString2Args(obj, note);
             curr = [];
             processes = struct();
+            overall = {};
             for i = 1: 2: length(args)
                 name = args{i};
                 value = args{i + 1};
@@ -59,6 +71,8 @@ classdef BaseStepper < BaseObject
                 elseif ~isempty(curr)
                     % Parse the arguments as parameter of current process
                     processes.(curr) = [processes.(curr), {name, value}];
+                elseif options.include_overall
+                    overall = [overall, {name, value}];
                 else
                     obj.error("Unable to parse argument name '%s', no identifier before parameters.", name)
                 end
@@ -72,10 +86,11 @@ classdef BaseStepper < BaseObject
             end
         end
 
-        % Parse the note to a structure of name-value pairs
+        % Parse the note to a cell array of name-value pairs
         function args = parseString2Args(obj, note)
             % Erase white-space and split the string by ","
             pieces = split(erase(note, " "), ",")';
+            pieces = pieces(pieces ~= "");
             % For each string piece, try to parse as name=value
             args = cell(1, 2 * length(pieces));
             for i = 1: length(pieces)

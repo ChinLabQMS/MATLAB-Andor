@@ -6,6 +6,7 @@ classdef LiveData < BaseObject
         Signal
         Background
         Analysis
+        BadFrameDetected
     end
 
     properties (SetAccess = protected)

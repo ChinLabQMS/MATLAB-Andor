@@ -9,6 +9,10 @@ classdef ZeluxCameraConfig < BaseObject
         MaxQueuedFrames = 1
         MaxPixelValue = 1022
     end
+
+    properties (Hidden)
+        NumSubFrames = 1
+    end
     
     methods (Static)
         function obj = struct2obj(s, varargin)

@@ -46,24 +46,24 @@ classdef AnalysisRegistry < BaseObject
 end
 
 %% Registered functions in AnalysisRegistry
-% Format: res = func(res, signal, info, options)
+% Format: res = func(res, live, info, options)
 
-function res = fitCenter(res, signal, info, options)
+function res = fitCenter(res, live, info, options)
     arguments
         res 
-        signal 
+        live
         info 
         options.first_only = true
     end
     assert(all(isfield(info, ["camera", "label", "config"])))
-    signal = signal.(info.camera).(info.label);
+    signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
 end
 
-function res = fitGauss(res, signal, info)
+function res = fitGauss(res, live, info)
     assert(all(isfield(info, ["camera", "label", "config"])))
-    signal = signal.(info.camera).(info.label);
+    signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config));
     f = fitGauss2D(signal);
     res.GaussX = f.x0;
@@ -72,15 +72,15 @@ function res = fitGauss(res, signal, info)
     res.GaussYWid = f.s2;
 end
 
-function res = calibLatR(res, signal, info, options)
+function res = calibLatR(res, live, info, options)
     arguments
         res
-        signal
+        live
         info
         options.first_only = true
     end
     assert(all(isfield(info, ["camera", "label", "config", "lattice"])))
-    signal = signal.(info.camera).(info.label);
+    signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     Lat = info.lattice.(info.camera);
     Lat.calibrateR(signal)
@@ -88,10 +88,10 @@ function res = calibLatR(res, signal, info, options)
     res.LatY = Lat.R(2);
 end
 
-function res = calibLatO(res, signal, info, options)
+function res = calibLatO(res, live, info, options)
     arguments
         res
-        signal
+        live
         info
         options
     end

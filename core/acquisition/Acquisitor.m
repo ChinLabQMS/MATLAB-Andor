@@ -10,7 +10,7 @@ classdef Acquisitor < BaseSequencer
                 obj.LayoutManager.init()
             end
             obj.Timer = tic;
-            obj.RunNumber = 0;
+            obj.Live = LiveData();
             obj.info2("Sequence initialized.")
         end
         

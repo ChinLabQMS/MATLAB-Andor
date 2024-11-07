@@ -1,11 +1,11 @@
 classdef AcquireStepper < BaseStepper
 
     methods
-        function run(obj, verbose)
-            args = [{"label", obj.ImageLabel, "verbose", verbose}, obj.RunParams];
-            obj.Sequencer.Live.Raw.(obj.CameraName).(obj.ImageLabel) = ...
-                obj.Sequencer.CameraManager.(obj.CameraName).acquire(args{:});
+        function run(obj)
+            [obj.Sequencer.Live.Raw.(obj.CameraName).(obj.ImageLabel), status] = ...
+                obj.Sequencer.CameraManager.(obj.CameraName).acquire(obj.RunParams{:});
+            obj.Sequencer.Live.BadFrameDetected = obj.Sequencer.Live.BadFrameDetected && status;
         end
     end
-
+    
 end

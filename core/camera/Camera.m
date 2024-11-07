@@ -120,7 +120,7 @@ classdef Camera < BaseRunner
                 options.timeout (1, 1) double {mustBePositive} = 10
                 options.flag_immediate (1, 1) logical = false
                 options.min_wait (1, 1) double = 0
-                options.verbose (1, 1) logical = false
+                options.verbose (1, 1) logical = true
             end
             timer = tic;
             obj.checkInitialized()

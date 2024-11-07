@@ -15,10 +15,6 @@ classdef BaseSequencer < BaseObject
     % Run verbose parameters
     properties (Constant)
         Run_Verbose = true
-        Run_VerboseStart = false
-        Run_VerboseAcquire = true
-        Run_VerbosePreprocess = false
-        Run_VerboseAnalysis = false
         Run_VerboseLayout = true
         Run_VerboseData = true
         Run_VerboseStat = false
@@ -27,12 +23,8 @@ classdef BaseSequencer < BaseObject
     % Live data
     properties (SetAccess = protected)
         Timer
-        RunNumber
-        BadFrameDetected
-        Raw
-        Signal
-        Background
-        Analysis
+        Live
+        Steppers
     end
 
     methods
@@ -68,10 +60,6 @@ classdef BaseSequencer < BaseObject
             arguments
                 obj
                 opt1.verbose = obj.Run_Verbose
-                opt2.verbose_start = obj.Run_VerboseStart
-                opt2.verbose_acquire = obj.Run_VerboseAcquire
-                opt2.verbose_preprocess = obj.Run_VerbosePreprocess
-                opt2.verbose_analysis = obj.Run_VerboseAnalysis
                 opt2.verbose_layout = obj.Run_VerboseLayout
                 opt2.verbose_data = obj.Run_VerboseData
                 opt2.verbose_stat = obj.Run_VerboseStat
@@ -80,28 +68,10 @@ classdef BaseSequencer < BaseObject
             if obj.AcquisitionConfig.AbortAtEnd
                 c_obj = onCleanup(@()obj.abortAtEnd);
             end
-            obj.RunNumber = obj.RunNumber + 1;
-            obj.Raw = [];
-            obj.Signal = [];
-            obj.Background = [];
-            obj.Analysis = [];
-            obj.BadFrameDetected = false;
-            sequence = obj.AcquisitionConfig.ActiveSequence;
-            for i = 1: height(sequence)
-                camera = string(sequence.Camera(i));
-                label = sequence.Label(i);
-                config = obj.CameraManager.(camera).Config;
-                operation = string(sequence.Type(i));
-                if operation == "Start" || operation == "Start+Acquire"
-                    obj.runStart(camera, label, config, opt2.verbose_start)
-                end
-                if operation == "Acquire" || operation == "Start+Acquire"
-                    obj.runAcquire(camera, label, config, opt2.verbose_acquire);
-                    obj.runPreprocess(camera, label, config, opt2.verbose_preprocess)                
-                end
-                if operation == "Analysis"
-                    obj.runAnalysis(camera, label, config, opt2.verbose_analysis)
-                end
+            obj.Live.init()
+            % Run the sequence
+            for i = 1: length(obj.Steppers)
+                obj.Steppers{i}.run()
             end
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(obj, 'verbose', opt2.verbose_layout)
@@ -121,30 +91,42 @@ classdef BaseSequencer < BaseObject
     end
 
     methods (Access = protected, Hidden)
-        function runStart(obj, camera, label, ~, verbose)
-            args = [{"label", label, "verbose", verbose}, obj.AcquisitionConfig.StartParams.(camera).(label)];
-            obj.CameraManager.(camera).startAcquisition(args{:})
-        end
-
-        function runAcquire(obj, camera, label, ~, verbose)
-            args = [{"label", label, "verbose", verbose}, obj.AcquisitionConfig.AcquireParams.(camera).(label)];
-            [obj.Raw.(camera).(label), is_good] = obj.CameraManager.(camera).acquire(args{:});
-            if ~is_good
-                obj.BadFrameDetected = true;
+        function initSteppers(obj)
+            sequence = obj.AcquisitionConfig.ActiveSequence;
+            obj.Steppers = {};
+            for i = 1: height(sequence)
+                camera = string(sequence.Camera(i));
+                label = sequence.Label(i);
+                note = sequence.Note(i);
+                operation = string(sequence.Type(i));
+                switch operation
+                    case "Start"
+                        obj.Steppers = [obj.Steppers, {StartStepper(obj, camera, label, note)}];
+                    case "Start+Acquire"
+                        obj.Steppers = [obj.Steppers, ...
+                            {StartStepper(obj, camera, label, note, ...
+                            "full", false, "composite_name", "Start", ...
+                            "process_list", ["Start", "Acquire", "Preprocess"]), ...
+                            AcquireStepper(obj, camera, label, note, ...
+                            "full", false, "composite_name", "Acquire", ...
+                            "process_list", ["Start", "Acquire", "Preprocess"]), ...
+                            PreprocessStepper(obj, camera, label, note, ...
+                            "full", false, "composite_name", "Preprocess", ...
+                            "process_list", ["Start", "Acquire", "Preprocess"])}
+                            ];
+                    case "Acquire"
+                        obj.Steppers = [obj.Steppers, ...
+                            {AcquireStepper(obj, camera, label, note, ...
+                            "full", false, "composite_name", "Acquire", ...
+                            "process_list", ["Acquire", "Preprocess"]), ...
+                            PreprocessStepper(obj, camera, label, note, ...
+                            "full", false, "composite_name", "Preprocess", ...
+                            "process_list", ["Acquire", "Preprocess"])}
+                            ];
+                    case "Analysis"
+                        obj.Steppers = [obj.Steppers, {AnalysisStepper(obj, camera, label, note)}];
+                end
             end
-        end
-
-        function runPreprocess(obj, camera, label, config, verbose)
-            args = [{"camera", camera, "label", label, "config", config, "verbose", verbose}, ...
-                obj.AcquisitionConfig.PreprocessParams.(camera).(label)];
-            [obj.Signal.(camera).(label), obj.Background.(camera).(label)] = obj.Preprocessor.process( ...
-                obj.Raw.(camera).(label), args{:});
-        end
-
-        function runAnalysis(obj, camera, label, config, verbose)
-            args = {obj.AcquisitionConfig.AnalysisParams.(camera).(label), ...
-                "camera", camera, "label", label, "config", config, "verbose", verbose};
-            [obj.Analysis.(camera).(label)] = obj.Analyzer.analyze(obj.Signal, args{:});
         end
 
         function addData(obj, verbose)

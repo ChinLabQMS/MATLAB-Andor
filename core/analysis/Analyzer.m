@@ -8,6 +8,10 @@ classdef Analyzer < BaseProcessor
     properties (SetAccess = protected)
         LatCalib
     end
+
+    properties (Constant)
+        Analyze_Verbose = false
+    end
     
     methods
         function set.LatCalibFilePath(obj, path)
@@ -15,23 +19,23 @@ classdef Analyzer < BaseProcessor
             obj.loadLatCalibFile()
         end
 
-        function res = analyze(obj, signal, processes, info, options)
+        function res = analyze(obj, live, info, options)
             arguments
                 obj
-                signal
-                processes = {}
+                live
                 info.camera
                 info.label
                 info.config
-                options.verbose = false
+                options.processes = {}
+                options.verbose = obj.Analyze_Verbose
             end
             timer = tic;
             res = struct();
             info.lattice = obj.LatCalib;
-            for i = 1: length(processes)
-                func = processes{i}{1};
-                args = processes{i}(2: end);
-                res = func(res, signal, info, args{:});
+            for i = 1: length(options.processes)
+                func = options.processes{i}{1};
+                args = options.processes{i}(2: end);
+                res = func(res, live, info, args{:});
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))

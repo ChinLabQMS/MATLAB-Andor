@@ -1,7 +1,7 @@
-classdef ReplayAcquireStepper < BaseStepper
+classdef ReplayAcquireStepper < AcquireStepper
     
     methods
-        function run(obj, ~)
+        function run(obj)
             obj.Sequencer.Live.Raw.(obj.CameraName).(obj.ImageLabel) = ...
                 obj.Sequencer.DataStorage.(obj.CameraName).(obj.ImageLabel)(:, :, obj.Sequencer.CurrentIndex);
         end
