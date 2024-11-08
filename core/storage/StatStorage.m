@@ -1,12 +1,6 @@
 classdef StatStorage < BaseStorage
     % STATMANAGER Class to store analysis results
 
-    methods
-        function obj = StatStorage(varargin)
-            obj@BaseStorage(varargin{:})
-        end
-    end
-
     methods (Access = protected, Hidden)
         function data = removeIncomplete(obj, data)
             data = data(1: obj.CurrentIndex, :);
@@ -19,7 +13,7 @@ classdef StatStorage < BaseStorage
         function initAnalysisStorage(obj, camera, label)
             out_vars = obj.AcquisitionConfig.AnalysisOutVars.(camera).(label);
             out_data = obj.AcquisitionConfig.AnalysisOutData.(camera).(label);
-            
+
             if length(out_vars) + length(out_data) > 0
                 obj.(camera).(label)(obj.MaxIndex) = struct();
             end

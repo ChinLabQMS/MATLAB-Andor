@@ -65,11 +65,14 @@ classdef AcquisitionConfig < BaseProcessor
             obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(obj.SequenceTable);
             obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(obj.SequenceTable);
             obj.ActiveProjection = SequenceRegistry.getActiveProjection(obj.SequenceTable);
+            obj.ImageList = getImageList(obj.ActiveAcquisition);
+
             [obj.AcquisitionNote, obj.AnalysisNote, obj.ProjectionNote] = parseSequenceNote(obj.ActiveSequence);
             [obj.StartParams, obj.AcquireParams, obj.PreprocessParams] = parseAcquisitionNoteFull(obj, obj.AcquisitionNote);
             [obj.AnalysisParams, obj.AnalysisOutVars, obj.AnalysisOutData] = parseAnalysisNoteFull(obj, obj.AnalysisNote);
             obj.ProjectionParams = parseProjectionNoteFull(obj, obj.ProjectionNote);
-            obj.ImageList = getImageList(obj.ActiveAcquisition);
+            
+
         end
     end
     

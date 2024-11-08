@@ -1,12 +1,6 @@
 classdef DataStorage < BaseStorage
     % DATAMANAGER Class for storing acquired data.
 
-    methods
-        function obj = DataStorage(varargin)
-            obj@BaseStorage(varargin{:})
-        end
-    end
-
     methods (Access = protected, Hidden)
         function data = removeIncomplete(obj, data)
             data = data(:, :, 1:obj.CurrentIndex);

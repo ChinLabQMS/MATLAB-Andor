@@ -50,7 +50,7 @@ classdef LayoutManager < BaseObject
                 obj
                 sequencer
                 fields = obj.VisibleProp
-                options.verbose = false
+                options.verbose = true
             end
             timer = tic;
             for field = fields

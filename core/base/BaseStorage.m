@@ -107,7 +107,12 @@ classdef (Abstract) BaseStorage < BaseObject
                     note = camera_seq.Note(j);
                     type = string(camera_seq.Type(j));
                     if contains(type, "Analysis")
-                        obj.(camera).Config.AnalysisNote.(label) = note;
+                        %% To do here
+                        if isfield(obj.(camera).Config.AnalysisNote, label) && note ~= ""
+                            obj.(camera).Config.AnalysisNote.(label) = obj.(camera).Config.AnalysisNote.(label) + ", " + note;
+                        else
+                            obj.(camera).Config.AnalysisNote.(label) = note;
+                        end
                         obj.initAnalysisStorage(camera, label)
                     elseif contains(type, "Acquire")
                         obj.(camera).Config.AcquisitionNote.(label) = note;
