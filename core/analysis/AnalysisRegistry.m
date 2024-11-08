@@ -4,24 +4,18 @@ classdef AnalysisRegistry < BaseObject
         FuncHandle
         OutputVars
         OutputData
-        TempVars
-        TempData
     end
     
     methods
-        function obj = AnalysisRegistry(func, out_vars, out_data, temp_vars, temp_data)
+        function obj = AnalysisRegistry(func, out_vars, out_data)
             arguments
                 func
                 out_vars = []
                 out_data = []
-                temp_vars = []
-                temp_data = []
             end
             obj.FuncHandle = func;
             obj.OutputVars = out_vars;
             obj.OutputData = out_data;
-            obj.TempVars = temp_vars;
-            obj.TempData = temp_data;
         end
     end
 

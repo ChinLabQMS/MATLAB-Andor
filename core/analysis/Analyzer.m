@@ -57,7 +57,7 @@ classdef Analyzer < BaseProcessor
     methods (Access = protected, Hidden)
         function loadLatCalibFile(obj)
             obj.LatCalib = load(obj.LatCalibFilePath);
-            obj.info("Lattice calibration file loaded.")
+            obj.info("Lattice calibration file loaded from '%s'.", obj.LatCalibFilePath)
         end
     end
 

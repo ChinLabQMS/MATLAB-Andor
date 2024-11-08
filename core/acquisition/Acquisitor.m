@@ -11,6 +11,7 @@ classdef Acquisitor < BaseSequencer
             end
             obj.Timer = tic;
             obj.Live = LiveData();
+            obj.initSequence()
             obj.info2("Sequence initialized.")
         end
         

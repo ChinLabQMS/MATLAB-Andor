@@ -62,60 +62,6 @@ classdef SequenceRegistry < BaseObject
             active_sequence = SequenceRegistry.getActiveSequence(sequence);
             active_projection = active_sequence(active_sequence.Type == "Projection", :);
         end
-
-        function mustBeValidSequence(sequence)
-            arguments
-                sequence (:, 5) table
-            end
-            active_cameras = SequenceRegistry.getActiveCameras(sequence);
-            if isempty(active_cameras)
-                error("Invalid sequence, no active camera.")
-            end
-            for camera = active_cameras
-                camera_seq = sequence(sequence.Camera == camera, :);
-                started = string.empty;
-                acquired = string.empty;
-                analyzed = string.empty;
-                for i = 1:height(camera_seq)
-                    label = string(camera_seq.Label(i));
-                    type = string(camera_seq.Type(i));
-                    if label == ""
-                        error("Invalid sequence, empty label.")
-                    end
-                    if label == "Config"
-                        error("Invalid sequence, 'Config' is reserved for camera sequenceuration and can not be used as label.")
-                    end
-                    if type == "Start" || type == "Start+Acquire"
-                        started = [started, label]; %#ok<AGROW>
-                    end
-                    if type == "Acquire" || type == "Start+Acquire"
-                        if label == ""
-                            error("Invalid sequence, empty label for acquire command for camera %s.", camera)
-                        end
-                        if ~ismember(label, started)
-                            error("Invalid sequence, acquire command before start command for camera %s.", camera)
-                        end
-                        if ismember(label, acquired)
-                            error("Invalid sequence, label %s is acquired more than once for camera %s.", label, camera)
-                        end
-                        started(started == label) = [];
-                        acquired(end + 1) = label; %#ok<AGROW>
-                    end
-                    if type == "Analysis"
-                        if ~ismember(label, acquired)
-                            error("Invalid sequence, missing acquire command for analysis on %s for camera %s.", label, camera)
-                        end
-                        if ismember(label, analyzed)
-                            error("Invalid sequence, label %s is analyzed more than once for camera %s", label, camera)
-                        end
-                        analyzed(end + 1) = label; %#ok<AGROW>
-                    end
-                end
-                if ~isempty(started)
-                    error("Invalid sequence, missing acquire command for camera %s.", camera)
-                end
-            end
-        end
     end
 
 end

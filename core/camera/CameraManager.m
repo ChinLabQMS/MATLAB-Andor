@@ -1,10 +1,11 @@
 classdef CameraManager < BaseObject
-    %CAMERAMANAGER Manage multiple cameras
+    %CAMERAMANAGER Manage multiple cameras and projectors
 
     properties (SetAccess = immutable)
         Andor19330 (1, 1) Camera
         Andor19331 (1, 1) Camera
         Zelux (1, 1) Camera
+        DMD (1, 1) Projector
     end
 
     methods
@@ -35,14 +36,20 @@ classdef CameraManager < BaseObject
                 cameras = obj.VisibleProp
             end
             for camera = cameras
-                obj.(camera).init()
+                if isa(obj.(camera), "Camera")
+                    obj.(camera).init()
+                end
             end
         end
     
         % Configure cameras with a structure (similar to Data)
         function config(obj, data)
             for camera = obj.VisibleProp
-                if (isfield(data, camera) || isprop(data, camera)) && isfield(data.(camera), "Config")
+                if ~isa(obj.(camera), "Camera")
+                    continue
+                end
+                if (isfield(data, camera) || isprop(data, camera)) && ...
+                        (isfield(data.(camera), "Config") || isprop(data.(camera), "Config"))
                     obj.(camera).config(data.(camera).Config)
                 else
                     obj.warn("Unable to configure camera [%s], not existing in data.", camera)
@@ -57,7 +64,9 @@ classdef CameraManager < BaseObject
                 cameras = obj.VisibleProp
             end
             for camera = cameras
-                obj.(camera).abortAcquisition()
+                if isa(obj.(camera), "Camera")
+                    obj.(camera).abortAcquisition()
+                end
             end
         end
     end

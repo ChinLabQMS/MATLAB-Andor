@@ -18,20 +18,23 @@ classdef AcquisitionConfig < BaseProcessor
         ActiveAcquisition
         ActiveAnalysis
         ActiveProjection
+        ImageList
         AcquisitionNote
         AnalysisNote
-        ProjectionNote
-        StartParams
-        AcquireParams
-        PreprocessParams
-        ProjectionParams
-        AnalysisParams
         AnalysisOutVars
         AnalysisOutData
-        ImageList
     end
 
     methods
+        function set.SequenceTable(obj, sequence)
+            arguments
+                obj
+                sequence {mustBeValidSequence(obj, sequence)}
+            end
+            obj.SequenceTable = sequence;
+            obj.updateProp()
+        end
+
         function contents = parseAnalysis2Content(obj, index_str)
             res = split(index_str, ": ");
             [camera, label] = res{:};
@@ -43,15 +46,6 @@ classdef AcquisitionConfig < BaseProcessor
             end
         end
 
-        function set.SequenceTable(obj, sequence_table)
-            arguments
-                obj
-                sequence_table {SequenceRegistry.mustBeValidSequence}
-            end
-            obj.SequenceTable = sequence_table;
-            obj.updateProp()
-        end
-
         function disp(obj)
             disp@BaseObject(obj)
             disp(obj.SequenceTable)
@@ -60,19 +54,16 @@ classdef AcquisitionConfig < BaseProcessor
 
     methods (Access = protected, Hidden)
         function updateProp(obj)
-            obj.ActiveCameras = SequenceRegistry.getActiveCameras(obj.SequenceTable);
-            obj.ActiveSequence = SequenceRegistry.getActiveSequence(obj.SequenceTable);
-            obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(obj.SequenceTable);
-            obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(obj.SequenceTable);
-            obj.ActiveProjection = SequenceRegistry.getActiveProjection(obj.SequenceTable);
+            [params, obj.AnalysisOutVars, obj.AnalysisOutData] = parseParams(obj, obj.SequenceTable);
+            sequence = [obj.SequenceTable, params];
+            obj.ActiveCameras = SequenceRegistry.getActiveCameras(sequence);
+            obj.ActiveSequence = SequenceRegistry.getActiveSequence(sequence);
+            obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(sequence);
+            obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(sequence);
+            obj.ActiveProjection = SequenceRegistry.getActiveProjection(sequence);
             obj.ImageList = getImageList(obj.ActiveAcquisition);
-
-            [obj.AcquisitionNote, obj.AnalysisNote, obj.ProjectionNote] = parseSequenceNote(obj.ActiveSequence);
-            [obj.StartParams, obj.AcquireParams, obj.PreprocessParams] = parseAcquisitionNoteFull(obj, obj.AcquisitionNote);
-            [obj.AnalysisParams, obj.AnalysisOutVars, obj.AnalysisOutData] = parseAnalysisNoteFull(obj, obj.AnalysisNote);
-            obj.ProjectionParams = parseProjectionNoteFull(obj, obj.ProjectionNote);
-            
-
+            obj.AcquisitionNote = getAcquisitionNote(obj.ActiveAcquisition);
+            obj.AnalysisNote = getAnalysisNote(obj.ActiveAnalysis);
         end
     end
     
@@ -95,155 +86,202 @@ function image_list = getImageList(active_acquisition)
     end
 end
 
-% Parse the notes in active sequence to different structures
-function [acquisition_note, analysis_note, projection_note] = parseSequenceNote(sequence)
-    acquisition_note = struct();
-    analysis_note = struct();
-    projection_note = struct();
+function res = getAcquisitionNote(active_acquisition)
+    res = struct();
+    for i = 1: height(active_acquisition)
+        camera = string(active_acquisition.Camera(i));
+        label = active_acquisition.Label(i);
+        note = active_acquisition.Note(i);
+        res.(camera).(label) = note;
+    end
+end
+
+function res = getAnalysisNote(active_analysis)
+    res = struct();
+    for i = 1: height(active_analysis)
+        camera = string(active_analysis.Camera(i));
+        label = active_analysis.Label(i);
+        note = active_analysis.Note(i);
+        if isfield(res, camera) && isfield(res.(camera), label)
+            res.(camera).(label) = res.(camera).(label) + ", " +  note;
+        else
+            res.(camera).(label) = note;
+        end
+    end
+end
+
+function [params, out_vars, out_data] = parseParams(obj, sequence)
+    Params = cell(height(sequence), 1);
+    out_vars = struct();
+    out_data = struct();
     for i = 1: height(sequence)
-        type = string(sequence.Type(i));
+        operation = string(sequence.Type(i));
         camera = string(sequence.Camera(i));
         label = sequence.Label(i);
         note = sequence.Note(i);
-        switch type
-            case {"Start", "Acquire", "Start+Acquire"}
-                if isfield(acquisition_note, camera) && isfield(acquisition_note.(camera), label) && note ~= ""
-                    acquisition_note.(camera).(label) = acquisition_note.(camera).(label) + "," + note;
-                else
-                    acquisition_note.(camera).(label) = note;
-                end
+        if camera == "--inactive--"
+            continue
+        end
+        switch operation
+            case {"Start", "Projection"}
+                Params{i} = parseString2Args(obj, note);
+            case "Acquire"
+                Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
+            case "Start+Acquire"
+                Params{i} = parseString2Processes(obj, note, ["Start", "Acquire", "Preprocess"], "full_struct", true);
             case "Analysis"
-                if isfield(analysis_note, camera) && isfield(analysis_note.(camera), label) && note ~= ""
-                    analysis_note.(camera).(label) = analysis_note.(camera).(label) + "," + note;
+                [Params{i}, new_vars, new_data] = parseString2AnalyzeProcesses(obj, note);
+                if isfield(out_vars, camera) && isfield(out_vars.(camera), label)
+                    out_vars.(camera).(label) = [out_vars.(camera).(label), new_vars];
+                    out_data.(camera).(label) = [out_data.(camera).(label), new_data];
                 else
-                    analysis_note.(camera).(label) = note;
-                end
-            case "Projection"
-                if isfield(projection_note, camera) && isfield(projection_note.(camera), label) && note ~= ""
-                    projection_note.(camera).(label) = projection_note.(camera).(label) + "," + note;
-                else
-                    projection_note.(camera).(label) = note;
+                    out_vars.(camera).(label) = new_vars;
+                    out_data.(camera).(label) = new_data;
                 end
         end
     end
+    params = table(Params);
 end
 
-% Parse a structure of notes into structure of cell array of parameters
-function [start, acquire, preprocess] = parseAcquisitionNoteFull(obj, note_full)
-    start = struct();
-    acquire = struct();
-    preprocess = struct();
-    for camera = string(fields(note_full))'
-        for label = string(fields(note_full.(camera)))'
-            [start.(camera).(label), acquire.(camera).(label), preprocess.(camera).(label)] = ...
-                parseAcquisitionNote(obj, note_full.(camera).(label));
-        end
-    end
-end
-
-% Parse the acquisition note into three cell array of parameters
-function [start, acquire, preprocess] = parseAcquisitionNote(obj, note)
-    start = {};
-    acquire = {'refresh', obj.Refresh, 'timeout', obj.Timeout};
-    preprocess = {};
-    params = parseString2Processes(obj, note, ["Start", "Acquire", "Preprocess"]);
-    if isfield(params, "Start")
-        start = [start, params.Start];
-    end
-    if isfield(params, "Acquire")
-        acquire = [acquire, params.Acquire];
-    end
-    if isfield(params, "Preprocess")
-        preprocess = [preprocess, params.Preprocess];
-    end
-end
-
-% Parse a structure of notes into structure of cell array of parameters
-function [processes, out_vars, out_data] = parseAnalysisNoteFull(obj, note_full)
-    processes = struct();
-    out_vars = struct();
-    out_data = struct();
-    for camera = string(fields(note_full))'
-        for label = string(fields(note_full.(camera)))'
-            [processes.(camera).(label), out_vars.(camera).(label), out_data.(camera).(label)] = ...
-                parseAnalysisNote(obj, note_full.(camera).(label));
-        end
-    end
-end
-
-% Parse the analysis note into cell arrays of analysis processes
-function [processes, out_vars, out_data] = parseAnalysisNote(obj, note)
+function [args, out_vars, out_data] = parseString2AnalyzeProcesses(obj, note)
     [~, analysis_list] = enumeration('AnalysisRegistry');
-    args = parseString2Processes(obj, note, analysis_list);
-    process_names = string(fields(args))';
-    processes = cell(1, length(process_names));
+    [processes, overall] = parseString2Processes(obj, note, analysis_list, "include_overall", true);
+    process_name = string(fields(processes))';
+    num_process = length(process_name);
+    res = cell(2, num_process);
     out_vars = string.empty;
     out_data = string.empty;
-    for i = 1:length(process_names)
-        p = process_names(i);
-        processes{i} = [{AnalysisRegistry.(p).FuncHandle}, args.(p)];
+    for i = 1: num_process
+        p = process_name(i);
+        res{1, i} = AnalysisRegistry.(p).FuncHandle;
+        res{2, i} = processes.(p);
         out_vars = [out_vars, AnalysisRegistry.(p).OutputVars]; %#ok<AGROW>
         out_data = [out_data, AnalysisRegistry.(p).OutputData]; %#ok<AGROW>
     end
+    args = [{"processes", res}, overall];
 end
 
-% Parse a structure of notes into structure of cell array of parameters
-function params = parseProjectionNoteFull(obj, note_full)
-    params = struct();
-    for camera = string(fields(note_full))'
-        for label = string(fields(note_full.(camera)))'
-            [params.(camera).(label)] = ...
-                parseProjectionNote(obj, note_full.(camera).(label));
-        end
+% Split structure of arguments by processes names, return a
+% structure of cell array
+function [processes, overall] = parseString2Processes(obj, note, process_list, options)
+    arguments
+        obj
+        note
+        process_list
+        options.full_struct = false
+        options.include_overall = false
     end
-end
-
-% Parse the projection note into cell array of projection parameters
-function params = parseProjectionNote(obj, note)
-    params = {};
-    obj.warn2("Not implemented, unable to parse '%s'.", note)
-end
-
-% Split structure of arguments by processes names, return a structure
-function processes = parseString2Processes(obj, note, process_list)
     args = parseString2Args(obj, note);
     curr = [];
     processes = struct();
-    for name = string(fields(args))'
-        if ismember(name, process_list) && args.(name)
+    overall = {};
+    for i = 1: 2: length(args)
+        name = args{i};
+        value = args{i + 1};
+        if ismember(name, process_list) && value
             % Start a new process
             curr = name;
             processes.(curr) = {};
         elseif ~isempty(curr)
             % Parse the arguments as parameter of current process
-            processes.(curr) = [processes.(curr), {name, args.(name)}];
+            processes.(curr) = [processes.(curr), {name, value}];
+        elseif options.include_overall
+            % If there is no identifier, parse it as overall params
+            overall = [overall, {name, value}]; %#ok<AGROW>
         else
             obj.error("Unable to parse argument name '%s', no identifier before parameters.", name)
         end
     end
+    if options.full_struct
+        for p = process_list
+            if ~isfield(processes, p)
+                processes.(p) = {};
+            end
+        end
+    end
 end
 
-% Parse the note to a structure
+% Parse the note to a cell array of name-value pairs
 function args = parseString2Args(obj, note)
     % Erase white-space and split the string by ","
     pieces = split(erase(note, " "), ",")';
+    pieces = pieces(pieces ~= "");
     % For each string piece, try to parse as name=value
-    args = struct();
-    for p = pieces
+    args = cell(1, 2 * length(pieces));
+    for i = 1: length(pieces)
+        p = pieces(i);
         if contains(p, "=")
             vals = split(p, "=");
             if length(vals) == 2
+                args{2*i-1} = vals(1);
                 arg_val = double(string(vals(2)));
                 if isnan(arg_val) && ~ismember(vals(2), ["Nan", "NaN", "nan"])
-                    args.(vals(1)) = vals(2);
+                    args{2*i} = vals(2);
                 else
-                    args.(vals(1)) = arg_val;
+                    args{2*i} = arg_val;
                 end
             else
                 obj.error("Multiple '=' appears in the partitioned string '%s'.", p)
             end
         elseif p ~= ""
-            args.(p) = true;
+            args{2*i-1} = p;
+            args{2*i} = true;
+        end
+    end
+end
+
+function mustBeValidSequence(obj, sequence)
+    arguments
+        obj
+        sequence (:, 5) table
+    end
+    active_cameras = SequenceRegistry.getActiveCameras(sequence);
+    if isempty(active_cameras)
+        obj.error("Invalid sequence, no active camera.")
+    end
+    for camera = active_cameras
+        camera_seq = sequence(sequence.Camera == camera, :);
+        started = string.empty;
+        acquired = string.empty;
+        for i = 1:height(camera_seq)
+            label = string(camera_seq.Label(i));
+            newerror = @(info) obj.error("[%s %s] Invalid sequence, %s.", camera, label, info);
+            operation = string(camera_seq.Type(i));
+            if label == ""
+                newerror("empty label")
+            end
+            if label == "Config"
+                newerror("'Config' is reserved and can not be used as label")
+            end
+            if operation == "Projection" && camera.startsWith("DMD")
+                continue
+            elseif operation == "Projection"
+                newerror("'Projection' is only available for DMD")
+            elseif camera.startsWith("DMD")
+                newerror("DMD can only use 'Projection'")
+            end
+            if operation == "Start" || operation == "Start+Acquire"
+                started = [started, label]; %#ok<AGROW>
+            end
+            if operation == "Acquire" || operation == "Start+Acquire"
+                if ~ismember(label, started)
+                    newerror("acquire command before start command")
+                end
+                if ismember(label, acquired)
+                    newerror("label is acquired more than once")
+                end
+                started(started == label) = [];
+                acquired(end + 1) = label; %#ok<AGROW>
+            end
+            if operation == "Analysis"
+                if ~ismember(label, acquired)
+                    newerror("missing acquire command before analysis")
+                end
+            end
+        end
+        if ~isempty(started)
+            obj.error("Invalid sequence, missing acquire command for camera %s, labels %s.", ...
+                camera, strjoin(started, ","))
         end
     end
 end

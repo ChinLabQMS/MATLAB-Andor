@@ -11,11 +11,14 @@ classdef AndorCameraConfig < BaseObject
         FastKineticSeriesLength = 2
         HSSpeed = 2  % Horizontal speed. 0 = 5 MHz, 1 = 3 MHz, 2 = 1 MHz, 3 = 50 kHz
         VSSpeed = 1  % Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
+    end
+
+    properties (SetAccess = immutable)
         MaxPixelValue = 65535
         MaxQueuedFrames = 1
     end
 
-    properties (Dependent, Hidden)
+    properties (Dependent)
         FastKineticExposedRows
         FastKineticOffset
         NumSubFrames
@@ -36,6 +39,10 @@ classdef AndorCameraConfig < BaseObject
             else
                 val = 1;
             end
+        end
+
+        function s = struct(obj)
+            s = struct@BaseObject(obj.AllProp);
         end
     end
 

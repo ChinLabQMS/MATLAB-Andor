@@ -1,17 +1,23 @@
-classdef ZeluxCameraConfig < BaseObject
+classdef ZeluxCameraConfig < CameraConfig
     % Configuration file for ZeluxCamera
     
     properties (SetAccess = {?BaseObject})
         Exposure = 0.000694
         ExternalTrigger = true
-        XPixels = 1440
-        YPixels = 1080
         MaxQueuedFrames = 1
-        MaxPixelValue = 1022
     end
 
-    properties (Hidden)
+    properties (SetAccess = immutable)
+        XPixels = 1440
+        YPixels = 1080
+        MaxPixelValue = 1022
         NumSubFrames = 1
+    end
+
+    methods
+        function s = struct(obj)
+            s = struct@BaseObject(obj.AllProp);
+        end
     end
     
     methods (Static)

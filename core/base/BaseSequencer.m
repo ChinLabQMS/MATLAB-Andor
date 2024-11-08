@@ -60,21 +60,21 @@ classdef BaseSequencer < BaseObject
             end
             timer = tic;
             if obj.AcquisitionConfig.AbortAtEnd
-                c_obj = onCleanup(@()obj.abortAtEnd);
+                c_obj = onCleanup(@() obj.CameraManager.abortAcquisition(obj.AcquisitionConfig.ActiveCameras));
             end
             obj.Live.init()
-            % Run the sequence
             for step = obj.SequenceStep
-                step{1}(step{2}{:})
+                [func, args] = step{:};
+                func(args{:})
             end
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(obj)
             end
             if (~obj.Live.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
-                if (rem(obj.RunNumber, obj.AcquisitionConfig.SampleInterval) == 0)
-                    obj.addData(opt2.verbose_data)
+                if (rem(obj.Live.RunNumber, obj.AcquisitionConfig.SampleInterval) == 0)
+                    obj.addData()
                 end
-                obj.addStat(opt2.verbose_stat)
+                obj.addStat()
             else
                 obj.warn2("Bad acquisition detected, data dropped.")
             end
@@ -90,21 +90,19 @@ classdef BaseSequencer < BaseObject
                 operation = string(active_sequence.Type(i));
                 camera = string(active_sequence.Camera(i));
                 label = active_sequence.Label(i);
-                note = active_sequence.Note(i);
+                params = active_sequence.Params{i};
                 switch operation
                     case "Start"
                         func = @(varargin) obj.start(camera, label, varargin{:});
-                        args = [{"label", label}, parseString2Args(obj, note)];
+                        args = [{"label", label}, params];
                         new_steps = [{func}; {args}];
                     case "Acquire"
-                        params = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
                         func1 = @(varargin) obj.acquire(camera, label, varargin{:});
                         func2 = @(varargin) obj.preprocess(camera, label, varargin{:});
                         args1 = [{"label", label}, params.Acquire];
                         args2 = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params.Preprocess];
                         new_steps = [{func1}, {func2}; {args1}, {args2}];
                     case "Start+Acquire"
-                        params = parseString2Processes(obj, note, ["Start", "Acquire", "Preprocess"], "full_struct", true);
                         func1 = @(varargin) obj.start(camera, label, varargin{:});
                         func2 = @(varargin) obj.acquire(camera, label, varargin{:});
                         func3 = @(varargin) obj.preprocess(camera, label, varargin{:});
@@ -114,11 +112,11 @@ classdef BaseSequencer < BaseObject
                         new_steps = [{func1}, {func2}, {func3}; {args1}, {args2}, {args3}];
                     case "Analysis"
                         func = @(varargin) obj.analyze(camera, label, varargin{:});
-                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, parseString2AnalyzeProcesses(obj, note)];
+                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
                         new_steps = [{func}; {args}];
                     case "Projection"
                         func = @(varargin) obj.project(camera, label, varargin{:});
-                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, parseString2Args(obj, note)];
+                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
                         new_steps = [{func}; {args}];
                 end
                 steps = [steps, new_steps]; %#ok<AGROW>
@@ -157,16 +155,12 @@ classdef BaseSequencer < BaseObject
             obj.warn2("[%s %s] Projection method is not implemented.", camera, label)
         end
 
-        function addData(obj, verbose)
-            obj.DataStorage.add(obj.Live.Raw, "verbose", verbose);
+        function addData(obj)
+            obj.DataStorage.add(obj.Live.Raw);
         end
 
-        function addStat(obj, verbose)
-            obj.StatStorage.add(obj.Live.Analysis, "verbose", verbose);
-        end
-
-        function abortAtEnd(obj)
-            obj.CameraManager.abortAcquisition(obj.AcquisitionConfig.ActiveCameras)
+        function addStat(obj)
+            obj.StatStorage.add(obj.Live.Analysis);
         end
     end
 
@@ -175,81 +169,6 @@ classdef BaseSequencer < BaseObject
         function label = getStatusLabel(obj)
             label = sprintf("%s(RunNum:%d, DataIdx:%d, StatIdx:%d)", ...
                 class(obj), obj.RunNumber, obj.DataStorage.CurrentIndex, obj.StatStorage.CurrentIndex);
-        end
-    end
-end
-
-function args = parseString2AnalyzeProcesses(obj, note)
-    [~, analysis_list] = enumeration('AnalysisRegistry');
-    [processes, overall] = parseString2Processes(obj, note, analysis_list, "include_overall", true);
-    args = [{"processes", processes}, overall];
-end
-
-% Split structure of arguments by processes names, return a
-% structure of cell array
-function [processes, overall] = parseString2Processes(obj, note, process_list, options)
-    arguments
-        obj
-        note
-        process_list
-        options.full_struct = false
-        options.include_overall = false
-    end
-    args = parseString2Args(obj, note);
-    curr = [];
-    processes = struct();
-    overall = {};
-    for i = 1: 2: length(args)
-        name = args{i};
-        value = args{i + 1};
-        if ismember(name, process_list) && value
-            % Start a new process
-            curr = name;
-            processes.(curr) = {};
-        elseif ~isempty(curr)
-            % Parse the arguments as parameter of current process
-            processes.(curr) = [processes.(curr), {name, value}];
-        elseif options.include_overall
-            % If there is no identifier, parse it as overall params
-            overall = [overall, {name, value}]; %#ok<AGROW>
-        else
-            obj.error("Unable to parse argument name '%s', no identifier before parameters.", name)
-        end
-    end
-    if options.full_struct
-        for p = process_list
-            if ~isfield(processes, p)
-                processes.(p) = {};
-            end
-        end
-    end
-end
-
-% Parse the note to a cell array of name-value pairs
-function args = parseString2Args(obj, note)
-    % Erase white-space and split the string by ","
-    pieces = split(erase(note, " "), ",")';
-    pieces = pieces(pieces ~= "");
-    % For each string piece, try to parse as name=value
-    args = cell(1, 2 * length(pieces));
-    for i = 1: length(pieces)
-        p = pieces(i);
-        if contains(p, "=")
-            vals = split(p, "=");
-            if length(vals) == 2
-                args{2*i-1} = vals(1);
-                arg_val = double(string(vals(2)));
-                if isnan(arg_val) && ~ismember(vals(2), ["Nan", "NaN", "nan"])
-                    args{2*i} = vals(2);
-                else
-                    args{2*i} = arg_val;
-                end
-            else
-                obj.error("Multiple '=' appears in the partitioned string '%s'.", p)
-            end
-        elseif p ~= ""
-            args{2*i-1} = p;
-            args{2*i} = true;
         end
     end
 end

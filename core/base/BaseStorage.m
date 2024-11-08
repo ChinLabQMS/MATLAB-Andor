@@ -99,8 +99,6 @@ classdef (Abstract) BaseStorage < BaseObject
                 obj.(camera).Config = obj.CameraManager.(camera).Config.struct();
                 % Record some additional information to the camera config
                 obj.(camera).Config.CameraName = camera;
-                obj.(camera).Config.NumAcquisitions = obj.AcquisitionConfig.NumAcquisitions;
-                obj.(camera).Config.NumStatistics = obj.AcquisitionConfig.NumStatistics;
                 camera_seq = sequence((sequence.Camera == camera), :);
                 for j = 1:height(camera_seq)
                     label = camera_seq.Label(j);

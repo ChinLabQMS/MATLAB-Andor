@@ -149,7 +149,7 @@ classdef BaseObject < handle
             arguments
                 s
                 obj = BaseObject()
-                fields = obj.ConfigurableProp
+                fields = obj.ConfigurableProp % Properties to set
                 options.verbose = true
             end
             args = struct();

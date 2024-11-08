@@ -1,5 +1,5 @@
-classdef Replayer < BaseSequencer & BaseProcessor
-
+classdef Replayer < BaseSequencer
+    
     properties (SetAccess = {?BaseObject})
         DataPath = "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat"
         CurrentIndex
@@ -23,7 +23,8 @@ classdef Replayer < BaseSequencer & BaseProcessor
             end
             obj.Timer = tic;
             obj.Live = LiveData();
-            obj.info2("Replay data loaded and sequence initialized.")
+            obj.initSequence()
+            obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
         end
     end
 
