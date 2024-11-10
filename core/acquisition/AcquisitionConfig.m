@@ -3,7 +3,7 @@ classdef AcquisitionConfig < BaseProcessor
     properties (SetAccess = {?BaseObject})
         SequenceTable = SequenceRegistry.Full4Analysis
         NumAcquisitions = 20
-        NumStatistics = 2000
+        NumStatistics = 1000
         Refresh = 0.01
         Timeout = Inf
         SampleInterval = 1

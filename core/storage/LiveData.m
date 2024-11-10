@@ -6,6 +6,7 @@ classdef LiveData < BaseObject
         Signal
         Background
         Analysis
+        Temporary
         BadFrameDetected
     end
 
@@ -21,10 +22,12 @@ classdef LiveData < BaseObject
         function init(obj)
             obj.LastData = obj.struct();
             obj.RunNumber = obj.RunNumber + 1;
+            obj.BadFrameDetected = false;
             obj.Raw = [];
             obj.Signal = [];
             obj.Background = [];
             obj.Analysis = [];
+            obj.Temporary = [];
         end
     end
 

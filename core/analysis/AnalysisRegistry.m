@@ -40,11 +40,10 @@ classdef AnalysisRegistry < BaseObject
 end
 
 %% Registered functions in AnalysisRegistry
-% Format: res = func(res, live, info, options)
+% Format: func(live, info, options)
 
-function res = fitCenter(res, live, info, options)
+function fitCenter(live, info, options)
     arguments
-        res 
         live
         info 
         options.first_only = true
@@ -52,23 +51,26 @@ function res = fitCenter(res, live, info, options)
     assert(all(isfield(info, ["camera", "label", "config"])))
     signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
-    [res.XCenter, res.YCenter, res.XWidth, res.YWidth] = fitCenter2D(signal);
+    [xc, yc, xw, yw] = fitCenter2D(signal);
+    live.Analysis.(info.camera).(info.label).XCenter = xc;
+    live.Analysis.(info.camera).(info.label).YCenter = yc;
+    live.Analysis.(info.camera).(info.label).XWidth = xw;
+    live.Analysis.(info.camera).(info.label).YWidth = yw;
 end
 
-function res = fitGauss(res, live, info)
+function fitGauss(live, info)
     assert(all(isfield(info, ["camera", "label", "config"])))
     signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config));
     f = fitGauss2D(signal);
-    res.GaussX = f.x0;
-    res.GaussY = f.y0;
-    res.GaussXWid = f.s1;
-    res.GaussYWid = f.s2;
+    live.Analysis.(info.camera).(info.label).GaussX = f.x0;
+    live.Analysis.(info.camera).(info.label).GaussY = f.y0;
+    live.Analysis.(info.camera).(info.label).GaussXWid = f.s1;
+    live.Analysis.(info.camera).(info.label).GaussYWid = f.s2;
 end
 
-function res = calibLatR(res, live, info, options)
+function calibLatR(live, info, options)
     arguments
-        res
         live
         info
         options.first_only = true
@@ -78,13 +80,12 @@ function res = calibLatR(res, live, info, options)
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
     Lat = info.lattice.(info.camera);
     Lat.calibrateR(signal)
-    res.LatX = Lat.R(1);
-    res.LatY = Lat.R(2);
+    live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
+    live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
 end
 
-function res = calibLatO(res, live, info, options)
+function calibLatO(live, info, options)
     arguments
-        res
         live
         info
         options

@@ -93,30 +93,17 @@ classdef (Abstract) BaseStorage < BaseObject
             for camera = obj.ConfigurableProp
                 obj.(camera) = [];
             end
-            sequence = obj.AcquisitionConfig.ActiveSequence;
             for camera = obj.AcquisitionConfig.ActiveCameras
                 % Record camera config
                 obj.(camera).Config = obj.CameraManager.(camera).Config.struct();
                 % Record some additional information to the camera config
                 obj.(camera).Config.CameraName = camera;
-                camera_seq = sequence((sequence.Camera == camera), :);
-                for j = 1:height(camera_seq)
-                    label = camera_seq.Label(j);
-                    note = camera_seq.Note(j);
-                    type = string(camera_seq.Type(j));
-                    if contains(type, "Analysis")
-                        %% To do here
-                        if isfield(obj.(camera).Config.AnalysisNote, label) && note ~= ""
-                            obj.(camera).Config.AnalysisNote.(label) = obj.(camera).Config.AnalysisNote.(label) + ", " + note;
-                        else
-                            obj.(camera).Config.AnalysisNote.(label) = note;
-                        end
-                        obj.initAnalysisStorage(camera, label)
-                    elseif contains(type, "Acquire")
-                        obj.(camera).Config.AcquisitionNote.(label) = note;
-                        obj.initAcquisitionStorage(camera, label)
-                    end
-                end
+                obj.(camera).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(camera);
+                obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
+                acquisition_labels = string(fields(obj.(camera).Config.AcquisitionNote))';
+                analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
+                obj.initAnalysisStorage(camera, acquisition_labels)
+                obj.initAcquisitionStorage(camera, analysis_labels)
             end
             obj.info("Storage initialized for %d cameras, total memory is %g MB.", ...
                      length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
@@ -178,8 +165,8 @@ classdef (Abstract) BaseStorage < BaseObject
     methods (Access = protected, Abstract, Hidden)
         data = removeIncomplete(obj, data)
         initMaxIndex(obj)
-        initAnalysisStorage(obj, camera, label)
-        initAcquisitionStorage(obj, camera, label)
+        initAnalysisStorage(obj, camera, labels)
+        initAcquisitionStorage(obj, camera, labels)
         shift(obj, camera, label)
         addNew(obj, new_data, camera, label)
     end

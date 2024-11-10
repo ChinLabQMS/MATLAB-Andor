@@ -141,14 +141,7 @@ classdef BaseSequencer < BaseObject
         end
         
         function analyze(obj, camera, label, varargin)
-            analysis = obj.Analyzer.analyze(obj.Live, varargin{:});
-            if isfield(obj.Live.Analysis, camera) && isfield(obj.Live.Analysis.(camera), label)
-                for field = string(fields(obj.Live.Analysis.(camera).(label)))'
-                    obj.Live.Analysis.(camera).(label).(field) = analysis.(field);
-                end
-            else
-                obj.Live.Analysis.(camera).(label) = analysis;
-            end
+            obj.Analyzer.analyze(obj.Live, varargin{:});
         end
         
         function project(obj, camera, label, varargin)
@@ -168,7 +161,7 @@ classdef BaseSequencer < BaseObject
         % Override the default getStatusLabel method from BaseObject
         function label = getStatusLabel(obj)
             label = sprintf("%s(RunNum:%d, DataIdx:%d, StatIdx:%d)", ...
-                class(obj), obj.RunNumber, obj.DataStorage.CurrentIndex, obj.StatStorage.CurrentIndex);
+                class(obj), obj.Live.RunNumber, obj.DataStorage.CurrentIndex, obj.StatStorage.CurrentIndex);
         end
     end
 end

@@ -30,12 +30,11 @@ classdef Analyzer < BaseProcessor
                 options.verbose = obj.Analyze_Verbose
             end
             timer = tic;
-            res = struct();
             info.lattice = obj.LatCalib;
-            for i = 1: length(options.processes)
-                func = options.processes{i}{1};
-                args = options.processes{i}(2: end);
-                res = func(res, live, info, args{:});
+            for p = options.processes
+                func = p{1};
+                args = p{2};
+                func(live, info, args{:})
             end
             if options.verbose
                 obj.info("[%s %s] Analysis completed in %.3f s.", info.camera, info.label, toc(timer))

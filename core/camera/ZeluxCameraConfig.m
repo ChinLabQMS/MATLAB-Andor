@@ -1,4 +1,4 @@
-classdef ZeluxCameraConfig < CameraConfig
+classdef ZeluxCameraConfig < BaseObject
     % Configuration file for ZeluxCamera
     
     properties (SetAccess = {?BaseObject})
@@ -16,7 +16,7 @@ classdef ZeluxCameraConfig < CameraConfig
 
     methods
         function s = struct(obj)
-            s = struct@BaseObject(obj.AllProp);
+            s = struct@BaseObject(obj, obj.AllProp);
         end
     end
     

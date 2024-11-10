@@ -13,10 +13,12 @@ classdef DataStorage < BaseStorage
         function initAnalysisStorage(~, ~, ~)
         end
 
-        function initAcquisitionStorage(obj, camera, label)
+        function initAcquisitionStorage(obj, camera, labels)
             if obj.(camera).Config.MaxPixelValue <= 65535
-                obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, ...
-                    obj.(camera).Config.YPixels, obj.MaxIndex, "uint16");
+                for label = labels
+                    obj.(camera).(label) = zeros(obj.(camera).Config.XPixels, ...
+                        obj.(camera).Config.YPixels, obj.MaxIndex, "uint16");
+                end
             else
                 obj.error("Unsupported pixel value range for camera %s.", camera)
             end
