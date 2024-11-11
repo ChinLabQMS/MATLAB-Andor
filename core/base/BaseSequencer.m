@@ -68,7 +68,7 @@ classdef BaseSequencer < BaseObject
                 func(args{:})
             end
             if ~isempty(obj.LayoutManager)
-                obj.LayoutManager.update(obj)
+                obj.LayoutManager.update(obj.Live)
             end
             if (~obj.Live.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
                 if (rem(obj.Live.RunNumber, obj.AcquisitionConfig.SampleInterval) == 0)
@@ -84,6 +84,12 @@ classdef BaseSequencer < BaseObject
         end
 
         function initSequence(obj)
+            obj.StatStorage.init()
+            if ~isempty(obj.LayoutManager)
+                obj.LayoutManager.init()
+            end
+            obj.Timer = tic;
+            obj.Live = LiveData(obj.CameraManager, obj.Analyzer.LatCalib);
             active_sequence = obj.AcquisitionConfig.ActiveSequence;
             steps = {};
             for i = 1: height(active_sequence)

@@ -15,10 +15,16 @@ classdef LiveData < BaseObject
     end
 
     properties (SetAccess = immutable)
+        CameraManager
         LatCalib
     end
 
     methods
+        function obj = LiveData(cameras, calib)
+            obj.CameraManager = cameras;
+            obj.LatCalib = calib;
+        end
+
         function init(obj)
             obj.LastData = obj.struct();
             obj.RunNumber = obj.RunNumber + 1;

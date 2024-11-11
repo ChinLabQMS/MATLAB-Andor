@@ -12,7 +12,7 @@ classdef LineRunner < AxesRunner
     end
     
     methods (Access = protected)
-        function updateContent(obj, data, sequencer)
+        function updateContent(obj, data, Live)
             switch obj.Config.FuncName
                 case "Mean"
                     new = mean(data, "all");
@@ -29,9 +29,9 @@ classdef LineRunner < AxesRunner
                     end
             end
             if isempty(obj.GraphHandle)
-                obj.GraphHandle = plot(obj.AxesHandle, sequencer.RunNumber, new, "LineWidth", 2);
+                obj.GraphHandle = plot(obj.AxesHandle, Live.RunNumber, new, "LineWidth", 2);
             else
-                obj.GraphHandle.XData = [obj.GraphHandle.XData, sequencer.RunNumber];
+                obj.GraphHandle.XData = [obj.GraphHandle.XData, Live.RunNumber];
                 obj.GraphHandle.YData = [obj.GraphHandle.YData, new];
             end
         end

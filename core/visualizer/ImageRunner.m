@@ -1,7 +1,7 @@
 classdef ImageRunner < AxesRunner
 
     methods (Access = protected)
-        function updateContent(obj, data, sequencer)
+        function updateContent(obj, data, Live)
             [x_size, y_size] = size(data);
             if isempty(obj.GraphHandle)
                 obj.GraphHandle = imagesc(obj.AxesHandle, data);
@@ -15,13 +15,13 @@ classdef ImageRunner < AxesRunner
             switch obj.Config.FuncName
                 case "None"
                 case "Lattice"
-                    Lat = sequencer.Analyzer.LatCalib.(obj.Config.CameraName);
+                    Lat = Live.LatCalib.(obj.Config.CameraName);
                     obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
                         Lattice.prepareSite("hex", "latr", 20), ...
                         'x_lim', [1, x_size], 'y_lim', [1, y_size]);
                 case "Lattice All"
-                    Lat = sequencer.Analyzer.LatCalib.(obj.Config.CameraName);
-                    num_frames = getNumFrames(sequencer.CameraManager.(obj.Config.CameraName).Config);
+                    Lat = Live.LatCalib.(obj.Config.CameraName);
+                    num_frames = getNumFrames(Live.CameraManager.(obj.Config.CameraName).Config);
                     obj.AddonHandle = gobjects(num_frames, 1);
                     for i = 1: num_frames
                         obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...

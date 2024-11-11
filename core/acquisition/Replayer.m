@@ -17,12 +17,6 @@ classdef Replayer < BaseSequencer
             obj.AcquisitionConfig.config(data.AcquisitionConfig)
             obj.CameraManager.config(data)
             obj.DataStorage.config(data, "config_cameras", false, "config_acq", false)
-            obj.StatStorage.init()
-            if ~isempty(obj.LayoutManager)
-                obj.LayoutManager.init()
-            end
-            obj.Timer = tic;
-            obj.Live = LiveData();
             obj.initSequence()
             obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
         end

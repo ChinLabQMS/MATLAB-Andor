@@ -5,12 +5,6 @@ classdef Acquisitor < BaseSequencer
         function init(obj)
             obj.CameraManager.init(obj.AcquisitionConfig.ActiveCameras)
             obj.DataStorage.init()
-            obj.StatStorage.init()
-            if ~isempty(obj.LayoutManager)
-                obj.LayoutManager.init()
-            end
-            obj.Timer = tic;
-            obj.Live = LiveData();
             obj.initSequence()
             obj.info2("Sequence initialized.")
         end
