@@ -26,13 +26,19 @@ classdef (Abstract) AxesRunner < BaseRunner
 
         function update(obj, Live)
             obj.LiveHandle = Live;
-            try
-                data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
-            catch
-                obj.warn("[%s %s] Not found in Live data.", obj.Config.CameraName, obj.Config.ImageLabel)
+            if isprop(Live, obj.Config.Content) && isfield(Live.(obj.Config.Content), obj.Config.CameraName) && ...
+                    isfield(Live.(obj.Config.Content).(obj.Config.CameraName), obj.Config.ImageLabel)
+                obj.updateContent(Live)
                 return
+            elseif ~isempty(Live.LastData)
+                LastLive = Live.LastData;
+                if isfield(LastLive, obj.Config.Content) && isfield(LastLive.(obj.Config.Content), obj.Config.CameraName) && ...
+                        isfield(LastLive.(obj.Config.Content).(obj.Config.CameraName), obj.Config.ImageLabel)
+                    obj.updateContent(LastLive)
+                    return
+                end
             end
-            obj.updateContent(data, Live)
+            obj.warn("[%s %s] Not found in Live data.", obj.Config.CameraName, obj.Config.ImageLabel)           
         end
 
         function config(obj, varargin)

@@ -12,7 +12,8 @@ classdef LineRunner < AxesRunner
     end
     
     methods (Access = protected)
-        function updateContent(obj, data, Live)
+        function updateContent(obj, Live)
+            data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
             switch obj.Config.FuncName
                 case "Mean"
                     new = mean(data, "all");

@@ -35,6 +35,12 @@ classdef LiveData < BaseObject
             obj.Analysis = [];
             obj.Temporary = [];
         end
+
+        function s = struct(obj)
+            s = struct@BaseObject(obj);
+            s.CameraManager = obj.CameraManager;
+            s.LatCalib = obj.LatCalib;
+        end
     end
 
 end

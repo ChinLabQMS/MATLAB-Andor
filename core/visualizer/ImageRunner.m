@@ -1,7 +1,8 @@
 classdef ImageRunner < AxesRunner
 
     methods (Access = protected)
-        function updateContent(obj, data, Live)
+        function updateContent(obj, Live)
+            data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
             [x_size, y_size] = size(data);
             if isempty(obj.GraphHandle)
                 obj.GraphHandle = imagesc(obj.AxesHandle, data);
