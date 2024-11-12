@@ -35,13 +35,24 @@ ylabel('LatR2')
 
 %% Correlation analysis
 
+x1 = res.Zelux.LatR1;
+x2 = res.Zelux.LatR2;
+y1 = res.Andor19330.LatR1;
+y2 = res.Andor19330.LatR2;
+
 figure
 subplot(1, 2, 1)
-scatter(res.Andor19330.LatR1, res.Zelux.LatR1)
+scatter(x1, y1)
 xlabel('Andor19330 LatR1')
 ylabel('Zelux LatR1')
 
 subplot(1, 2, 2)
-scatter(res.Andor19330.LatR2(2:end), res.Zelux.LatR2(2:end))
+scatter(x2, y2)
 xlabel('Andor19330 LatR2')
 ylabel('Zelux LatR2')
+
+%% Make a GIF
+
+start_idx = 60;
+end_idx = 80;
+

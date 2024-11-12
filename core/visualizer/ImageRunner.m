@@ -30,8 +30,7 @@ classdef ImageRunner < AxesRunner
                             'center', Lat.R + [x_size / num_frames * (i - 1), 0], ...
                             'x_lim', [1, x_size], 'y_lim', [1, y_size]);
                     end
-                case "PSF"
-                    
+                case "PSF"                    
             end
         end
     end

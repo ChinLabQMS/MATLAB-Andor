@@ -23,7 +23,7 @@ classdef LatCalibrator < DataProcessor
         CalibO_SignalIndex = 1
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
-        CalibO_Sites = Lattice.prepareSite('hex', 'latr', 3)
+        CalibO_Sites = Lattice.prepareSite('hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_VerboseStep = false
         CalibO_Debug = false
@@ -33,7 +33,7 @@ classdef LatCalibrator < DataProcessor
         TrackCalib_CalibOFirst = true
         TrackCalib_CalibOEnd = true
         TrackCalib_CalibOEvery = true
-        TrackCalib_DropShifted = true
+        TrackCalib_DropShifted = false
     end
 
     properties (SetAccess = protected)
@@ -190,7 +190,7 @@ classdef LatCalibrator < DataProcessor
                 if options.calibO_every
                     obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, ...
                         "crop_R_site", options.crop_R_site, ...
-                        "plot_diagnostic", false, "verbose", false, 'debug', true)
+                        "plot_diagnostic", false, "verbose", false, 'debug', options.drop_shifted)
                     Lat = obj.LatCalib.(obj.CalibO_Camera);
                     Lat2 = obj.LatCalib.(obj.CalibO_Camera2);
                     if ~isequal(Lat.Ostat.Site, [0, 0])
@@ -216,11 +216,14 @@ classdef LatCalibrator < DataProcessor
                 end
             end
             if options.calibO_end
-                obj.calibrateO(num_acq, "calib_R", false, "plot_diagnosticO", false, "verbose", true);
+                obj.calibrateO(num_acq, "calib_R", false, "plot_diagnosticO", false, "verbose", false);
             end
             for j = 1:length(obj.CameraList)
                 camera = obj.CameraList(j);
                 result.(camera) = struct2table(result.(camera));
+                if isfield(obj.Signal.(camera).Config, "DataTimestamp")
+                    result.(camera).DataTimestamp = obj.Signal.(camera).Config.DataTimestamp(1: num_acq);
+                end
             end
             obj.info('Lattice offset tracking report is generated.')
         end

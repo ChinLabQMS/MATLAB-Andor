@@ -21,7 +21,6 @@ classdef (Abstract) BaseStorage < BaseObject
     properties (SetAccess = protected)
         CurrentIndex
         MaxIndex
-        Timestamp
     end
 
     properties (Dependent, Hidden)
@@ -64,10 +63,6 @@ classdef (Abstract) BaseStorage < BaseObject
                 end
             end
             s.AcquisitionConfig = obj.AcquisitionConfig.struct();
-            s.Timestamp = obj.Timestamp;
-            if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
-                s.Timestamp = s.Timestamp(1: obj.CurrentIndex);
-            end
             for camera = obj.ConfigurableProp
                 if isempty(obj.(camera))
                     continue
@@ -77,9 +72,10 @@ classdef (Abstract) BaseStorage < BaseObject
                 if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
                     for label = string(fields(s.(camera)))'
                         if label == "Config"
-                            continue
+                            s.(camera).Config.DataTimestamp = s.(camera).Config.DataTimestamp(1: obj.CurrentIndex);
+                        else
+                            s.(camera).(label) = obj.removeIncomplete(s.(camera).(label));
                         end
-                        s.(camera).(label) = obj.removeIncomplete(s.(camera).(label));
                     end
                 end
             end
@@ -89,7 +85,6 @@ classdef (Abstract) BaseStorage < BaseObject
         function init(obj)
             obj.CurrentIndex = 0;
             obj.initMaxIndex();
-            obj.Timestamp = NaT(obj.MaxIndex, 1);
             for camera = obj.ConfigurableProp
                 obj.(camera) = [];
             end
@@ -100,6 +95,7 @@ classdef (Abstract) BaseStorage < BaseObject
                 obj.(camera).Config.CameraName = camera;
                 obj.(camera).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(camera);
                 obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
+                obj.(camera).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
                 acquisition_labels = string(fields(obj.(camera).Config.AcquisitionNote))';
                 analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
                 obj.initAnalysisStorage(camera, acquisition_labels)
@@ -123,8 +119,13 @@ classdef (Abstract) BaseStorage < BaseObject
             end
             obj.checkInitialized()
             obj.CurrentIndex = obj.CurrentIndex + 1;
-            obj.Timestamp(obj.CurrentIndex) = datetime;
             for camera = string(fields(new))'
+                if obj.CurrentIndex > obj.MaxIndex
+                    obj.(camera).Config.DataTimestamp = circshift(obj.(camera).Config.DataTimestamp, -1, 1);
+                    obj.(camera).Config.DataTimestamp(end) = datetime;
+                else
+                    obj.(camera).Config.DataTimestamp(obj.CurrentIndex) = datetime;
+                end
                 for label = string(fields(new.(camera)))'
                     if obj.CurrentIndex > obj.MaxIndex
                         obj.shift(camera, label)
