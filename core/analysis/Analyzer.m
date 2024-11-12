@@ -8,10 +8,6 @@ classdef Analyzer < BaseProcessor
     properties (SetAccess = protected)
         LatCalib
     end
-
-    properties (Constant)
-        Analyze_Verbose = false
-    end
     
     methods
         function set.LatCalibFilePath(obj, path)
@@ -19,7 +15,7 @@ classdef Analyzer < BaseProcessor
             obj.loadLatCalibFile()
         end
 
-        function res = analyze(obj, live, info, options)
+        function analyze(obj, live, info, options)
             arguments
                 obj
                 live
@@ -27,7 +23,7 @@ classdef Analyzer < BaseProcessor
                 info.label
                 info.config
                 options.processes = {}
-                options.verbose = obj.Analyze_Verbose
+                options.verbose = false
             end
             timer = tic;
             info.lattice = obj.LatCalib;

@@ -47,8 +47,12 @@ classdef ZeluxCamera < Camera
                 obj.error('Camera index out of range. Number of cameras found: %d', serialNumbers.Count)
             end
             obj.CameraHandle = obj.CameraSDK.OpenCamera(serialNumbers.Item(obj.ID), false);
-            obj.Config.XPixels = obj.CameraHandle.ImageWidth_pixels;
-            obj.Config.YPixels = obj.CameraHandle.ImageHeight_pixels;
+            if (obj.Config.XPixels ~= obj.CameraHandle.ImageWidth_pixels) || ...
+                    (obj.Config.YPixels ~= obj.CameraHandle.ImageHeight_pixels)
+                obj.warn2("Image size does not match, configured size (%d, %d), actual size (%d, %d).", ...
+                    obj.Config.XPixels, obj.Config.YPixels, ...
+                    obj.CameraHandle.ImageWidth_pixels, obj.CameraHandle.ImageHeight_pixels)
+            end
             obj.FrameIndex = 0;
         end
 

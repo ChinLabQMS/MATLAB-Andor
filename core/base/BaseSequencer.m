@@ -12,11 +12,6 @@ classdef BaseSequencer < BaseObject
         StatStorage
     end
     
-    % Run verbose parameters
-    properties (Constant)
-        Run_Verbose = true
-    end
-    
     % Live data
     properties (SetAccess = protected)
         Timer
@@ -56,7 +51,7 @@ classdef BaseSequencer < BaseObject
         function run(obj, options)
             arguments
                 obj
-                options.verbose = obj.Run_Verbose
+                options.verbose = true
             end
             timer = tic;
             if obj.AcquisitionConfig.AbortAtEnd
@@ -146,7 +141,7 @@ classdef BaseSequencer < BaseObject
             obj.Live.Background.(camera).(label) = background;
         end
         
-        function analyze(obj, camera, label, varargin)
+        function analyze(obj, ~, ~, varargin)
             obj.Analyzer.analyze(obj.Live, varargin{:});
         end
         
