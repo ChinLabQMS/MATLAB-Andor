@@ -94,12 +94,14 @@ classdef (Abstract) BaseStorage < BaseObject
                 % Record some additional information to the camera config
                 obj.(camera).Config.CameraName = camera;
                 obj.(camera).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(camera);
-                obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
                 obj.(camera).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
                 acquisition_labels = string(fields(obj.(camera).Config.AcquisitionNote))';
-                analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
-                obj.initAnalysisStorage(camera, acquisition_labels)
-                obj.initAcquisitionStorage(camera, analysis_labels)
+                obj.initAcquisitionStorage(camera, acquisition_labels)
+                if isfield(obj.AcquisitionConfig.AnalysisNote, camera)
+                    obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
+                    analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
+                    obj.initAnalysisStorage(camera, analysis_labels)
+                end
             end
             obj.info("Storage initialized for %d cameras, total memory is %g MB.", ...
                      length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)

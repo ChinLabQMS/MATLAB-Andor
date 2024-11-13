@@ -100,7 +100,7 @@ classdef BaseSequencer < BaseObject
                     case "Acquire"
                         func1 = @(varargin) obj.acquire(camera, label, varargin{:});
                         func2 = @(varargin) obj.preprocess(camera, label, varargin{:});
-                        args1 = [{"label", label}, params.Acquire];
+                        args1 = [{"label", label, "refresh", obj.AcquisitionConfig.Refresh, "timeout", obj.AcquisitionConfig.Timeout}, params.Acquire];
                         args2 = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params.Preprocess];
                         new_steps = [{func1}, {func2}; {args1}, {args2}];
                     case "Start+Acquire"
@@ -108,7 +108,7 @@ classdef BaseSequencer < BaseObject
                         func2 = @(varargin) obj.acquire(camera, label, varargin{:});
                         func3 = @(varargin) obj.preprocess(camera, label, varargin{:});
                         args1 = [{"label", label}, params.Start];
-                        args2 = [{"label", label}, params.Acquire];
+                        args2 = [{"label", label, "refresh", obj.AcquisitionConfig.Refresh, "timeout", obj.AcquisitionConfig.Timeout}, params.Acquire];
                         args3 = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params.Preprocess];
                         new_steps = [{func1}, {func2}, {func3}; {args1}, {args2}, {args3}];
                     case "Analysis"
@@ -132,7 +132,10 @@ classdef BaseSequencer < BaseObject
         end
 
         function acquire(obj, camera, label, varargin)
-            obj.Live.Raw.(camera).(label) = obj.CameraManager.(camera).acquire(varargin{:});
+            [obj.Live.Raw.(camera).(label), is_good] = obj.CameraManager.(camera).acquire(varargin{:});
+            if ~is_good
+                obj.Live.BadFrameDetected = true;
+            end
         end
 
         function preprocess(obj, camera, label, varargin)

@@ -115,3 +115,13 @@ function calibLatO(live, info, options, options2)
         live.info("Cross calibrating lattice R takes %5.3f s.", toc(timer))
     end
 end
+
+function fitPSF(live, info, options)
+    arguments
+        live
+        info
+        options.thresh_percent = 0.5
+        options.crop_size = 10
+        options.verbose = false
+    end
+end

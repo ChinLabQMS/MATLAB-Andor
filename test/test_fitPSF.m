@@ -1,20 +1,17 @@
 %% Loading the raw dataset
 clear; clc;
 % DataPath = 'data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat';
-DataPath = 'calibration/20240903_align_lattice_and_DMD_sparse_exp=1.45s_both_upper_and_lower.mat';
+% DataPath = 'calibration/20240903_align_lattice_and_DMD_sparse_exp=1.45s_both_upper_and_lower.mat';
+DataPath = "data/2024/11 November/20241111/Warmup_sparse2.mat";
 Data = load(DataPath, "Data").Data;
-
-%% Preprocess the data
-p = Preprocessor;
-Signal = p.processData(Data);
-
+Signal = Preprocessor().process(Data);
 
 %% Visualize a sample image
 
 sample = Signal.Andor19330.Image(:, :, 1);
 
 figure
-Lattice.imagesc(sample)
+imagesc2(sample)
 
 %%
 close all

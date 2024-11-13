@@ -33,6 +33,53 @@ grid on
 legend(["Andor19330", "Andor19331", "Zelux"], "Location", "eastoutside")
 ylabel('LatR2')
 
+%% Histograms
+
+bins = linspace(-0.3, 0.3, 30);
+
+figure
+val = res.Andor19330.LatR1 - res.Andor19330.LatR1(ref_index);
+subplot(4, 2, 1)
+histogram(val, "BinEdges", bins)
+title(sprintf("Andor19330 LatR1, std: %g", std(val)))
+
+subplot(4, 2, 2)
+val = res.Andor19330.LatR2 - res.Andor19330.LatR2(ref_index);
+histogram(val, "BinEdges", bins)
+title(sprintf("Andor19330 LatR2, std: %g", std(val)))
+
+subplot(4, 2, 3)
+val = res.Andor19331.LatR1 - res.Andor19331.LatR1(ref_index);
+histogram(val, "BinEdges", bins)
+title(sprintf("Andor19331 LatR1, std: %g", std(val)))
+
+subplot(4, 2, 4)
+val = res.Andor19331.LatR2 - res.Andor19331.LatR2(ref_index);
+histogram(val, "BinEdges", bins)
+title(sprintf("Andor19331 LatR2, std: %g", std(val)))
+
+subplot(4, 2, 5)
+val = res.Zelux.LatR1 - res.Zelux.LatR1(ref_index);
+histogram(val, "BinEdges", bins)
+title("Zelux LatR1")
+
+subplot(4, 2, 6)
+val = res.Zelux.LatR2 - res.Zelux.LatR2(ref_index);
+histogram(val, "BinEdges", bins)
+title(sprintf("Zelux LatR1, std: %g", std(val)))
+
+subplot(4, 2, 7)
+val = (res.Andor19330.LatR1 - res.Andor19330.LatR1(ref_index)) - ...
+    (res.Zelux.LatR1 - res.Zelux.LatR1(ref_index));
+histogram(val, "BinEdges", bins)
+title(sprintf("(Andor19330 - Zelux) LatR1, std: %g", std(val)))
+
+subplot(4, 2, 8)
+val = (res.Andor19330.LatR2 - res.Andor19330.LatR2(ref_index)) - ...
+    (res.Zelux.LatR2 - res.Zelux.LatR2(ref_index));
+histogram(val, "BinEdges", bins)
+title(sprintf("(Andor19330 - Zelux) LatR2, std: %g", std(val)))
+
 %% Correlation analysis
 
 x1 = res.Zelux.LatR1;
@@ -43,16 +90,14 @@ y2 = res.Andor19330.LatR2;
 figure
 subplot(1, 2, 1)
 scatter(x1, y1)
-xlabel('Andor19330 LatR1')
-ylabel('Zelux LatR1')
+daspect([1 1 1])
+xlabel('Zelux LatR1')
+ylabel('Andor19330 LatR1')
+title(sprintf('Corr: %g', corr(x1, y1)))
 
 subplot(1, 2, 2)
 scatter(x2, y2)
-xlabel('Andor19330 LatR2')
-ylabel('Zelux LatR2')
-
-%% Make a GIF
-
-start_idx = 60;
-end_idx = 80;
-
+daspect([1 1 1])
+xlabel('Zelux LatR2')
+ylabel('Andor19330 LatR2')
+title(sprintf('Corr: %g', corr(x2, y2)))
