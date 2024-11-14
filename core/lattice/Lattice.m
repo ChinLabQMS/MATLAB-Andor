@@ -2,6 +2,9 @@
     %LATTICE Class for lattice calibration and conversion
 
     properties (Constant)
+        Standard_V1 = [0, 1]
+        Standard_V2 = [1/2*sqrt(3), -1/2]
+        Standard_Scale = 10
         CalibR_BinarizeThres = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
@@ -16,7 +19,7 @@
         CalibO_Sites = Lattice.prepareSite("hex", "latr", 5)
         CalibO_DistanceMetric = "cosine"
         CalibO_NumScores = 5
-        CalibO_VerboseStep = false
+        CalibO_WarnThresScoreDev = 5
         CalibO_Verbose = false
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false
@@ -39,11 +42,18 @@
     end
     
     methods
-        function Lat = Lattice(ID)
+        function Lat = Lattice(ID, options)
             arguments
-                ID = "Test"
+                ID = "Standard"
+                options.v1 = Lattice.Standard_V1
+                options.v2 = Lattice.Standard_V2
+                options.scale = Lattice.Standard_Scale
             end
-            Lat.ID = ID;            
+            Lat.ID = ID;
+            if ID == "Standard"
+                Lat.init([0, 0], [], options.scale * [options.v1; options.v2], ...
+                    "format", "KV")
+            end
         end
         
         % Initialize the calibration by
@@ -57,12 +67,24 @@
                 pos_or_V = []
                 options.format = "peak_pos"
             end
-            if ~isempty(pos_or_V) && ~isempty(size_or_K)
+            if ~isempty(pos_or_V) || ~isempty(size_or_K)
                 if options.format == "peak_pos"
-                    [Lat.K, Lat.V] = convertFFTPeak2K(size_or_K, pos_or_V);
+                    if ~isempty(pos_or_V) && ~isempty(size_or_K)
+                        [Lat.K, Lat.V] = convertFFTPeak2K(size_or_K, pos_or_V);
+                    else
+                        Lat.error("Wrong input format.")
+                    end
                 elseif options.format == "KV"
-                    Lat.K = size_or_K;
-                    Lat.V = pos_or_V;
+                    if ~isempty(size_or_K)
+                        Lat.K = size_or_K;
+                    else
+                        Lat.K = inv(pos_or_V)';
+                    end
+                    if ~isempty(pos_or_V)
+                        Lat.V = pos_or_V;
+                    else
+                        Lat.V = inv(size_or_K)';
+                    end
                 end
             end
             if ~isempty(R)
@@ -264,6 +286,25 @@
                 + (coor(idx, 2) - y_range(1)) * size(signal, 1));
         end
         
+        % Cross conversion of one image from Lat space to a standard Lat2
+        function [transformed2, x_range2, y_range2] = transformSignalStandard(Lat, signal, x_range, y_range, options)
+            arguments
+                Lat
+                signal 
+                x_range 
+                y_range 
+                options.v1 = [0, 1]
+                options.v2 = [1/2*sqrt(3), -1/2]
+                options.scale = 10
+                options.x_lim = [-15, 15]
+                options.y_lim = [-15, 15]
+            end
+            Lat2 = Lattice('Standard');
+            x_range2 = options.x_lim(1): options.x_lim(2);
+            y_range2 = options.y_lim(1): options.y_lim(2);
+            transformed2 = Lat.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
+        end
+
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
         function calibrateO(Lat, Lat2, signal, signal2, ...
                 x_range, y_range, x_range2, y_range2, options)
@@ -281,9 +322,9 @@
                 options.sites = Lat.CalibO_Sites
                 options.metric = Lat.CalibO_DistanceMetric
                 options.debug = Lat.CalibO_Debug
-                options.verbose_step = Lat.CalibO_VerboseStep
                 options.verbose = Lat.CalibO_Verbose
                 options.num_scores = Lat.CalibO_NumScores
+                options.warn_thres_score_dev = Lat.CalibO_WarnThresScoreDev
                 options.plot_diagnosticO = Lat.CalibO_PlotDiagnostic
             end
             Lat.checkInitialized()
@@ -307,15 +348,12 @@
                     best_score = score.SignalDist(i);
                     best_transformed = transformed;
                 end
-                if options.verbose_step
-                    Lat.info("Trying site (%3d, %3d) at (%5.2f px, %5.2f px), score is %7.3f.", ...
-                        score.Site(i, 1), score.Site(i, 2), score.Center(i, 1), score.Center(i, 2), score.SignalDist(i))
-                end
             end
             score = struct2table(score);
             options.num_scores = min(options.num_scores, num_sites);
             [min_val, min_idx] = mink(score.SignalDist, options.num_scores);
             best = score(min_idx(1), :);
+            others = score(min_idx(2:end), :);
             Lat.R = best.Center;
             Lat.Ostat = table2struct(best);
             Lat.Ostat.BestTransformed = best_transformed;
@@ -323,7 +361,8 @@
             info_str = sprintf("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
                     Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist);
             info_str2 = sprintf("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)));
-            if all(best.Site == [0, 0])
+            if all(best.Site == [0, 0]) && ...
+                    abs(best.SignalDist - mean(others.SignalDist))/std(others.SignalDist) > options.warn_thres_score_dev
                 if options.verbose
                     Lat.info("%s", info_str)
                     Lat.info("%s", info_str2)
