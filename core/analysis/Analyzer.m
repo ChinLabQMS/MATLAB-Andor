@@ -26,7 +26,6 @@ classdef Analyzer < BaseProcessor
                 options.verbose = false
             end
             timer = tic;
-            info.lattice = obj.LatCalib;
             for p = options.processes
                 func = p{1};
                 args = p{2};

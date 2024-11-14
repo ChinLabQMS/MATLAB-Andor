@@ -57,8 +57,8 @@ function fitCenter(live, info, options)
     live.Analysis.(info.camera).(info.label).YCenter = yc;
     live.Analysis.(info.camera).(info.label).XWidth = xw;
     live.Analysis.(info.camera).(info.label).YWidth = yw;
-    if options.verbose
-        live.info("Fitting centers takes %5.3f s.", toc(timer))
+    if options.verbose && isa(live, "BaseObject")
+        live.info("Fitting cloud centers takes %5.3f s.", toc(timer))
     end
 end
 
@@ -82,11 +82,11 @@ function calibLatR(live, info, options)
     timer = tic;
     signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
-    Lat = info.lattice.(info.camera);
+    Lat = live.LatCalib.(info.camera);
     Lat.calibrateR(signal)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
-    if options.verbose
+    if options.verbose && isa(live, "BaseObject")
         live.info("Calibrating lattice R takes %5.3f s.", toc(timer))
     end
 end
