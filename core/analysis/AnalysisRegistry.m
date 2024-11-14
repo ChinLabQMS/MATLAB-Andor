@@ -76,7 +76,7 @@ function calibLatR(live, info, options)
     arguments
         live
         info
-        options.first_only = true
+        options.first_only = false
         options.verbose = false
     end
     timer = tic;

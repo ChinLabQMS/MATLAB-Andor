@@ -13,7 +13,7 @@ classdef Camera < BaseRunner
 
     properties (Access = private)
         AcquisitionStartTime
-        ExampleLocation = "data/2024/11 November/20241106/BIG_data_exp=1.2s.mat"
+        ExampleLocation = "data/2024/11 November/20241106/startofday.mat"
         ExampleImage
         CurrentIndex = 0
     end

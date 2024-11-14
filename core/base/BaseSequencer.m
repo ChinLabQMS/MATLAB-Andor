@@ -55,7 +55,7 @@ classdef BaseSequencer < BaseObject
             end
             timer = tic;
             if obj.AcquisitionConfig.AbortAtEnd
-                c_obj = onCleanup(@() obj.CameraManager.abortAcquisition(obj.AcquisitionConfig.ActiveCameras));
+                c_obj = onCleanup(@obj.abortAtEnd);
             end
             obj.Live.init()
             for step = obj.SequenceStep
@@ -158,6 +158,10 @@ classdef BaseSequencer < BaseObject
 
         function addStat(obj)
             obj.StatStorage.add(obj.Live.Analysis);
+        end
+
+        function abortAtEnd(obj)
+            obj.CameraManager.abortAcquisition(obj.AcquisitionConfig.ActiveCameras);
         end
     end
 

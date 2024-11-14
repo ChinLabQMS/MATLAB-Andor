@@ -4,7 +4,9 @@
     properties (Constant)
         Standard_V1 = [0, 1]
         Standard_V2 = [1/2*sqrt(3), -1/2]
-        Standard_Scale = 10
+        TransformStandard_Scale = 10
+        TransformStandard_XLimSite = [-25, 25]
+        TransformStandard_YLimSite = [-25, 25]
         CalibR_BinarizeThres = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
@@ -47,11 +49,10 @@
                 ID = "Standard"
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
-                options.scale = Lattice.Standard_Scale
             end
             Lat.ID = ID;
             if ID == "Standard"
-                Lat.init([0, 0], [], options.scale * [options.v1; options.v2], ...
+                Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")
             end
         end
@@ -277,7 +278,7 @@
             [Y2, X2] = meshgrid(y_range2, x_range2);
             coor2 = [X2(:), Y2(:)];
             % Corresponding pixel position in Lat camera space
-            coor = Lat2.transform(Lat, coor2);
+            coor = Lat2.transform(Lat, coor2, "round_output", true);
             % Look up the values at corresponding pixels
             idx = (coor(:, 1) >= x_range(1)) & (coor(:, 1) <= x_range(end)) ...
                 & (coor(:, 2) >= y_range(1)) & (coor(:, 2) <= y_range(end));
@@ -287,22 +288,31 @@
         end
         
         % Cross conversion of one image from Lat space to a standard Lat2
-        function [transformed2, x_range2, y_range2] = transformSignalStandard(Lat, signal, x_range, y_range, options)
+        function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandard(Lat, signal, x_range, y_range, options)
             arguments
                 Lat
                 signal 
                 x_range 
-                y_range 
-                options.v1 = [0, 1]
-                options.v2 = [1/2*sqrt(3), -1/2]
-                options.scale = 10
-                options.x_lim = [-15, 15]
-                options.y_lim = [-15, 15]
+                y_range
+                options.scale = Lat.TransformStandard_Scale
+                options.x_lim = Lat.TransformStandard_XLimSite
+                options.y_lim = Lat.TransformStandard_YLimSite
             end
             Lat2 = Lattice('Standard');
-            x_range2 = options.x_lim(1): options.x_lim(2);
-            y_range2 = options.y_lim(1): options.y_lim(2);
+            xlim = options.x_lim;
+            ylim = options.y_lim;
+            x_range2 = xlim(1): 1/options.scale: xlim(2);
+            y_range2 = ylim(1): 1/options.scale: ylim(2);
             transformed2 = Lat.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
+        end
+
+        function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCrop(Lat, signal, crop_R, varargin)
+            [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
+            [transformed2, x_range2, y_range2, Lat2] = Lat.transformSignalStandard(signal, x_range, y_range, varargin{:});
+        end
+
+        function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCropSite(Lat, signal, crop_R_site, varargin)
+            [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCrop(Lat, signal, crop_R_site * Lat.V_norm, varargin{:});
         end
 
         % Calibrate the origin of Lat to Lat2 based on signal overlapping
@@ -459,7 +469,7 @@
                 options.scale = 1
             end
             Lat.checkInitialized()
-            cObj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
+            c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
             hold(ax,'on');
             quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(1, 2), options.scale * Lat.V(1, 1), "off", ...
                 "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)

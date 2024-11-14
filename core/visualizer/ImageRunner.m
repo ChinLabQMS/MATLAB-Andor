@@ -3,6 +3,7 @@ classdef ImageRunner < AxesRunner
     methods (Access = protected)
         function updateContent(obj, Live)
             data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+            num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
             [x_size, y_size] = size(data);
             Lat = Live.LatCalib.(obj.Config.CameraName);
             if isempty(obj.GraphHandle)
@@ -21,7 +22,6 @@ classdef ImageRunner < AxesRunner
                         Lattice.prepareSite("hex", "latr", 20), ...
                         'x_lim', [1, x_size], 'y_lim', [1, y_size]);
                 case "Lattice All"
-                    num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
                     obj.AddonHandle = gobjects(num_frames, 1);
                     for i = 1: num_frames
                         obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
@@ -29,6 +29,14 @@ classdef ImageRunner < AxesRunner
                             'center', Lat.R + [x_size / num_frames * (i - 1), 0], ...
                             'x_lim', [1, x_size], 'y_lim', [1, y_size]);
                     end
+                case "Transformed"
+                    signal = getSignalSum(data, num_frames, "first_only", true);
+                    [transformed, x_range, y_range, Lat2] = Lat.transformSignalStandardCropSite(signal, 20);
+                    hold(obj.AxesHandle, "on")
+                    obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
+                    obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
+                        Lattice.prepareSite("hex", "latr", 20), 'filter', false);
+                    hold(obj.AxesHandle, "off")
                 case "PSF"
             end
         end

@@ -1,4 +1,4 @@
-classdef Replayer < BaseSequencer
+classdef Replayer < BaseSequencer & BaseProcessor
     
     properties (SetAccess = {?BaseObject})
         DataPath = "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat"
@@ -8,7 +8,7 @@ classdef Replayer < BaseSequencer
     methods
         function obj = Replayer(varargin)
             obj@BaseSequencer(varargin{:})
-            obj.DataPath = obj.DataPath;
+            obj@BaseProcessor()
         end
 
         function set.DataPath(obj, path)
@@ -23,6 +23,13 @@ classdef Replayer < BaseSequencer
     end
 
     methods (Access = protected, Hidden)
+        function start(~, ~, ~, varargin)
+        end
+        
+        function acquire(obj, camera, label, varargin)
+            obj.Live.Raw.(camera).(label) = obj.DataStorage.(camera).(label)(:, :, obj.CurrentIndex);
+        end
+
         function addData(~, ~)
         end
 
