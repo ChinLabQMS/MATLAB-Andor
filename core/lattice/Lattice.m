@@ -18,9 +18,9 @@
         CalibV_PlotDiagnostic = false
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
-        CalibO_Sites = Lattice.prepareSite("hex", "latr", 5)
+        CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
         CalibO_DistanceMetric = "cosine"
-        CalibO_NumScores = 5
+        CalibO_NumScores = 7
         CalibO_WarnThresScoreDev = 5
         CalibO_Verbose = false
         CalibO_Debug = false

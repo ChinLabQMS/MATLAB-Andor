@@ -14,6 +14,10 @@ figure
 imagesc2(sample)
 
 %%
+figure
+imagesc2(Signal.Andor19331.Image(:, :, 1))
+
+%%
 close all
 psf = fitPSF(sample);
 

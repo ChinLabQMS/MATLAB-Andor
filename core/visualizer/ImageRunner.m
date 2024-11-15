@@ -90,11 +90,11 @@ function plotTransformedLattice(obj, Live, options)
     Lat = Live.LatCalib.(obj.Config.CameraName);
     [transformed, x_range, y_range, Lat2] = ...
         Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
+    c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
     hold(obj.AxesHandle, "on")
     obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
     obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
         Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
-    hold(obj.AxesHandle, "off")
 end
 
 function plotTransformedAxis(obj, Live, options)
@@ -110,8 +110,15 @@ function plotTransformedAxis(obj, Live, options)
     Lat = Live.LatCalib.(obj.Config.CameraName);
     [transformed, x_range, y_range, Lat2] = ...
         Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
+    c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
     hold(obj.AxesHandle, "on")
     obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
     obj.AddonHandle(2:3) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
-    hold(obj.AxesHandle, "off")
+end
+
+% Function for preserving hold behavior on exit
+function preserveHold(was_hold_on,ax)
+    if ~was_hold_on
+        hold(ax,'off');
+    end
 end
