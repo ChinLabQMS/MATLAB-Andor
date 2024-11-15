@@ -63,12 +63,12 @@ classdef BaseObject < handle
     methods (Access = protected, Sealed, Hidden)
         % Configure the properties
         function varagout = configProp(obj, varargin)
-            suppress_warning = false;
+            struct_input = false;
             if nargin == 2
                 args = varargin{1};
                 if isa(args, "struct")
                     args = namedargs2cell(args);
-                    suppress_warning = true;
+                    struct_input = true;
                 elseif isa(args, "BaseObject")
                     args = namedargs2cell(args.struct(args.ConfigurableProp));
                 else
@@ -91,7 +91,7 @@ classdef BaseObject < handle
                     catch me
                         obj.warn2("Error occurs during setting property [%s]\n\t%s", args{i}, me.message)
                     end
-                elseif ~suppress_warning
+                elseif ~struct_input
                     if isprop(obj, args{i})
                         obj.warn("[%s] is not a configurable property.", args{i})
                     else
@@ -102,6 +102,9 @@ classdef BaseObject < handle
             names = strip(names);
             if nargout == 1
                 varagout = names;
+            end
+            if struct_input
+                obj.info("Properties configured to structured input [%s].", names)
             end
         end
 

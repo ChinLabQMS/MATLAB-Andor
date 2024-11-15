@@ -69,6 +69,19 @@ classdef CameraManager < BaseObject
                 end
             end
         end
+        
+        % Close selected cameras
+        function close(obj, cameras)
+            arguments
+                obj
+                cameras = obj.VisibleProp
+            end
+            for camera = cameras
+                if isa(obj.(camera), "Camera")
+                    obj.(camera).close()
+                end
+            end
+        end
     end
 
     methods (Static)

@@ -3,7 +3,7 @@
 
     properties (Constant)
         Standard_V1 = [0, 1]
-        Standard_V2 = [1/2*sqrt(3), -1/2]
+        Standard_V2 = [-1/2*sqrt(3), -1/2]
         TransformStandard_Scale = 10
         TransformStandard_XLimSite = [-25, 25]
         TransformStandard_YLimSite = [-25, 25]
@@ -461,22 +461,27 @@
         end
         
         % Plot lattice vectors
-        function plotV(Lat, ax, options)
+        function varargout = plotV(Lat, ax, options)
             arguments
                 Lat
                 ax = gca()
                 options.origin = Lat.R
                 options.scale = 1
+                options.add_legend = true
             end
             Lat.checkInitialized()
             c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
             hold(ax,'on');
-            quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(1, 2), options.scale * Lat.V(1, 1), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V1", Lat.ID), "MaxHeadSize", 10)
-            axis image
-            quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(2, 2), options.scale * Lat.V(2, 1), "off", ...
-                "LineWidth", 2, "DisplayName", sprintf("%s: V2", Lat.ID), "MaxHeadSize", 10)
-            legend()
+            h(1) = quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(1, 2), options.scale * Lat.V(1, 1), 'off', ...
+                'LineWidth', 2, 'DisplayName', sprintf("%s: V1", Lat.ID), 'MaxHeadSize', 10, 'Color', 'r');
+            h(2) = quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(2, 2), options.scale * Lat.V(2, 1), 'off', ...
+                'LineWidth', 2, 'DisplayName', sprintf("%s: V2", Lat.ID), 'MaxHeadSize', 10, 'Color', 'm');
+            if options.add_legend
+                legend()
+            end
+            if nargout == 1
+                varargout{1} = h;
+            end
         end
         
         % Convert the current K vector to an expected FFT peak location

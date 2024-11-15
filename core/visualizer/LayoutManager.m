@@ -45,16 +45,16 @@ classdef LayoutManager < BaseObject
         end
         
         % Update axes content
-        function update(obj, sequencer, fields, options)
+        function update(obj, Live, fields, options)
             arguments
                 obj
-                sequencer
+                Live
                 fields = obj.VisibleProp
                 options.verbose = true
             end
             timer = tic;
             for field = fields
-                obj.(field).update(sequencer)
+                obj.(field).update(Live)
             end
             if options.verbose
                 obj.info("Layout rendered in %.3f s.", toc(timer))
