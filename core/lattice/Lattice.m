@@ -29,6 +29,10 @@
 
     properties (SetAccess = immutable)
         ID
+        NA
+        ImagingWavelength           % um
+        PixelSize                   % um
+        LatticePhysicalV = 0.8815   % um
     end
 
     properties (SetAccess = protected)
@@ -36,21 +40,30 @@
         V  % Real-space lattice vectors, 2x2 double
         R  % Real-space lattice center, 1x2 double
         Rstat  % Statistics generated during calibrating lattice R
-        Ostat  % Statistics generated during cross calibrating R
+        Ostat  % Statistics generated during cross calibrating lattice R
     end
 
     properties (Dependent, Hidden)
         V_norm
+        ImageMagnification
+        RayleighResolution
+        RayleighResolutionGaussSigma
     end
     
     methods
-        function Lat = Lattice(ID, options)
+        function Lat = Lattice(ID, wavelength, pixel_size, NA, options)
             arguments
                 ID = "Standard"
+                wavelength = 0.852
+                pixel_size = 13.3
+                NA = 0.8
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
             end
             Lat.ID = ID;
+            Lat.ImagingWavelength = wavelength;
+            Lat.PixelSize = pixel_size;
+            Lat.NA = NA;
             if ID == "Standard"
                 Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")
@@ -394,9 +407,9 @@
         % Calibrate the origin of Lat to Lat2 based on signal overlapping,
         % with cropped signal
         function calibrateOCrop(Lat, Lat2, signal, signal2, ...
-                crop_R, crop_R2, varargin)
+                crop_R, varargin)
             [signal, x_range, y_range] = prepareBox(signal, Lat.R, crop_R);
-            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R2);
+            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R);
             Lat.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:})
         end
 
@@ -404,8 +417,8 @@
         % with cropped signal, crop radius is in the unit of lattice
         % spacing
         function calibrateOCropSite(Lat, Lat2, signal, signal2, ...
-                crop_R_site, crop_R2_site, varargin)
-            Lat.calibrateOCrop(Lat2, signal, signal2, crop_R_site * Lat.V_norm, crop_R2_site * Lat2.V_norm, varargin{:})
+                crop_R_site, varargin)
+            Lat.calibrateOCrop(Lat2, signal, signal2, crop_R_site * Lat.V_norm, varargin{:})
         end
 
         % Overlaying the lattice sites
@@ -512,7 +525,16 @@
             V1 = Lat.V(1, :);
             V2 = Lat.V(2, :);
             V3 = V1 + V2;
-            fprintf('%s: \n\tR  = (%7.2f, %7.2f) px\n', Lat.getStatusLabel(), Lat.R(1), Lat.R(2))
+            fprintf('%s: \n', Lat.getStatusLabel())
+            fprintf(['\tNA = %g, ' ...
+                'ImagingWavelength = %g um, ' ...
+                'PixelSize = %g um, ' ...
+                'LatticePhysicalV = %g um, ' ...
+                'ImageMagnification = %g,  ' ...
+                'RayleighResolution = %g px\n'], ...
+                Lat.NA, Lat.ImagingWavelength, Lat.PixelSize, Lat.LatticePhysicalV, ...
+                Lat.ImageMagnification, Lat.RayleighResolution)
+            fprintf('\tR  = (%7.2f, %7.2f) px\n', Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', V1(1), V1(2), norm(V1))
             fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', V2(1), V2(2), norm(V2))
             fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', V3(1), V3(2), norm(V3))
@@ -521,11 +543,25 @@
         end
 
         function val = get.V_norm(Lat)
+            Lat.checkInitialized()
             val = mean([norm(Lat.V(1, :)), norm(Lat.V(2, :))]);
         end
 
+        function val = get.ImageMagnification(Lat)
+            val = (Lat.V_norm * Lat.PixelSize) / Lat.LatticePhysicalV;
+        end
+
+        function val = get.RayleighResolution(Lat)
+            val = 0.61 * Lat.ImagingWavelength / Lat.NA * Lat.ImageMagnification / Lat.PixelSize;
+        end
+
+        function val = get.RayleighResolutionGaussSigma(Lat)
+            val = Lat.RayleighResolution / 2.9;
+        end
+
         function s = struct(Lat)
-            s = struct@BaseObject(Lat, ["K", "V", "R", "ID"]);
+            s = struct@BaseObject(Lat, ["K", "V", "R", "ID", "NA", ...
+                "ImagingWavelength", "PixelSize", "LatticePhysicalV"]);
         end
     end
     
@@ -580,12 +616,12 @@
             arguments
                 Lat
                 Lat2
-                label = " (old)"
-                label2 = " (new)"
+                label = "old"
+                label2 = "new"
             end
             V = [Lat.V; Lat.V(1, :) + Lat.V(2, :)];
             V2 = [Lat2.V; Lat2.V(1, :) + Lat2.V(2, :)];
-            fprintf('Difference between %s%s and %s%s:\n', Lat.ID, label, Lat2.ID, label2)
+            fprintf('Difference between %s (%s) and %s (%s):\n', Lat.ID, label, Lat2.ID, label2)
             fprintf('\t\t R = (%7.2f, %7.2f),\t R'' = (%7.2f, %7.2f),\tDiff = (%7.2f, %7.2f)\n', ...
                     Lat.R(1), Lat.R(2), Lat2.R(1), Lat2.R(2), Lat2.R(1) - Lat.R(1), Lat2.R(2) - Lat.R(2))
             for i = 1:3
@@ -603,7 +639,7 @@
         end
     end
     
-end
+ end
 
 % Convert FFT peak positions to K and V vectors
 function [K, V] = convertFFTPeak2K(xy_size, peak_pos)

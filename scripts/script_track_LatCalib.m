@@ -1,7 +1,8 @@
 %% Create a Calibrator object
 clear; clc; close all
 p = LatCalibrator("DataPath", ...
-    "data/2024/11 November/20241106/BIG_data_exp=1.2s.mat");
+    "data/2024/11 November/20241115 projecting gray/gray_cross_on_black_angled_angle=-17.1_width=5_row=0.mat");
+    % "data/2024/11 November/20241106/BIG_data_exp=1.2s.mat");
     % "data/2024/10 October/20241021 DMD alignment/BIG300_anchor=64_array64_spacing=100_centered_r=20_r=10.mat");
     % "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat");
 
@@ -10,35 +11,42 @@ res = p.trackCalib();
 
 %% Track drift in lattice frame over time
 
+names = ["Andor19331_852", "Andor19330_852", "Zelux_935"];
+shiftv = [0, -1, -2];
+
 ref_index = 10;
 
 figure
 subplot(2, 1, 1)
-errorbar(res.Andor19330.LatR1 - res.Andor19330.LatR1(ref_index) - 2, res.Andor19330.LatR1_Std)
 hold on
-errorbar(res.Andor19331.LatR1 - res.Andor19331.LatR1(ref_index), res.Andor19331.LatR1_Std)
-errorbar(res.Zelux.LatR1 - res.Zelux.LatR1(ref_index) - 1, res.Zelux.LatR1_Std)
+for i = 1: length(names)
+    name = names(i);
+    val = res.(name).LatR1 - res.(name).LatR1(ref_index) + shiftv(i);
+    errorbar(val, res.(name).LatR1_Std)
+end
 xlabel("Run Number")
 grid on
-legend(["Andor19330", "Andor19331", "Zelux"], "Location", "eastoutside")
+legend(names, 'Location', 'eastoutside', 'Interpreter', 'none')
 ylabel('LatR1')
 
 subplot(2, 1, 2)
-errorbar(res.Andor19330.LatR2 - res.Andor19330.LatR2(ref_index) - 2, res.Andor19330.LatR2_Std)
 hold on
-errorbar(res.Andor19331.LatR2 - res.Andor19331.LatR2(ref_index), res.Andor19331.LatR2_Std)
-errorbar(res.Zelux.LatR2 - res.Zelux.LatR2(ref_index) - 1, res.Zelux.LatR2_Std)
+for i = 1: length(names)
+    name = names(i);
+    val = res.(name).LatR2 - res.(name).LatR2(ref_index) + shiftv(i);
+    errorbar(val, res.(name).LatR2_Std)
+end
 xlabel("Run Number")
 grid on
-legend(["Andor19330", "Andor19331", "Zelux"], "Location", "eastoutside")
+legend(names, 'Location', 'eastoutside', 'Interpreter', 'none')
 ylabel('LatR2')
 
 %% Correlation analysis
 
-x1 = res.Zelux.LatR1;
-x2 = res.Zelux.LatR2;
-y1 = res.Andor19330.LatR1;
-y2 = res.Andor19330.LatR2;
+x1 = res.Zelux_935.LatR1;
+x2 = res.Zelux_935.LatR2;
+y1 = res.Andor19330_852.LatR1;
+y2 = res.Andor19330_852.LatR2;
 
 figure
 subplot(1, 2, 1)
