@@ -25,10 +25,9 @@ classdef ImageRunner < AxesRunner
                     plotLatticeAll(obj, Live, 'lattice_hexr', options.lattice_hexr)
                 case "Transformed with Lattice"
                     plotTransformedLattice(obj, Live, ...
-                        'lattice_hexr', options.lattice_hexr, 'transform_cropRsite', options.transform_cropRsite)
-                case "Transformed with Axis"
-                    plotTransformedAxis(obj, Live, ...
-                        'transform_cropRsite', options.transform_cropRsite, 'transform_scaleV', options.transform_scaleV)
+                        'lattice_hexr', options.lattice_hexr, ...
+                        'transform_cropRsite', options.transform_cropRsite, ...
+                        'transform_scaleV', options.transform_scaleV)
                 case "PSF"
             end
         end
@@ -55,7 +54,7 @@ function plotLattice(obj, Live, options1)
         Live
         options1.lattice_hexr
     end
-    Lat = Live.LatCalib.(obj.Config.CameraName);
+    Lat = getLatCalib(obj, Live);
     obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
             Lattice.prepareSite("hex", "latr", options1.lattice_hexr), 'filter', false);
 end
@@ -66,7 +65,7 @@ function plotLatticeAll(obj, Live, options1)
         Live
         options1.lattice_hexr
     end
-    Lat = Live.LatCalib.(obj.Config.CameraName);
+    Lat = getLatCalib(obj, Live);
     num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
     x_size = Live.CameraManager.(obj.Config.CameraName).Config.XPixels;
     obj.AddonHandle = gobjects(num_frames, 1);
@@ -83,11 +82,12 @@ function plotTransformedLattice(obj, Live, options)
         Live
         options.lattice_hexr
         options.transform_cropRsite
+        options.transform_scaleV
     end
     data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
     num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
     signal = getSignalSum(data, num_frames, 'first_only', true);
-    Lat = Live.LatCalib.(obj.Config.CameraName);
+    Lat = getLatCalib(obj, Live);
     [transformed, x_range, y_range, Lat2] = ...
         Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
     c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
@@ -95,25 +95,11 @@ function plotTransformedLattice(obj, Live, options)
     obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
     obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
         Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
+    obj.AddonHandle(3:4) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
 end
 
-function plotTransformedAxis(obj, Live, options)
-    arguments
-        obj
-        Live
-        options.transform_cropRsite
-        options.transform_scaleV
-    end
-    data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
-    num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
-    signal = getSignalSum(data, num_frames, "first_only", true);
-    Lat = Live.LatCalib.(obj.Config.CameraName);
-    [transformed, x_range, y_range, Lat2] = ...
-        Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
-    c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
-    hold(obj.AxesHandle, "on")
-    obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
-    obj.AddonHandle(2:3) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
+function Lat = getLatCalib(obj, Live)
+    Lat = Live.LatCalib.(getCalibName(obj.Config.CameraName, obj.Config.ImageLabel));
 end
 
 % Function for preserving hold behavior on exit

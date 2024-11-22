@@ -81,7 +81,10 @@ classdef Preprocessor < BaseProcessor
         function [Signal, Leakage] = processSingleData(obj, Data, varargin)
             Signal = Data;
             Leakage = Data;
-            for label = string(fields(Data.Config.AcquisitionNote)')
+            for label = string(fields(Data))'
+                if label == "Config"
+                    continue
+                end
                 info = {'camera', Data.Config.CameraName, 'label', label, 'config', Data.Config};
                 [Signal.(label), Leakage.(label)] = obj.process(Data.(label), info{:}, varargin{:});
             end

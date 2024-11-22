@@ -2,7 +2,7 @@
 clear; clc; close all
 p = LatCalibrator( ...
     "LatCalibFilePath", [], ... 
-    "DataPath", "data/2024/11 November/20241115 projecting gray/gray_cross_on_black_angled_angle=-17.1_width=5_row=0.mat");
+    "DataPath", "calibration/example_data/20241115_gray_cross_on_black_angled_angle=-17.1_width=5_row=0.mat");
 
 %% Andor19330: Plot FFT of a small box centered at atom cloud
 close all

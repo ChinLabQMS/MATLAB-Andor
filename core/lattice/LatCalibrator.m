@@ -6,11 +6,8 @@ classdef LatCalibrator < DataProcessor
 
     properties (SetAccess = {?BaseObject})
         LatCalibFilePath = "calibration/LatCalib_20241118.mat"
-        CalibList = ["Andor19330_852", "Andor19331_852", "Zelux_935"]
         CameraList = ["Andor19330", "Andor19331", "Zelux"]
-        ImageLabel = ["Image", "Image", "Lattice"]
-        ImagingWavelength = [0.852, 0.852, 0.935]
-        PixelSize = [13, 13, 3.45]
+        ImageLabel = ["Image", "Image", "Lattice_935"]
     end
 
     properties (Constant)
@@ -23,8 +20,6 @@ classdef LatCalibrator < DataProcessor
         CalibO_Camera2 = "Andor19330"
         CalibO_Label = "Image"
         CalibO_Label2 = "Image"
-        CalibO_CalibName = "Andor19331_852"
-        CalibO_CalibName2 = "Andor19330_852"
         CalibO_SignalIndex = 1
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
@@ -94,8 +89,6 @@ classdef LatCalibrator < DataProcessor
                 opt3.camera2 = obj.CalibO_Camera2
                 opt3.label = obj.CalibO_Label
                 opt3.label2 = obj.CalibO_Label2
-                opt3.calib_name = obj.CalibO_CalibName
-                opt3.calib_name2 = obj.CalibO_CalibName2
                 opt3.crop_R_site = obj.CalibO_CropRSite
                 opt4.calib_R = obj.CalibO_CalibR
                 opt4.calib_R_bootstrap = obj.CalibO_CalibR_Bootstrap
@@ -109,8 +102,8 @@ classdef LatCalibrator < DataProcessor
             signal2 = getSignalSum(obj.Signal.(opt3.camera2).(opt3.label2)(:, :, signal_index), ...
                 getNumFrames(obj.Signal.(opt3.camera2).Config), "first_only", true);
             args = namedargs2cell(opt4);
-            Lat = obj.LatCalib.(opt3.calib_name);
-            Lat2 = obj.LatCalib.(opt3.calib_name2);
+            Lat = obj.LatCalib.(getCalibName(opt3.camera, opt3.label));
+            Lat2 = obj.LatCalib.(getCalibName(opt3.camera, opt3.label));
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
         
@@ -127,8 +120,6 @@ classdef LatCalibrator < DataProcessor
                 opt3.camera2 = obj.CalibO_Camera2
                 opt3.label = obj.CalibO_Label
                 opt3.label2 = obj.CalibO_Label2
-                opt3.calib_name = obj.CalibO_CalibName
-                opt3.calib_name2 = obj.CalibO_CalibName2
                 opt3.crop_R_site = obj.CalibO_CropRSite
                 opt3.calib_R = obj.CalibO_CalibR
                 opt3.sites = obj.CalibO_Sites
@@ -136,12 +127,18 @@ classdef LatCalibrator < DataProcessor
                 opt3.plot_diagnosticO = obj.CalibO_PlotDiagnostic
             end
             if opt.reset_centers
-                for calib_name = obj.CalibList
+                for i = length(obj.CameraList)
+                    camera = obj.CameraList(i);
+                    label = obj.ImageLabel(i);
+                    calib_name = getCalibName(camera, label);
                     obj.LatCalib.(calib_name).init(obj.Stat.(calib_name).Center)
                 end
             end
             args1 = namedargs2cell(opt1);
-            for calib_name = obj.CalibList
+            for i = length(obj.CameraList)
+                camera = obj.CameraList(i);
+                label = obj.ImageLabel(i);
+                calib_name = getCalibName(camera, label);
                 if ~isempty(obj.LatCalib.(calib_name).K)
                     obj.calibrate(calib_name, args1{:});
                 else
@@ -200,24 +197,28 @@ classdef LatCalibrator < DataProcessor
                     obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, ...
                         "crop_R_site", options.crop_R_site, ...
                         "plot_diagnostic", false, "verbose", false, 'debug', options.drop_shifted)
-                    Lat = obj.LatCalib.(obj.CalibO_CalibName);
-                    Lat2 = obj.LatCalib.(obj.CalibO_CalibName2);
+                    calib_name = getCalibName(obj.CalibO_Camera, obj.CalibO_Label);
+                    calib_name2 = getCalibName(obj.CalibO_Camera2, obj.CalibO_Label2);
+                    Lat = obj.LatCalib.(calib_name);
+                    Lat2 = obj.LatCalib.(calib_name2);
                     if ~isequal(Lat.Ostat.Site, [0, 0])
                         obj.warn("RunNumber = %d, lattice shifted.", i)
                         if options.drop_shifted
                             continue
                         end
                     end
-                    result.(obj.CalibO_CalibName)(i) = Lat.Rstat;
-                    result.(obj.CalibO_CalibName2)(i) = Lat2.Rstat;
+                    result.(calib_name)(i) = Lat.Rstat;
+                    result.(calib_name2)(i) = Lat2.Rstat;
                 end
-                for j = 1: length(obj.CalibList)
-                    calib_name = obj.CalibList(j);
-                    if options.calibO_every && ismember(calib_name, [obj.CalibO_CalibName, obj.CalibO_CalibName2])                        
-                        continue
-                    end
+                for j = 1: length(obj.CameraList)
                     camera = obj.CameraList(j);
                     label = obj.ImageLabel(j);
+                    calib_name = getCalibName(camera, label);
+                    if options.calibO_every && ismember(calib_name, ...
+                            [getCalibName(obj.CalibO_Camera, obj.CalibO_Label), ...
+                             getCalibName(obj.CalibO_Camera2, obj.CalibO_Label2)])
+                        continue
+                    end
                     signal = obj.Signal.(camera).(label)(:, :, i);
                     signal = getSignalSum(signal, getNumFrames(obj.Signal.(camera).Config));
                     Lat = obj.LatCalib.(calib_name);
@@ -228,9 +229,10 @@ classdef LatCalibrator < DataProcessor
             if options.calibO_end
                 obj.calibrateO(num_acq, "calib_R", false, "plot_diagnosticO", false, "verbose", false);
             end
-            for j = 1:length(obj.CalibList)
-                calib_name = obj.CalibList(j);
+            for j = 1:length(obj.CameraList)
                 camera = obj.CameraList(j);
+                label = obj.ImageLabel(j);
+                calib_name = getCalibName(camera, label);
                 result.(calib_name) = struct2table(result.(calib_name));
                 if isfield(obj.Signal.(camera).Config, "DataTimestamp")
                     result.(calib_name).DataTimestamp = obj.Signal.(camera).Config.DataTimestamp(1: num_acq);
@@ -246,10 +248,10 @@ classdef LatCalibrator < DataProcessor
             if isempty(obj.DataPath)
                 obj.error('DataPath not set!')
             end
-            for i = 1: length(obj.CalibList)
-                calib_name = obj.CalibList(i);
+            for i = 1: length(obj.CameraList)
                 camera = obj.CameraList(i);
                 label = obj.ImageLabel(i);
+                [calib_name, wavelength] = getCalibName(camera, label);
                 s.MeanImage = getSignalSum(obj.Signal.(camera).(label), getNumFrames(obj.Signal.(camera).Config));
                 [xc, yc, xw, yw] = fitCenter2D(s.MeanImage);                
                 [s.FFTImage, s.FFTX, s.FFTY] = prepareBox(s.MeanImage, [xc, yc], 2*[xw, yw]);
@@ -257,6 +259,12 @@ classdef LatCalibrator < DataProcessor
                 s.Center = [xc, yc];
                 s.Width = [xw, yw];
                 obj.Stat.(calib_name) = s;
+                
+                if ~isfield(obj.LatCalib, calib_name)
+                    pixel_size = obj.Signal.(camera).Config.PixelSize;
+                    obj.LatCalib.(calib_name) = Lattice(camera, wavelength, pixel_size);
+                    obj.info("Empty Lattice object created for %s.", calib_name)
+                end                
             end
             obj.info("Finish processing to get averaged images and basic statistics.")
         end
@@ -267,14 +275,6 @@ classdef LatCalibrator < DataProcessor
                 obj.info("Pre-calibration loaded from: '%s'.", obj.LatCalibFilePath)
             else
                 obj.LatCalib = [];
-                for i = 1: length(obj.CalibList)
-                    calib_name = obj.CalibList(i);
-                    camera = obj.CameraList(i);
-                    wavelength = obj.ImagingWavelength(i);
-                    pixel_size = obj.PixelSize(i);
-                    obj.LatCalib.(calib_name) = Lattice(camera, wavelength, pixel_size);
-                    obj.info("Empty Lattice object created for %s.", calib_name)
-                end
             end
         end
 

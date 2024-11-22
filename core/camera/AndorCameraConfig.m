@@ -16,6 +16,7 @@ classdef AndorCameraConfig < BaseObject
     properties (SetAccess = immutable)
         MaxPixelValue = 65535
         MaxQueuedFrames = 1
+        PixelSize = 13
     end
 
     properties (Dependent)

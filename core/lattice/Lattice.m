@@ -301,21 +301,25 @@
         end
         
         % Cross conversion of one image from Lat space to a standard Lat2
-        function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandard(Lat, signal, x_range, y_range, options)
+        function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandard( ...
+                Lat, signal, x_range, y_range, options1, options2)
             arguments
                 Lat
                 signal 
                 x_range 
                 y_range
-                options.scale = Lat.TransformStandard_Scale
-                options.x_lim = Lat.TransformStandard_XLimSite
-                options.y_lim = Lat.TransformStandard_YLimSite
+                options1.v1 = Lattice.Standard_V1
+                options1.v2 = Lattice.Standard_V2
+                options2.scale = Lat.TransformStandard_Scale
+                options2.x_lim = Lat.TransformStandard_XLimSite
+                options2.y_lim = Lat.TransformStandard_YLimSite
             end
-            Lat2 = Lattice('Standard');
-            xlim = options.x_lim;
-            ylim = options.y_lim;
-            x_range2 = xlim(1): 1/options.scale: xlim(2);
-            y_range2 = ylim(1): 1/options.scale: ylim(2);
+            args = namedargs2cell(options1);
+            Lat2 = Lattice('Standard', args{:});
+            xlim = options2.x_lim;
+            ylim = options2.y_lim;
+            x_range2 = xlim(1): 1/options2.scale: xlim(2);
+            y_range2 = ylim(1): 1/options2.scale: ylim(2);
             transformed2 = Lat.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
         end
 

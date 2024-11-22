@@ -76,14 +76,13 @@ function calibLatR(live, info, options)
     arguments
         live
         info
-        options.calib_name (1, 1) string = "852"
         options.first_only = false
         options.verbose = false
     end
     timer = tic;
     signal = live.Signal.(info.camera).(info.label);
     signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
-    calib_name = info.camera + "_" + options.calib_name;
+    calib_name = getCalibName(info.camera, info.label);
     Lat = live.LatCalib.(calib_name);
     Lat.calibrateR(signal)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
@@ -97,8 +96,6 @@ function calibLatO(live, info, options, options2)
     arguments
         live
         info
-        options.calib_name (1, 1) string = "852"
-        options.ref_calib = "Andor19330_852"
         options.ref_camera = "Andor19330"
         options.ref_label = "Image"
         options.crop_R_site = 15
@@ -110,8 +107,8 @@ function calibLatO(live, info, options, options2)
         getNumFrames(live.CameraManager.(options.ref_camera).Config), "first_only", true);
     signal = getSignalSum(live.Signal.(info.camera).(info.label), ...
         getNumFrames(live.CameraManager.(info.camera)), "first_only", true);
-    Lat = live.LatCalib.(info.camera + "_" + options.calib_name);
-    Lat2 = live.LatCalib.(options.ref_calib);
+    Lat = live.LatCalib.(getCalibName(info.camera, info.label));
+    Lat2 = live.LatCalib.(getCalibName(options.ref_camera, options.ref_label));
     Lat.calibrateOCropSite(Lat2, signal, ref_signal, options.crop_R_site)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);

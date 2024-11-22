@@ -12,6 +12,7 @@ classdef ZeluxCameraConfig < BaseObject
         YPixels = 1080
         MaxPixelValue = 1022
         NumSubFrames = 1
+        PixelSize = 3.45
     end
 
     methods
