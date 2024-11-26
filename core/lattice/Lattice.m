@@ -370,7 +370,7 @@
             for i = 1: num_sites
                 Lat.R = score.Center(i, :);
                 transformed = Lat2.transformSignal(Lat, x_range, y_range, signal2, x_range2, y_range2);
-                score.SignalDist(i) = pdist([signal(:)'; transformed(:)'], options.metric);
+                score.SignalDist(i) = pdist2(signal(:)', transformed(:)', options.metric);
                 if score.SignalDist(i) < best_score
                     best_score = score.SignalDist(i);
                     best_transformed = transformed;

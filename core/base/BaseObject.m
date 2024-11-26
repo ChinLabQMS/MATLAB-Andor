@@ -141,7 +141,7 @@ classdef BaseObject < handle
         % Assert a certain condition being met
         function assert(obj, condition, info, varargin)
             if ~condition
-                obj.error(info, varargin{:})
+                obj.error('Assertion error, %s.', sprintf(info, varargin{:}))
             end
         end
     end
