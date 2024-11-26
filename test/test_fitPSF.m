@@ -9,9 +9,8 @@ Signal = Preprocessor().process(Data);
 
 %% Visualize a sample image
 
-sample = Signal.Andor19330.Image(:, :, 1);
-
-imagesc2(sample)
+sample = Signal.Andor19330.Image(:, :, 3);
+centroids = PointFitter().findPeaks(sample, 'plot_diagnostic', 0, 'verbose', 1);
 
 %%
 expected = @(x, y) exp(-1/2*(x./options.target_sigma).^2 - 1/2*(y./options.target_sigma).^2);
@@ -61,6 +60,3 @@ zlabel('MaxInt')
 
 %%
 stats((stats.MSE2 > 2.5), :)
-
-%%
-stats = PointFitter.findPeaks(img_data);
