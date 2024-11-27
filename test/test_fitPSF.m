@@ -10,7 +10,11 @@ Signal = Preprocessor().process(Data);
 %% Visualize a sample image
 
 sample = Signal.Andor19330.Image(:, :, 3);
-centroids = PointFitter().findPeaks(sample, 'plot_diagnostic', 0, 'verbose', 1);
+p = PointFitter();
+stats = findPeaks(p, sample, 'plot_diagnostic', 1, 'verbose', 1);
+
+%%
+
 
 %%
 expected = @(x, y) exp(-1/2*(x./options.target_sigma).^2 - 1/2*(y./options.target_sigma).^2);
@@ -60,3 +64,50 @@ zlabel('MaxInt')
 
 %%
 stats((stats.MSE2 > 2.5), :)
+
+
+function stats = findPeaks(obj, img_data, expected_sigma, options)
+    arguments
+        obj
+        img_data
+        expected_sigma = obj.FindPeak_ExpectedSigma
+        options.plot_diagnostic = obj.FindPeak_PlotDiagnostic
+        options.verbose = obj.FindPeak_Verbose
+        options.peak_properties = ["WeightedCentroid", "BoundingBox", "MaxIntensity", "Area"]
+        options.binarize_threshold = 30
+        options.filter_area_min = obj.FindPeak_FilterAreaMin
+        options.filter_intensity_min = obj.FindPeak_FilterIntensityMin
+        options.dbscan_distance = obj.FindPeak_DBScanDistSigma * expected_sigma
+        options.dbscan_single_only = obj.FindPeak_DBScanSingleOnly
+        options.filter_box_xmax = obj.FindPeak_FilterBoxXMaxSigma * expected_sigma
+        options.filter_box_ymax = obj.FindPeak_FilterBoxYMaxSigma * expected_sigma
+    end
+    timer = tic;
+    % Binarize image and find connected components
+    img_bin = img_data > options.binarize_threshold;
+    stats = regionprops("table", img_bin, img_data, options.peak_properties);
+    % Filter the connected components by area and intensity
+    stats = stats(stats.Area >= options.filter_area_min, :);
+    stats = stats(stats.MaxIntensity >= options.filter_intensity_min, :);
+    % Use dbscan to cluster nearby peaks
+    stats.Cluster = dbscan(stats.WeightedCentroid, options.dbscan_distance, 1);
+    stats = convertvars(stats, 'Cluster', 'categorical');
+    stats = renamevars(groupsummary(stats, 'Cluster', 'mean', options.peak_properties), ...
+        arrayfun(@(x) "mean_" + x, options.peak_properties), options.peak_properties);
+    if options.dbscan_single_only
+        stats = stats((stats.GroupCount == 1), :);
+    end
+    % Filter on bounding box size
+    stats = stats(...
+        (stats.BoundingBox(:, 4) <= options.filter_box_xmax) & ...
+        (stats.BoundingBox(:, 3) <= options.filter_box_ymax), :);
+    centroids = stats.WeightedCentroid;
+    if options.plot_diagnostic
+        figure
+        imagesc2(img_data)
+        viscircles(stats.WeightedCentroid, 3*expected_sigma);
+    end
+    if options.verbose
+        obj.info('Find %d peaks in the image, elapsed time is %g s.', size(centroids, 1), toc(timer))
+    end
+end

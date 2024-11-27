@@ -51,13 +51,18 @@ if ~isequal(fn,0) % fn will be zero if user hits cancel
     
     % do save and throw errordlg on error
     try
+        d = uiprogressdlg(fig, 'Title', 'Please Wait', ...
+            'Message', 'Saving dataset to file...', ...
+            'Indeterminate','on');
         if save_v7
             evalin('caller', ['save(''' fn  ''', ' variables ');']);
-            uialert(fig, sprintf("Dataset saved as '%s'", fn), "Saving completed")
+            info = sprintf("Dataset saved as '%s'", fn);
         else
             evalin('caller', ['save(''' fn  ''', ' variables ', ''-v7.3'');']);
-            uialert(fig, sprintf("Dataset saved as '%s' in v7.3 format", fn), "Saving completed")
+            info = sprintf("Dataset saved as '%s' in v7.3 format", fn);
         end
+        disp(info)
+        close(d)
     catch ex
         errordlg(ex.getReport('basic', 'hyperlinks', 'off')); 
     end

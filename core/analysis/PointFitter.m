@@ -10,12 +10,12 @@ classdef PointFitter < BaseObject
         FindPeak_FilterIntensityMin = 50
         FindPeak_DBScanDistSigma = 12
         FindPeak_DBScanSingleOnly = true
-        FindPeak_FilterBoxXMaxSigma = 7
-        FindPeak_FilterBoxYMaxSigma = 7
+        FindPeak_FilterBoxXMaxSigma = 10
+        FindPeak_FilterBoxYMaxSigma = 10
     end
 
     methods
-        function centroids = findPeaks(obj, img_data, expected_sigma, options)
+        function stats = findPeaks(obj, img_data, expected_sigma, options)
             arguments
                 obj
                 img_data
