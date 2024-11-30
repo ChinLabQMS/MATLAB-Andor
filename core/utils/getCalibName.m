@@ -1,4 +1,8 @@
 function [calib_name, wavelength] = getCalibName(camera, label)
+arguments
+    camera (1, 1) string
+    label (1, 1) string
+end
     if label.contains("_")
         wavelength = label.extractAfter("_");
     else

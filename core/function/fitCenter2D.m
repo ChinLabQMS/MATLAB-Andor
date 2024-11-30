@@ -1,10 +1,10 @@
-function [XCenter, YCenter, XWidth, YWidth] = fitCenter2D(signal, options)
+function [XCenter, YCenter, XWidth, YWidth] = fitCenter2D(signal, x_range, y_range)
     arguments
         signal (:, :, :) double
-        options.x_range = 1: size(signal, 1)
-        options.y_range = 1: size(signal, 2)
+        x_range = 1: size(signal, 1)
+        y_range = 1: size(signal, 2)
     end    
-    [y, x, z] = prepareSurfaceData(options.y_range, options.x_range, signal);
+    [y, x, z] = prepareSurfaceData(y_range, x_range, signal);
     z_sum = sum(z, "all");
     XCenter = sum(z .* x, "all") / z_sum;
     YCenter = sum(z .* y, "all") / z_sum;

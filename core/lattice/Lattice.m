@@ -20,7 +20,7 @@
         CalibO_CalibR_Bootstrap = false
         CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
         CalibO_DistanceMetric = "cosine"
-        CalibO_NumScores = 7
+        CalibO_NumScores = 5
         CalibO_WarnThresScoreDev = 5
         CalibO_Verbose = false
         CalibO_Debug = false
@@ -55,7 +55,7 @@
             arguments
                 ID = "Standard"
                 wavelength = 0.852
-                pixel_size = 13.3
+                pixel_size = 13
                 NA = 0.8
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
@@ -80,6 +80,7 @@
                 size_or_K = []
                 pos_or_V = []
                 options.format = "peak_pos"
+                options.verbose = false
             end
             if ~isempty(pos_or_V) || ~isempty(size_or_K)
                 if options.format == "peak_pos"
@@ -102,7 +103,12 @@
                 end
             end
             if ~isempty(R)
+                old_R = Lat.R;
                 Lat.R = R;
+                if options.verbose
+                    Lat.info("Lattice center is set to (%g, %g), originally (%g, %g)", ...
+                        R(1), R(2), old_R(1), old_R(2))
+                end
             end
         end
         

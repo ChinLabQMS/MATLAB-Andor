@@ -1,10 +1,6 @@
 %% Create a Calibrator object
 clear; clc; close all
-p = LatCalibrator("DataPath", ...
-    "data/2024/11 November/20241115 projecting gray/gray_cross_on_black_angled_angle=-17.1_width=5_row=0.mat");
-    % "data/2024/11 November/20241106/BIG_data_exp=1.2s.mat");
-    % "data/2024/10 October/20241021 DMD alignment/BIG300_anchor=64_array64_spacing=100_centered_r=20_r=10.mat");
-    % "data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat");
+p = LatCalibrator("DataPath", "data/2024/11 November/20241126 sparse/normal_upper_not_on_focus.mat");
 
 %% Generate drift report table
 res = p.trackCalib();

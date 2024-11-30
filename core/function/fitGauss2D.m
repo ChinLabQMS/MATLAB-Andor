@@ -1,11 +1,11 @@
-function [fit_result, GOF, x, y, z] = fitGauss2D(signal, x_range, y_range, options)
+function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options)
 %FIT2DGAUSSIAN Fit a 2D gaussian on the 2D signal data. It wraps up the
 % built-in fit function with properly-guessed initial parameters for the fit
 % to converge.
 % 
-% [fit_result, x, y, z, output] = fitGauss2D(signal)
-% [fit_result, x, y, z, output] = fitGauss2D(signal, x_range, y_range)
-% [fit_result, x, y, z, output] = fitGauss2D(_, Name, Value)
+% [fit_result, output, x, y, z] = fitGauss2D(signal)
+% [fit_result, output, x, y, z] = fitGauss2D(signal, x_range, y_range)
+% [fit_result, output, x, y, z] = fitGauss2D(_, Name, Value)
 % 
 %Available name-value pairs:
 % "x_range": default is 1:size(signal, 1)
@@ -19,6 +19,7 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, x_range, y_range, optio
         signal (:, :, :) double
         x_range = 1: size(signal, 1)
         y_range = 1: size(signal, 2)
+        options.sub_sample = 1
         options.offset = 'c'
         options.cross_term logical = false
     end
@@ -72,9 +73,14 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, x_range, y_range, optio
         end
     end
     foptions = fitoptions(fit_type);
-
+    
+    % Sub-sample the image (to make computation faster)
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal);
+    signal = signal(1:options.sub_sample:x_size, 1:options.sub_sample:y_size);
+
+    x_range = x_range(1:options.sub_sample:x_size);
+    y_range = y_range(1:options.sub_sample:y_size);
     x_diff = x_range(2) - x_range(1);
     y_diff = y_range(2) - y_range(1);
 
@@ -98,5 +104,16 @@ function [fit_result, GOF, x, y, z] = fitGauss2D(signal, x_range, y_range, optio
     foptions.StartPoint = start(parameters);
     foptions.Display = "off";
 
-    [fit_result, GOF] = fit([x, y], z, fit_type, foptions);
+    [f_res, output] = fit([x, y], z, fit_type, foptions);
+    if options.cross_term
+        mat = [1/(f_res.s1)^2, f_res.d/(f_res.s1 * f_res.s2); 
+               f_res.d/(f_res.s1 * f_res.s2), 1/(f_res.s2)^2];
+        [V, D] = eig(mat, 'vector');
+        [D, ind] = sort(D);
+        V = V(:, ind);
+        output.eigen_angles = acosd(V(1, :));
+        output.eigen_vectors = V';
+        output.eigen_values = D';
+        output.eigen_widths = 1./sqrt(D');
+    end
 end

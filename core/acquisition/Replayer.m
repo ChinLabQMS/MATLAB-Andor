@@ -1,7 +1,7 @@
 classdef Replayer < BaseSequencer & BaseProcessor
     
     properties (SetAccess = {?BaseObject})
-        DataPath = "data/2024/11 November/20241114 projecting gray/anchor=64_array64_spacing=100_asym_r=15_r=7.mat"
+        DataPath = "calibration/example_data/20241126_normal_upper_not_on_focus.mat"
         CurrentIndex
     end
 

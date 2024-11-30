@@ -5,7 +5,7 @@ classdef LatCalibrator < DataProcessor
     % 3. Analyze calibration drifts over time
 
     properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241118.mat"
+        LatCalibFilePath = "calibration/LatCalib_20241126.mat"
         CameraList = ["Andor19330", "Andor19331", "Zelux"]
         ImageLabel = ["Image", "Image", "Lattice_935"]
     end
@@ -103,7 +103,7 @@ classdef LatCalibrator < DataProcessor
                 getNumFrames(obj.Signal.(opt3.camera2).Config), "first_only", true);
             args = namedargs2cell(opt4);
             Lat = obj.LatCalib.(getCalibName(opt3.camera, opt3.label));
-            Lat2 = obj.LatCalib.(getCalibName(opt3.camera, opt3.label));
+            Lat2 = obj.LatCalib.(getCalibName(opt3.camera2, opt3.label2));
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
         
@@ -127,15 +127,16 @@ classdef LatCalibrator < DataProcessor
                 opt3.plot_diagnosticO = obj.CalibO_PlotDiagnostic
             end
             if opt.reset_centers
-                for i = length(obj.CameraList)
+                for i = 1: length(obj.CameraList)
                     camera = obj.CameraList(i);
                     label = obj.ImageLabel(i);
                     calib_name = getCalibName(camera, label);
-                    obj.LatCalib.(calib_name).init(obj.Stat.(calib_name).Center)
+                    obj.LatCalib.(calib_name).init(obj.Stat.(calib_name).Center, ...
+                        'verbose', true)
                 end
             end
             args1 = namedargs2cell(opt1);
-            for i = length(obj.CameraList)
+            for i = 1: length(obj.CameraList)
                 camera = obj.CameraList(i);
                 label = obj.ImageLabel(i);
                 calib_name = getCalibName(camera, label);
