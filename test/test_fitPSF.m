@@ -8,4 +8,4 @@ p = PointSource();
 
 %% Visualize a sample image
 
-p.fit(Signal.Andor19330.Image(:, :, 6), 'verbose', 1, 'plot_diagnostic', 0)
+p.fit(Signal.Andor19330.Image(:, :, 1), 'verbose', 1, 'plot_diagnostic', 0)

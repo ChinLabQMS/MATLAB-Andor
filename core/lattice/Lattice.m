@@ -33,6 +33,7 @@
         ImagingWavelength           % um
         PixelSize                   % um
         LatticePhysicalV = 0.8815   % um
+        PointSource
     end
 
     properties (SetAccess = protected)
@@ -51,20 +52,22 @@
     end
     
     methods
-        function Lat = Lattice(ID, wavelength, pixel_size, NA, options)
+        function Lat = Lattice(camera, wavelength, pixel_size, NA, options)
             arguments
-                ID = "Standard"
+                camera = "Standard"
                 wavelength = 0.852
                 pixel_size = 13
                 NA = 0.8
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
             end
+            ID = camera + "_" + string(round(wavelength * 1000));
             Lat.ID = ID;
             Lat.ImagingWavelength = wavelength;
             Lat.PixelSize = pixel_size;
             Lat.NA = NA;
-            if ID == "Standard"
+            Lat.PointSource = PointSource(ID);
+            if camera == "Standard"
                 Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")
             end
@@ -391,18 +394,16 @@
             Lat.Ostat = table2struct(best);
             Lat.Ostat.BestTransformed = best_transformed;
             Lat.Ostat.OriginalSignal = signal;
-            info_str = sprintf("Lattice center is cross-calibrated to %s, initially at (%5.2f px, %5.2f px), now at (%d, %d) = (%5.2f px, %5.2f px), min dist = %7.3f.", ...
-                    Lat2.ID, R_init(1), R_init(2), best.Site(1), best.Site(2), best.Center(1), best.Center(2), best.SignalDist);
-            info_str2 = sprintf("Minimum %d distances are %s.", options.num_scores, strip(sprintf('%7.3f ', min_val)));
+            info_str = sprintf("Center is calibrated to %s, now at (%d, %d) = (%5.2f px, %5.2f px), initially at (%5.2f px, %5.2f px), min dist = %5.3f (%s).", ...
+                    Lat2.ID, best.Site(1), best.Site(2), best.Center(1), best.Center(2), ...
+                    R_init(1), R_init(2), best.SignalDist, join(string(compose('%4.3f', min_val)), ", "));
             if all(best.Site == [0, 0]) && ...
                     abs(best.SignalDist - mean(others.SignalDist))/std(others.SignalDist) > options.warn_thres_score_dev
                 if options.verbose
                     Lat.info("%s", info_str)
-                    Lat.info("%s", info_str2)
                 end
             else
                 Lat.warn("%s", info_str)
-                Lat.warn("%s", info_str2)
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
@@ -500,7 +501,7 @@
             h(2) = quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(2, 2), options.scale * Lat.V(2, 1), 'off', ...
                 'LineWidth', 2, 'DisplayName', sprintf("%s: V2", Lat.ID), 'MaxHeadSize', 10, 'Color', 'm');
             if options.add_legend
-                legend()
+                legend('Interpreter', 'none')
             end
             if nargout == 1
                 varargout{1} = h;
@@ -758,9 +759,9 @@ function plotFFT(signal_fft, peak_init, peak_pos, peak_info, ID)
     num_peaks = size(peak_pos, 1);
     % Plot FFT magnitude in log scale
     figure("Name", "FFT peak fits diagnostics")
-    sgtitle(ID)
+    sgtitle(ID, 'interpreter', 'none')
     subplot(1, num_peaks + 1, 1)
-    imagesc2(log(signal_fft), "title", sprintf("[%s]: log(FFT)", ID))
+    imagesc2(log(signal_fft), "title", "log(FFT)")
     viscircles(peak_init(:, 2:-1:1), 7, "EnhanceVisibility", false, "Color", "white", "LineWidth", 1);
     viscircles(peak_pos(:, 2:-1:1), 2, "EnhanceVisibility", false, "Color", "red", "LineWidth", 1);
     hold on

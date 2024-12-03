@@ -5,7 +5,7 @@ classdef LatCalibrator < DataProcessor
     % 3. Analyze calibration drifts over time
 
     properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241126.mat"
+        LatCalibFilePath
         CameraList = ["Andor19330", "Andor19331", "Zelux"]
         ImageLabel = ["Image", "Image", "Lattice_935"]
     end
@@ -50,8 +50,7 @@ classdef LatCalibrator < DataProcessor
         function plotFFT(obj, calib_name)
             s = obj.Stat.(calib_name);
             figure
-            imagesc2(log(s.FFTPattern))
-            title(calib_name, 'Interpreter', 'none')
+            imagesc2(log(s.FFTPattern), 'title', calib_name)
             if ~isempty(obj.LatCalib.(calib_name).K)
                 peak_pos = obj.LatCalib.(calib_name).convert2FFTPeak(size(s.FFTPattern));
                 viscircles(peak_pos(:, 2:-1:1), 7, ...
@@ -158,8 +157,8 @@ classdef LatCalibrator < DataProcessor
                 obj
                 filename = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
             end
-            for camera = obj.CameraList
-                if ~isfield(obj.LatCalib, camera)
+            for i = 1: length(obj.CameraList)
+                if ~isfield(obj.LatCalib, getCalibName(obj.CameraList(i), obj.ImageLabel(i)))
                     obj.warn("Camera %s is not calibrated.", camera)
                 end
             end

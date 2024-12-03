@@ -9,5 +9,5 @@ end
         wavelength = "852";
     end
     calib_name = camera + "_" + wavelength;
-    wavelength = double(wavelength);
+    wavelength = double(wavelength) / 1000;
 end

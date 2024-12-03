@@ -16,9 +16,9 @@ classdef ImageRunner < AxesRunner
                 options.transform_scaleV = obj.Content_TransformScaleV
             end
             plotData(obj, Live)
-            delete(obj.AddonHandle)
             switch obj.Config.FuncName
                 case "None"
+                    delete(obj.AddonHandle)
                 case "Lattice"
                     plotLattice(obj, Live, 'lattice_hexr', options.lattice_hexr)
                 case "Lattice All"
@@ -55,6 +55,7 @@ function plotLattice(obj, Live, options1)
         options1.lattice_hexr
     end
     Lat = getLatCalib(obj, Live);
+    delete(obj.AddonHandle)
     obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
             Lattice.prepareSite("hex", "latr", options1.lattice_hexr), 'filter', false);
 end
@@ -68,6 +69,7 @@ function plotLatticeAll(obj, Live, options1)
     Lat = getLatCalib(obj, Live);
     num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
     x_size = Live.CameraManager.(obj.Config.CameraName).Config.XPixels;
+    delete(obj.AddonHandle)
     obj.AddonHandle = gobjects(num_frames, 1);
     for i = 1: num_frames
         obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
@@ -92,6 +94,7 @@ function plotTransformedLattice(obj, Live, options)
         Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
     c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
     hold(obj.AxesHandle, "on")
+    delete(obj.AddonHandle)
     obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
     obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
         Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
@@ -99,7 +102,18 @@ function plotTransformedLattice(obj, Live, options)
 end
 
 function Lat = getLatCalib(obj, Live)
-    Lat = Live.LatCalib.(getCalibName(obj.Config.CameraName, obj.Config.ImageLabel));
+    try
+        Lat = Live.LatCalib.(getCalibName(obj.Config.CameraName, obj.Config.ImageLabel));
+    catch
+        for calib_name = string(fields(Live.LatCalib))'
+            Lat = Live.LatCalib.(calib_name);
+            if calib_name.startsWith(obj.Config.CameraName)
+                break
+            end
+        end
+        obj.warn('[%s %s] Unable to find calibration data, use %s.', ...
+                    obj.Config.CameraName, obj.Config.ImageLabel, calib_name)
+    end
 end
 
 % Function for preserving hold behavior on exit

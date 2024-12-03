@@ -25,6 +25,8 @@ classdef PointSource < BaseObject
 
     properties (SetAccess = protected)
         PSF
+        GaussPSF
+        GaussGOF  % Goodness of fit
         DataPSF
         DataXRange
         DataYRange
@@ -35,8 +37,8 @@ classdef PointSource < BaseObject
 
     properties (Dependent)
         DataNumPeaks
-        XRangeStep
-        YRangeStep
+        DataXRangeStep
+        DataYRangeStep
     end
 
     methods
@@ -75,7 +77,7 @@ classdef PointSource < BaseObject
             args2 = namedargs2cell(opt2);
             [psf, x_range, y_range] = obj.mergePeaks(img_data, stats.RefinedCentroid, args2{:});
             if opt.update_prop
-                obj.updateProp(stats, psf, x_range, y_range)
+                obj.update(stats, psf, x_range, y_range)
             end
             if opt1.verbose
                 obj.info('PSF fitted from data (NumPeaks: %d), peak_count = %5.1f, sum_count = %7.1f, elapsed time is %5.3f s.', ...
@@ -209,7 +211,19 @@ classdef PointSource < BaseObject
             psf = mean(peaks, 3);
         end
 
-        function updateProp(obj, stats, psf, x_range, y_range, reset)
+        function reset(obj)
+            obj.PSF = [];
+            obj.GaussPSF = [];
+            obj.GaussGOF = [];
+            obj.DataPSF = [];
+            obj.DataXRange = [];
+            obj.DataYRange = [];
+            obj.DataSumCount = [];
+            obj.DataPeakCount = [];
+            obj.DataStats = [];
+        end
+
+        function update(obj, stats, psf, x_range, y_range, reset)
             arguments
                 obj
                 stats
@@ -223,7 +237,7 @@ classdef PointSource < BaseObject
                 reset = true;
             end
             peak_count = max(psf(:));
-            sum_count = sum(psf, 'all') * obj.XRangeStep * obj.YRangeStep;
+            sum_count = sum(psf, 'all') * obj.DataXRangeStep * obj.DataYRangeStep;
             if reset || isempty(obj.PSF)
                 obj.DataStats = stats;
                 obj.DataPeakCount = peak_count;
@@ -243,12 +257,21 @@ classdef PointSource < BaseObject
             end
             [Y, X] = meshgrid(y_range, x_range);
             obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF, y, x);
+            [gauss_fit, gof] = fitGauss2D(obj.DataPSF * obj.DataSumCount, ...
+                x_range, y_range, "cross_term", true);
+            obj.GaussPSF = gauss_fit;
+            obj.GaussGOF = gof;
         end
         
         function disp(obj)
             fprintf('%s: \n', obj.getStatusLabel())
             for p = ["DataNumPeaks", "DataPeakCount", "DataSumCount"]
                 fprintf('%15s: %g\n', p, obj.(p))
+            end
+            if ~isempty(obj.GaussPSF)
+                fprintf('Gaussian PSF fit\n')
+                disp(obj.GaussPSF)
+                disp(obj.GaussGOF)
             end
         end
 
@@ -261,7 +284,7 @@ classdef PointSource < BaseObject
             val = height(obj.DataStats);
         end
 
-        function val = get.XRangeStep(obj)
+        function val = get.DataXRangeStep(obj)
             if isempty(obj.DataXRange)
                 val = nan;
             else
@@ -269,7 +292,7 @@ classdef PointSource < BaseObject
             end
         end
 
-        function val = get.YRangeStep(obj)
+        function val = get.DataYRangeStep(obj)
             if isempty(obj.DataYRange)
                 val = nan;
             else
