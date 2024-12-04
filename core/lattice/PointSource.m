@@ -169,6 +169,8 @@ classdef PointSource < BaseObject
                         center = round(stats.WeightedCentroid(j, :));
                         x_range = center(2) + (-options.gauss_crop_radius(1): options.gauss_crop_radius(1));
                         y_range = center(1) + (-options.gauss_crop_radius(end): options.gauss_crop_radius(end));
+                        x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
+                        y_range = y_range((y_range > 0) & (y_range <= size(img_data, 1)));
                         spot = img_data(x_range, y_range);
                         [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true);
                         stats.RefinedCentroid(j, :) = [f.y0, f.x0];
