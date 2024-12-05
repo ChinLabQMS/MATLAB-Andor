@@ -110,10 +110,13 @@ classdef PointSource < BaseObject
             end
             total_timer = tic;
             props = ["WeightedCentroid", "Area", "BoundingBox", "MaxIntensity", "PixelIdxList"];
+            add_props = ["RefinedCentroid", "RefinedWidth", "RefinedAngle", "MaxRefinedWidth", "RefinedRSquare", "ImageIndex"];
             if isempty(options.gauss_crop_radius)
                 options.gauss_crop_radius = [1, 1] * options.dbscan_distance;
             end
-            stats_all = table();
+            stats_all = table('Size', [0, length(props) + length(add_props)], ...
+                'VariableTypes', repmat("doublenan", 1, length(props) + length(add_props)), ...
+                'VariableNames', [props, add_props]);
             for i = 1: size(img_all, 3)
                 timer = tic;
                 img_data = img_all(:, :, i);
@@ -164,7 +167,12 @@ classdef PointSource < BaseObject
             
                 % Refine the centroids by fitting 2D Gaussian and filter by width
                 stats4 = stats;
-                if options.filter_gausswid_max < inf
+                stats.RefinedCentroid = nan(height(stats), 2);
+                stats.RefinedWidth = nan(height(stats), 2);
+                stats.RefinedAngle = nan(height(stats), 2);
+                stats.MaxRefinedWidth = nan(height(stats), 1);
+                stats.RefinedRSquare = nan(height(stats), 1);
+                if (options.filter_gausswid_max < inf)
                     for j = 1: height(stats)
                         center = round(stats.WeightedCentroid(j, :));
                         x_range = center(2) + (-options.gauss_crop_radius(1): options.gauss_crop_radius(1));
@@ -184,7 +192,7 @@ classdef PointSource < BaseObject
                 
                 % Add result to table
                 stats.ImageIndex = repmat(i, height(stats), 1);
-                stats_all = [stats_all; stats];
+                stats_all = [stats_all; stats]; %#ok<AGROW>
                 
                 if options.plot_diagnostic
                     plotPeaks(img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats)
@@ -196,13 +204,13 @@ classdef PointSource < BaseObject
                 end
             end
             if options.verbose
-                obj.info('Total elapsed time is %g s.', toc(total_timer))
+                obj.info('Total elapsed time for finding peaks is %g s.', toc(total_timer))
             end
         end
 
-        function [psf, x_range, y_range, peaks] = mergePeaks(obj, img_all, stats, options)
+        function [psf, x_range, y_range, peaks] = mergePeaks(~, img_all, stats, options)
             arguments
-                obj
+                ~
                 img_all
                 stats
                 options.scale = obj.MergePeaks_Scale
@@ -303,12 +311,9 @@ classdef PointSource < BaseObject
             end
         end
 
-        function varargout = plot(obj)
-            h = imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF);
-            title(obj.ID)
-            if nargout == 1
-                varargout{1} = h;
-            end
+        function plot(obj)
+            imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF, ...
+                'title', sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
         end
 
         function val = get.DataNumPeaks(obj)
