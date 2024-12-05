@@ -1,5 +1,5 @@
 function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options)
-%FIT2DGAUSSIAN Fit a 2D gaussian on the 2D signal data. It wraps up the
+%FITGAUSS2D Fit a 2D gaussian on the 2D signal data. It wraps up the
 % built-in fit function with properly-guessed initial parameters for the fit
 % to converge.
 % 
@@ -21,7 +21,8 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
         y_range = 1: size(signal, 2)
         options.sub_sample = 1
         options.offset = 'c'
-        options.cross_term logical = false
+        options.cross_term = false
+        options.plot_diagnostic = false
     end
     
     % Define 2D Gaussian fit type
@@ -92,12 +93,9 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
     max_y = y(max_index);
 
     % Initial guess for the fit parameters
-    upper = [5*diff, x_size, y_size, x_range(end), y_range(end), ...
-             max_signal, max_signal/x_size, max_signal/y_size, Inf];
-    lower = [0, 0.1*x_diff, 0.1*y_diff, x_range(1), y_range(1), ...
-             min_signal-0.1*diff, -max_signal/x_size, -max_signal/y_size, -Inf];    
-    start = [diff, x_size/10, y_size/10, max_x, max_y, ...
-             min_signal, 0, 0, 0];
+    upper = [5*diff,    x_size,         y_size,         x_range(end),   y_range(end),   max_signal,             diff/x_size,    max_signal/y_size,  Inf];
+    lower = [0,         0.1*x_diff,     0.1*y_diff,     x_range(1),     y_range(1),     min_signal-0.1*diff,    -diff/x_size,   -max_signal/y_size, -Inf];
+    start = [diff,      x_size/10,      y_size/10,      max_x,          max_y,          min_signal,             0,              0,                  0];
     
     foptions.Upper = upper(parameters);
     foptions.Lower = lower(parameters);
@@ -109,11 +107,28 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
         mat = [1/(f_res.s1)^2, f_res.d/(f_res.s1 * f_res.s2); 
                f_res.d/(f_res.s1 * f_res.s2), 1/(f_res.s2)^2];
         [V, D] = eig(mat, 'vector');
-        [D, ind] = sort(D);
+        [D, ind] = sort(D, 'descend');
         V = V(:, ind);
         output.eigen_angles = acosd(V(1, :));
-        output.eigen_vectors = V';
+        output.eigen_vectors = V;
         output.eigen_values = D';
         output.eigen_widths = 1./sqrt(D');
+    end
+
+    if options.plot_diagnostic
+        figure
+        plot(f_res, [x, y], z)
+        xlabel('X')
+        ylabel('Y')
+        if options.cross_term
+            v1 = output.eigen_widths(1) * output.eigen_vectors(:, 1);
+            v2 = output.eigen_widths(2) * output.eigen_vectors(:, 2);
+            hold on
+            quiver(0, 0, v1(2), v1(1), ...
+                'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, 'DisplayName', sprintf("Major: %g", output.eigen_widths(1)))
+            quiver(0, 0, v2(2), v2(1), ...
+                'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, 'DisplayName', sprintf("Minor: %g", output.eigen_widths(2)))
+            hold off
+        end
     end
 end

@@ -10,11 +10,14 @@ classdef PointSource < BaseObject
         FindPeaks_DbscanSingleOnly = false
         FindPeaks_FilterIntensityMin = 50
         FindPeaks_FilterBoxSizeMax = [12, 12]
-        FindPeaks_GaussFitCropRadius = []
+        FindPeaks_GaussFitCropRadius = [10, 10]
         FindPeaks_FilterGaussWidthMax = 3
         FindPeaks_PlotDiagnostic = false
         MergePeaks_Scale = 10
         MergePeaks_CropRadius = [10, 10]
+        Update_NormalizeMethod = "Gaussian"
+        Update_GaussFitCropRadius = [10, 10]
+        Update_GaussFitSubSample = 10
         Fit_Verbose = false
         Fit_Reset = false
     end
@@ -30,13 +33,14 @@ classdef PointSource < BaseObject
         DataPSF
         DataXRange
         DataYRange
-        DataSumCount
-        DataPeakCount
+        DataSumCount = 0
         DataStats
     end
 
     properties (Dependent)
+        DataPSFNormalized
         DataNumPeaks
+        DataPeakCount
         DataXRangeStep
         DataYRangeStep
     end
@@ -81,6 +85,7 @@ classdef PointSource < BaseObject
                 end
                 [psf, x_range, y_range] = obj.mergePeaks(img_data, stats, args2{:});
                 obj.update(stats, psf, x_range, y_range)
+
             else
                 obj.warn('No peak found from data!')
             end
@@ -111,9 +116,6 @@ classdef PointSource < BaseObject
             total_timer = tic;
             props = ["WeightedCentroid", "Area", "BoundingBox", "MaxIntensity", "PixelIdxList"];
             add_props = ["RefinedCentroid", "RefinedWidth", "RefinedAngle", "MaxRefinedWidth", "RefinedRSquare", "ImageIndex"];
-            if isempty(options.gauss_crop_radius)
-                options.gauss_crop_radius = [1, 1] * options.dbscan_distance;
-            end
             stats_all = table('Size', [0, length(props) + length(add_props)], ...
                 'VariableTypes', repmat("doublenan", 1, length(props) + length(add_props)), ...
                 'VariableNames', [props, add_props]);
@@ -247,6 +249,53 @@ classdef PointSource < BaseObject
             psf = mean(peaks, 3);
         end
 
+        function update(obj, stats, psf, x_range, y_range, options)
+            arguments
+                obj
+                stats
+                psf
+                x_range = 1: size(psf, 1)
+                y_range = 1: size(psf, 2)
+                options.gauss_crop_radius = obj.Update_GaussFitCropRadius
+                options.gauss_sub_sample = obj.Update_GaussFitSubSample
+                options.normalize_method = obj.Update_NormalizeMethod
+            end
+            if (~isempty(obj.DataXRange) && (~isequal(x_range, obj.DataXRange)) || ...
+                    (~isempty(obj.DataYRange) && ~isequal(y_range, obj.DataYRange)))
+                obj.warn2('Unable to add fitted PSF to the existing result, range does not match. Reset result to add new data.')
+                obj.reset()
+            end
+            obj.DataXRange = x_range;
+            obj.DataYRange = y_range;
+            old_num = obj.DataNumPeaks;
+            new_num = height(stats);
+            old_weight = old_num / (old_num + new_num);
+            new_weight = new_num / (old_num + new_num);
+            obj.DataStats = [obj.DataStats; stats];
+            if isempty(obj.DataPSF)
+                obj.DataPSF = psf;
+            else
+                obj.DataPSF = obj.DataPSF * old_weight + psf * new_weight;
+            end
+            fit_x = (x_range >= -options.gauss_crop_radius(1)) & (x_range <= options.gauss_crop_radius(1));
+            fit_y = (y_range >= -options.gauss_crop_radius(end)) & (y_range <= options.gauss_crop_radius(end));
+            fit_data = obj.DataPSF(fit_x, fit_y);
+            fit_x_range = x_range(fit_x);
+            fit_y_range = y_range(fit_y);
+            [obj.GaussPSF, obj.GaussGOF] = fitGauss2D(fit_data, fit_x_range, fit_y_range, ...
+                'cross_term', true, 'sub_sample', options.gauss_sub_sample, 'offset', 'linear', 'plot_diagnostic', 1);
+            switch options.normalize_method
+                case "Gaussian"
+                    sum_count = 2*pi*obj.GaussPSF.a* ...
+                        obj.GaussGOF.eigen_widths(1)*obj.GaussGOF.eigen_widths(2);
+                case "Sum"
+                    sum_count = sum(fit_data(:)) * obj.DataXRangeStep * obj.DataYRangeStep;
+            end
+            obj.DataSumCount = obj.DataSumCount*old_weight + sum_count*new_weight;
+            [Y, X] = meshgrid(y_range, x_range);
+            obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF / obj.DataSumCount, y, x);
+        end
+
         function reset(obj)
             obj.PSF = [];
             obj.GaussPSF = [];
@@ -254,49 +303,8 @@ classdef PointSource < BaseObject
             obj.DataPSF = [];
             obj.DataXRange = [];
             obj.DataYRange = [];
-            obj.DataSumCount = [];
-            obj.DataPeakCount = [];
+            obj.DataSumCount = 0;
             obj.DataStats = [];
-        end
-
-        function update(obj, stats, psf, x_range, y_range, reset)
-            arguments
-                obj
-                stats
-                psf
-                x_range = 1: size(psf, 1)
-                y_range = 1: size(psf, 2)
-                reset = isempty(obj.PSF)
-            end
-            if ~reset && (~isequal(x_range, obj.DataXRange) || ~isequal(y_range, obj.DataYRange))
-                obj.warn2('Unable to add fitted PSF to the existing result, range does not match. Reset result to new data.')
-                reset = true;
-            end
-            obj.DataXRange = x_range;
-            obj.DataYRange = y_range;
-            peak_count = max(psf(:));
-            sum_count = sum(psf, 'all') * obj.DataXRangeStep * obj.DataYRangeStep;
-            if reset || isempty(obj.PSF)
-                obj.DataStats = stats;
-                obj.DataPeakCount = peak_count;
-                obj.DataSumCount = sum_count;
-                obj.DataPSF = psf / sum_count;
-            else
-                old_num = obj.DataNumPeaks;
-                new_num = height(stats);
-                obj.DataStats = [obj.DataStats; stats];
-                old_weight = old_num / (old_num + new_num);
-                new_weight = new_num / (old_num + new_num);
-                obj.DataPeakCount = obj.DataPeakCount * old_weight + peak_count * new_weight;
-                obj.DataSumCount = obj.DataSumCount * old_weight + sum_count * new_weight;
-                obj.DataPSF = obj.DataPSF * old_weight + psf / sum_count * new_weight;
-            end
-            [Y, X] = meshgrid(y_range, x_range);
-            obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF, y, x);
-            [gauss_fit, gof] = fitGauss2D(obj.DataPSF * obj.DataSumCount, ...
-                x_range, y_range, "cross_term", true);
-            obj.GaussPSF = gauss_fit;
-            obj.GaussGOF = gof;
         end
         
         function disp(obj)
@@ -305,19 +313,71 @@ classdef PointSource < BaseObject
                 fprintf('%15s: %g\n', p, obj.(p))
             end
             if ~isempty(obj.GaussPSF)
-                fprintf('Gaussian PSF fit\n')
+                fprintf('\nGaussian PSF fit:\n')
                 disp(obj.GaussPSF)
+                fprintf('\nGoodness of fit:\n')
                 disp(obj.GaussGOF)
             end
         end
 
         function plot(obj)
+            [y, x, z] = prepareSurfaceData(obj.DataYRange, obj.DataXRange, obj.DataPSF);
+            v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
+            v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
+            figure
+            subplot(1, 2, 1)
+            plot(obj.GaussPSF, [x, y], z)
+            xlabel('X')
+            ylabel('Y')
+            subplot(1, 2, 2)
             imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF, ...
                 'title', sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
+            % hold on
+            % quiver(0, 0, v1(1), v1(2), ...
+            %     'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, 'DisplayName', sprintf("Major: %g", obj.GaussGOF.eigen_widths(1)))
+            % quiver(0, 0, v2(1), v2(2), ...
+            %     'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, 'DisplayName', sprintf("Minor: %g", obj.GaussGOF.eigen_widths(2)))
+            % hold off
+            xlabel('Y')
+            ylabel('X')
+            legend()
+        end
+
+        function [peak_data, x_range, y_range] = extractPeak(obj, img_all, i, options)
+            arguments
+                obj
+                img_all
+                i = 1
+                options.crop_radius = obj.MergePeaks_CropRadius
+                options.plot = false
+            end
+            if i > height(obj.DataStats)
+                obj.warn('Specified index is larger than number of stored peaks!')
+                return
+            end
+            img_data = img_all(:, :, obj.DataStats.ImageIndex(i));
+            center = round(obj.DataStats.RefinedCentroid(i, :));
+            x_range = center(2) + (-options.crop_radius(1): options.crop_radius(1));
+            y_range = center(1) + (-options.crop_radius(end): options.crop_radius(end));
+            x_range = x_range((x_range > 0) & (x_range <= size(img_all, 1)));
+            y_range = y_range((y_range > 0) & (y_range <= size(img_all, 2)));
+            peak_data = img_data(x_range, y_range);
+            if options.plot
+                figure
+                imagesc2(y_range, x_range, peak_data)
+            end
         end
 
         function val = get.DataNumPeaks(obj)
             val = height(obj.DataStats);
+        end
+
+        function val = get.DataPeakCount(obj)
+            if isempty(obj.DataStats)
+                val = nan;
+                return
+            end
+            val = mean(obj.DataStats.MaxIntensity);
         end
 
         function val = get.DataXRangeStep(obj)
@@ -334,6 +394,10 @@ classdef PointSource < BaseObject
             else
                 val = obj.DataYRange(2) - obj.DataYRange(1);
             end
+        end
+
+        function psf = get.DataPSFNormalized(obj)
+            psf = obj.DataPSF / obj.DataSumCount;
         end
     end
 

@@ -17,12 +17,10 @@ p.fit(Signal.Andor19331.Image(:, :, 31:40), 'verbose', 1, 'plot_diagnostic', 0, 
     'filter_box_max', [30, 30], 'filter_gausswid_max', 5)
 
 %%
-figure
 p.plot()
 
 %%
 
 p = PointSource("Andor19330");
-p.reset()
-p.fit(Signal.Andor19330.Image(:, :, 91:100), 'verbose', 1, 'plot_diagnostic', 0, 'crop_radius', [30, 30])
+p.fit(Signal.Andor19330.Image(:, :, 91), 'verbose', 1, 'plot_diagnostic', 0, 'crop_radius', [10, 10])
 p.plot()
