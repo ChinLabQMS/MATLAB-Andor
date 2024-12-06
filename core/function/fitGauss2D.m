@@ -17,8 +17,8 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
 
     arguments
         signal (:, :, :) double
-        x_range = 1: size(signal, 1)
-        y_range = 1: size(signal, 2)
+        x_range {mustBeValidRange(signal, 1, x_range)} = 1: size(signal, 1)
+        y_range {mustBeValidRange(signal, 2, y_range)} = 1: size(signal, 2)
         options.sub_sample = 1
         options.offset = 'c'
         options.cross_term = false
@@ -52,19 +52,19 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
     else
         switch options.offset
             case 'n'
-                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2)+2*d*(x-x0)*(y-y0)/(s1*s2))",...
+                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2+2*d*(x-x0)*(y-y0)/(s1*s2)))",...
                                    "dependent", "z", ...
                                    "independent",{'x','y'},...
                                    "coefficient",{'a','s1','s2','x0','y0','d'});
                 parameters = [1,2,3,4,5,9];
             case 'c'
-                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2)+2*d*(x-x0)*(y-y0)/(s1*s2)) + b",...
+                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2+2*d*(x-x0)*(y-y0)/(s1*s2))) + b",...
                                    "dependent", "z", ...
                                    "independent",{'x','y'},...
                                    "coefficient",{'a','s1','s2','x0','y0','b','d'});
                 parameters = [1,2,3,4,5,6,9];
             case 'linear'
-                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2)+2*d*(x-x0)*(y-y0)/(s1*s2)) + b + c1*x + c2*y",...
+                fit_type = fittype("a*exp(-0.5*((x-x0)^2/s1^2+(y-y0)^2/s2^2+2*d*(x-x0)*(y-y0)/(s1*s2))) + b + c1*x + c2*y",...
                                    "dependent", "z", ...
                                    "independent",{'x','y'},...
                                    "coefficient",{'a','s1','s2','x0','y0','b','c1','c2','d'});
@@ -92,8 +92,8 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
     max_x = x(max_index);
     max_y = y(max_index);
 
-    % Initial guess for the fit parameters
-    upper = [5*diff,    x_size,         y_size,         x_range(end),   y_range(end),   max_signal,             diff/x_size,    max_signal/y_size,  Inf];
+    % Initial guess for the fit parameters: a, s1, s2, x0, y0, b, c1, c2, d
+    upper = [5*diff,    x_size,         y_size,         x_range(end),   y_range(end),   max_signal+0.1*diff,    diff/x_size,    max_signal/y_size,  Inf];
     lower = [0,         0.1*x_diff,     0.1*y_diff,     x_range(1),     y_range(1),     min_signal-0.1*diff,    -diff/x_size,   -max_signal/y_size, -Inf];
     start = [diff,      x_size/10,      y_size/10,      max_x,          max_y,          min_signal,             0,              0,                  0];
     
@@ -117,18 +117,23 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
 
     if options.plot_diagnostic
         figure
+        subplot(1, 2, 1)
         plot(f_res, [x, y], z)
         xlabel('X')
         ylabel('Y')
+        subplot(1, 2, 2)
+        imagesc2(y_range, x_range, signal)
+        viscircles([f_res.y0, f_res.x0], mean([f_res.s1, f_res.s2])/10, 'LineWidth', 2);
         if options.cross_term
             v1 = output.eigen_widths(1) * output.eigen_vectors(:, 1);
             v2 = output.eigen_widths(2) * output.eigen_vectors(:, 2);
             hold on
-            quiver(0, 0, v1(2), v1(1), ...
-                'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, 'DisplayName', sprintf("Major: %g", output.eigen_widths(1)))
-            quiver(0, 0, v2(2), v2(1), ...
-                'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, 'DisplayName', sprintf("Minor: %g", output.eigen_widths(2)))
+            quiver(f_res.y0, f_res.x0, v1(2), v1(1), ...
+                'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, 'DisplayName', sprintf("major width: %.3g", output.eigen_widths(1)))
+            quiver(f_res.y0, f_res.x0, v2(2), v2(1), ...
+                'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, 'DisplayName', sprintf("minor width: %.3g", output.eigen_widths(2)))
             hold off
+            legend()
         end
     end
 end

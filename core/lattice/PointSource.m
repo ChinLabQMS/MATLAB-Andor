@@ -13,8 +13,8 @@ classdef PointSource < BaseObject
         FindPeaks_GaussFitCropRadius = [10, 10]
         FindPeaks_FilterGaussWidthMax = 3
         FindPeaks_PlotDiagnostic = false
-        MergePeaks_Scale = 10
-        MergePeaks_CropRadius = [10, 10]
+        MergePeaks_SuperSample = 10
+        MergePeaks_CropRadius = [20, 20]
         Update_NormalizeMethod = "Gaussian"
         Update_GaussFitCropRadius = [10, 10]
         Update_GaussFitSubSample = 10
@@ -72,7 +72,7 @@ classdef PointSource < BaseObject
                 opt1.filter_gausswid_max = obj.FindPeaks_FilterGaussWidthMax
                 opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
                 opt1.verbose = obj.Fit_Verbose
-                opt2.scale = obj.MergePeaks_Scale
+                opt2.super_sample = obj.MergePeaks_SuperSample
                 opt2.crop_radius = obj.MergePeaks_CropRadius
             end
             timer = tic;
@@ -174,23 +174,21 @@ classdef PointSource < BaseObject
                 stats.RefinedAngle = nan(height(stats), 2);
                 stats.MaxRefinedWidth = nan(height(stats), 1);
                 stats.RefinedRSquare = nan(height(stats), 1);
-                if (options.filter_gausswid_max < inf)
-                    for j = 1: height(stats)
-                        center = round(stats.WeightedCentroid(j, :));
-                        x_range = center(2) + (-options.gauss_crop_radius(1): options.gauss_crop_radius(1));
-                        y_range = center(1) + (-options.gauss_crop_radius(end): options.gauss_crop_radius(end));
-                        x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
-                        y_range = y_range((y_range > 0) & (y_range <= size(img_data, 1)));
-                        spot = img_data(x_range, y_range);
-                        [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true);
-                        stats.RefinedCentroid(j, :) = [f.y0, f.x0];
-                        stats.RefinedWidth(j, :) = gof.eigen_widths;
-                        stats.RefinedAngle(j, :) = gof.eigen_angles;
-                        stats.MaxRefinedWidth(j) = max(gof.eigen_widths);
-                        stats.RefinedRSquare(j) = gof.rsquare;
-                    end
-                    stats = stats(stats.MaxRefinedWidth < options.filter_gausswid_max, :);
+                for j = 1: height(stats)
+                    center = round(stats.WeightedCentroid(j, :));
+                    x_range = center(2) + (-options.gauss_crop_radius(1): options.gauss_crop_radius(1));
+                    y_range = center(1) + (-options.gauss_crop_radius(end): options.gauss_crop_radius(end));
+                    x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
+                    y_range = y_range((y_range > 0) & (y_range <= size(img_data, 1)));
+                    spot = img_data(x_range, y_range);
+                    [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true);
+                    stats.RefinedCentroid(j, :) = [f.y0, f.x0];
+                    stats.RefinedWidth(j, :) = gof.eigen_widths;
+                    stats.RefinedAngle(j, :) = gof.eigen_angles;
+                    stats.MaxRefinedWidth(j) = max(gof.eigen_widths);
+                    stats.RefinedRSquare(j) = gof.rsquare;
                 end
+                stats = stats(stats.MaxRefinedWidth < options.filter_gausswid_max, :);
                 
                 % Add result to table
                 stats.ImageIndex = repmat(i, height(stats), 1);
@@ -215,15 +213,15 @@ classdef PointSource < BaseObject
                 ~
                 img_all
                 stats
-                options.scale = obj.MergePeaks_Scale
+                options.super_sample = obj.MergePeaks_Scale
                 options.crop_radius = obj.MergePeaks_CropRadius
             end
-            peaks = repmat(zeros(options.scale * (2*options.crop_radius + 1)), ...
+            peaks = repmat(zeros(options.super_sample * (2*options.crop_radius + 1)), ...
                            1, 1, height(stats));
-            x_size = options.scale * (2*options.crop_radius(1) + 1);
-            y_size = options.scale * (2*options.crop_radius(end) + 1);
-            x_range = ((1: x_size) - (1 + x_size)/2)./options.scale;
-            y_range = ((1: y_size) - (1 + y_size)/2)./options.scale;
+            x_size = options.super_sample * (2*options.crop_radius(1) + 1);
+            y_size = options.super_sample * (2*options.crop_radius(end) + 1);
+            x_range = ((1: x_size) - (1 + x_size)/2)./options.super_sample;
+            y_range = ((1: y_size) - (1 + y_size)/2)./options.super_sample;
             padded = zeros(size(img_all, 1) + 2*options.crop_radius(1)+2, ...
                            size(img_all, 2) + 2*options.crop_radius(end)+2);
             img_x = options.crop_radius(1)+1 + (1: size(img_all, 1));
@@ -237,9 +235,9 @@ classdef PointSource < BaseObject
                         (-options.crop_radius(1): options.crop_radius(1));
                 sample_y = round(center(1)) + options.crop_radius(end)+1 + ...
                     (-options.crop_radius(end): options.crop_radius(end));
-                sample = kron(img_data(sample_x, sample_y), ones(options.scale));
-                x_shift = round(options.scale * (round(center(2)) - center(2)));
-                y_shift = round(options.scale * (round(center(1)) - center(1)));
+                sample = kron(img_data(sample_x, sample_y), ones(options.super_sample));
+                x_shift = round(options.super_sample * (round(center(2)) - center(2)));
+                y_shift = round(options.super_sample * (round(center(1)) - center(1)));
                 % Shift the center with sub-pixel resolution
                 sample = circshift(sample, x_shift, 1);
                 sample = circshift(sample, y_shift, 2);
@@ -283,7 +281,7 @@ classdef PointSource < BaseObject
             fit_x_range = x_range(fit_x);
             fit_y_range = y_range(fit_y);
             [obj.GaussPSF, obj.GaussGOF] = fitGauss2D(fit_data, fit_x_range, fit_y_range, ...
-                'cross_term', true, 'sub_sample', options.gauss_sub_sample, 'offset', 'linear', 'plot_diagnostic', 1);
+                'cross_term', true, 'sub_sample', options.gauss_sub_sample, 'offset', 'linear');
             switch options.normalize_method
                 case "Gaussian"
                     sum_count = 2*pi*obj.GaussPSF.a* ...
@@ -320,27 +318,44 @@ classdef PointSource < BaseObject
             end
         end
 
-        function plot(obj)
+        function plot(obj, options)
+            arguments
+                obj
+                options.show_gauss = true
+            end
             [y, x, z] = prepareSurfaceData(obj.DataYRange, obj.DataXRange, obj.DataPSF);
-            v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
-            v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
             figure
-            subplot(1, 2, 1)
-            plot(obj.GaussPSF, [x, y], z)
-            xlabel('X')
-            ylabel('Y')
-            subplot(1, 2, 2)
-            imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF, ...
-                'title', sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
-            % hold on
-            % quiver(0, 0, v1(1), v1(2), ...
-            %     'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, 'DisplayName', sprintf("Major: %g", obj.GaussGOF.eigen_widths(1)))
-            % quiver(0, 0, v2(1), v2(2), ...
-            %     'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, 'DisplayName', sprintf("Minor: %g", obj.GaussGOF.eigen_widths(2)))
-            % hold off
+            sgtitle(sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
+            ax1 = subplot(1, 3, 1);
+            ax2 = subplot(1, 3, 2);
+            imagesc2(ax2, obj.DataYRange, obj.DataXRange, obj.DataPSF)
             xlabel('Y')
             ylabel('X')
-            legend()
+            subplot(1, 3, 3)
+            imagesc2(obj.DataYRange, obj.DataXRange, log(obj.DataPSF))
+            xlabel('Y')
+            ylabel('X')
+            if options.show_gauss
+                v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
+                v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
+                h = plot(ax1, obj.GaussPSF, [x, y], z);
+                h(2).MarkerSize = 3;
+                xlabel(ax1, 'X')
+                ylabel(ax1, 'Y')
+
+                hold(ax2, "on")
+                quiver(ax2, 0, 0, v1(2), v1(1), ...
+                    'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, ...
+                    'DisplayName', sprintf("major width: %.3g", obj.GaussGOF.eigen_widths(1)))
+                quiver(ax2, 0, 0, v2(2), v2(1), ...
+                    'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
+                    'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)))
+                hold(ax2, "off")
+                legend(ax2)
+            else
+                [y, x] = meshgrid(obj.DataYRange, obj.DataXRange);
+                surf(ax1, y, x, obj.DataPSF, 'EdgeColor', 'none')
+            end
         end
 
         function [peak_data, x_range, y_range] = extractPeak(obj, img_all, i, options)
