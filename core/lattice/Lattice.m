@@ -66,7 +66,7 @@
             Lat.ImagingWavelength = wavelength;
             Lat.PixelSize = pixel_size;
             Lat.NA = NA;
-            Lat.PointSource = PointSource(ID);
+            Lat.PointSource = PointSource(ID, obj.RayleighResolution);
             if camera == "Standard"
                 Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")

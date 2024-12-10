@@ -18,8 +18,7 @@ imagesc2(Signal.Zelux.Pattern_532(:, :, 1))
 
 %%
 p = PointSource("Andor19331");
-p.fit(Signal.Andor19331.Image, 'verbose', 1, 'plot_diagnostic', 0, 'crop_radius', [30, 30], ...
-    'filter_box_max', [15, 15], 'filter_gausswid_max', 4)
+p.fit(Signal.Andor19331.Image, 'verbose', 1, 'plot_diagnostic', 0)
 
 %%
 p.plot()

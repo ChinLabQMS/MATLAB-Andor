@@ -47,9 +47,9 @@ classdef Preprocessor < BaseProcessor
             arguments
                 obj
                 raw
-                info.camera
-                info.label
-                info.config
+                info.camera = "Andor19330"
+                info.label = "Image"
+                info.config = AndorCameraConfig()
                 opt.verbose = obj.Process_Verbose
                 opt.camera_list = obj.Process_CameraList
                 opt1.var_name = obj.BackgroundSubtraction_VarName

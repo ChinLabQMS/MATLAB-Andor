@@ -9,9 +9,9 @@ classdef PointSource < BaseObject
         FindPeaks_DbscanDist = 10
         FindPeaks_DbscanSingleOnly = false
         FindPeaks_FilterIntensityMin = 50
-        FindPeaks_FilterBoxSizeMax = [12, 12]
+        FindPeaks_FilterBoxSizeMax = [15, 15]
         FindPeaks_GaussFitCropRadius = [10, 10]
-        FindPeaks_FilterGaussWidthMax = 3
+        FindPeaks_FilterGaussWidthMax = 4
         FindPeaks_PlotDiagnostic = false
         MergePeaks_SuperSample = 10
         MergePeaks_CropRadius = [20, 20]
@@ -24,6 +24,11 @@ classdef PointSource < BaseObject
 
     properties (SetAccess = immutable)
         ID
+        RayleighResolution
+        IdealPSFGauss
+        IdealPSFAiry
+        IdealPSFGaussPeakIntensity
+        IdealPSFAiryPeakIntensity
     end
 
     properties (SetAccess = protected)
@@ -43,15 +48,21 @@ classdef PointSource < BaseObject
         DataPeakCount
         DataXRangeStep
         DataYRangeStep
+        StrehlRatioGauss
+        StrehlRatioAiry
     end
 
     methods
-        function obj = PointSource(id)
+        function obj = PointSource(id, resolution)
             arguments
                 id = "Test"
+                resolution = 4.44
             end
             obj@BaseObject()
             obj.ID = id;
+            obj.RayleighResolution = resolution;
+            [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(resolution);
+            [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(resolution);
         end
 
         function fit(obj, img_data, opt, opt1, opt2)
@@ -307,8 +318,9 @@ classdef PointSource < BaseObject
         
         function disp(obj)
             fprintf('%s: \n', obj.getStatusLabel())
-            for p = ["DataNumPeaks", "DataPeakCount", "DataSumCount"]
-                fprintf('%15s: %g\n', p, obj.(p))
+            for p = ["DataNumPeaks", "DataPeakCount", "DataSumCount", ...
+                     "RayleighResolution", "StrehlRatioGauss", "StrehlRatioAiry"]
+                fprintf('%20s: %.5g\n', p, obj.(p))
             end
             if ~isempty(obj.GaussPSF)
                 fprintf('\nGaussian PSF fit:\n')
@@ -321,57 +333,82 @@ classdef PointSource < BaseObject
         function plot(obj, options)
             arguments
                 obj
-                options.show_gauss = true
+                options.gauss_sub_sample = obj.Update_GaussFitSubSample
+                options.show_gauss_surface = true
             end
-            [y, x, z] = prepareSurfaceData(obj.DataYRange, obj.DataXRange, obj.DataPSF);
+            x_idx = 1:options.gauss_sub_sample:length(obj.DataXRange);
+            y_idx = 1:options.gauss_sub_sample:length(obj.DataYRange);
+            x_range = obj.DataXRange(x_idx);
+            y_range = obj.DataYRange(y_idx);
+            psf = reshape(obj.DataPSF(x_idx, y_idx), length(x_idx), length(y_idx));
+            [y, x, z] = prepareSurfaceData(y_range, x_range, psf);
+            [Y, X] = meshgrid(obj.DataYRange, obj.DataXRange);
             figure
             sgtitle(sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
-            ax1 = subplot(1, 3, 1);
-            ax2 = subplot(1, 3, 2);
-            imagesc2(ax2, obj.DataYRange, obj.DataXRange, obj.DataPSF)
+            ax1 = subplot(2, 3, [3, 6]);
+            subplot(2, 3, 1)
+            imagesc2(obj.DataYRange, obj.DataXRange, ...
+                obj.DataSumCount*reshape(obj.IdealPSFGauss(X(:), Y(:)), size(obj.DataPSF)))
             xlabel('Y')
             ylabel('X')
-            subplot(1, 3, 3)
+            title('Ideal Gaussian PSF')
+            subplot(2, 3, 4)
+            % imagesc2(obj.DataYRange, obj.DataXRange, reshape(obj.IdealPSFAiry(X(:), Y(:)), size(obj.DataPSF)))
+            xlabel('Y')
+            ylabel('X')
+            title('Ideal Airy PSF')
+            ax2 = subplot(2, 3, 2);
+            imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF)
+            xlabel('Y')
+            ylabel('X')
+            title('Real PSF')
+            ax3 = subplot(2, 3, 5);
             imagesc2(obj.DataYRange, obj.DataXRange, log(obj.DataPSF))
             xlabel('Y')
             ylabel('X')
-            if options.show_gauss
+            title('Real PSF (log)')
+            if options.show_gauss_surface
+                axes(ax1)
+                plot(obj.GaussPSF, [x, y], z)
+                axis equal
+                ylabel('X')
+                xlabel('Y')
+                title('Real PSF with Gaussian fit')
                 v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
                 v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
-                h = plot(ax1, obj.GaussPSF, [x, y], z);
-                h(2).MarkerSize = 3;
-                xlabel(ax1, 'X')
-                ylabel(ax1, 'Y')
-
-                hold(ax2, "on")
-                quiver(ax2, 0, 0, v1(2), v1(1), ...
-                    'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, ...
-                    'DisplayName', sprintf("major width: %.3g", obj.GaussGOF.eigen_widths(1)))
-                quiver(ax2, 0, 0, v2(2), v2(1), ...
-                    'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
-                    'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)))
-                hold(ax2, "off")
-                legend(ax2)
+                for ax = [ax2, ax3]
+                    axes(ax)
+                    hold on
+                    quiver(0, 0, v1(2), v1(1), ...
+                        'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, ...
+                        'DisplayName', sprintf("major width: %.3g", obj.GaussGOF.eigen_widths(1)))
+                    quiver(0, 0, v2(2), v2(1), ...
+                        'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
+                        'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)))
+                    hold off
+                    legend()
+                end
             else
-                [y, x] = meshgrid(obj.DataYRange, obj.DataXRange);
-                surf(ax1, y, x, obj.DataPSF, 'EdgeColor', 'none')
+                axes(ax1)
+                scatter3(x, y, z, 10, z, 'filled')
+                axis equal
             end
         end
 
-        function [peak_data, x_range, y_range] = extractPeak(obj, img_all, i, options)
+        function [peak_data, x_range, y_range] = extractPeak(obj, img_all, stats, options)
             arguments
                 obj
                 img_all
-                i = 1
+                stats
                 options.crop_radius = obj.MergePeaks_CropRadius
                 options.plot = false
             end
-            if i > height(obj.DataStats)
-                obj.warn('Specified index is larger than number of stored peaks!')
-                return
+            if height(stats) > 1
+                obj.warn('Only the first peak is extracted')
+                stats = stats(1, :);
             end
-            img_data = img_all(:, :, obj.DataStats.ImageIndex(i));
-            center = round(obj.DataStats.RefinedCentroid(i, :));
+            img_data = img_all(:, :, stats.ImageIndex);
+            center = round(stats.RefinedCentroid);
             x_range = center(2) + (-options.crop_radius(1): options.crop_radius(1));
             y_range = center(1) + (-options.crop_radius(end): options.crop_radius(end));
             x_range = x_range((x_range > 0) & (x_range <= size(img_all, 1)));
@@ -414,6 +451,14 @@ classdef PointSource < BaseObject
         function psf = get.DataPSFNormalized(obj)
             psf = obj.DataPSF / obj.DataSumCount;
         end
+
+        function val = get.StrehlRatioGauss(obj)
+            val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFGaussPeakIntensity);
+        end
+
+        function val = get.StrehlRatioAiry(obj)
+            val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFAiryPeakIntensity);
+        end
     end
 
     methods (Access = protected, Hidden)
@@ -421,6 +466,17 @@ classdef PointSource < BaseObject
             label = sprintf('%s (%s)', class(obj), obj.ID);
         end
     end
+end
+
+function [func, peak_val] = getIdealPSFGauss(resolution)
+    sigma = resolution / 2.9;
+    func = @(x, y) 1/(2*pi*sigma^2)*exp(-1/2*(x.^2 + y.^2)./sigma^2);
+    peak_val = 1/(2*pi*sigma^2);
+end
+
+function [func, peak_val] = getIdealPSFAiry(resolution)
+    func = @(x, y) 1;
+    peak_val = 1;
 end
 
 function plotPeaks(img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats5)
