@@ -66,7 +66,7 @@
             Lat.ImagingWavelength = wavelength;
             Lat.PixelSize = pixel_size;
             Lat.NA = NA;
-            Lat.PointSource = PointSource(ID, obj.RayleighResolution);
+            Lat.PointSource = PointSource(ID);
             if camera == "Standard"
                 Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")
@@ -113,6 +113,11 @@
                         R(1), R(2), old_R(1), old_R(2))
                 end
             end
+        end
+
+        function set.V(obj, V)
+            obj.V = V;
+            obj.updateResolution();
         end
         
         % Convert lattice space coordinates to real space
@@ -581,6 +586,10 @@
             if isempty(Lat.K)
                 Lat.error("Lattice details are not initialized.")
             end
+        end
+
+        function updateResolution(obj)
+            obj.PointSource.config("RayleighResolution", obj.RayleighResolution)
         end
 
         function label = getStatusLabel(Lat)
