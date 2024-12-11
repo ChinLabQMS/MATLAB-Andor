@@ -20,6 +20,9 @@ classdef PointSource < BaseObject
         Update_GaussFitSubSample = 10
         Fit_Verbose = false
         Fit_Reset = false
+        Plot_ShowGaussSurface = true
+        Plot_ShowIdealPSF = false
+        Plot_LineCutRange = -15:0.01:15
     end
 
     properties (SetAccess = immutable)
@@ -330,49 +333,60 @@ classdef PointSource < BaseObject
             end
         end
 
-        function plot(obj, options)
+        function plot(obj, opt)
             arguments
                 obj
-                options.gauss_sub_sample = obj.Update_GaussFitSubSample
-                options.show_gauss_surface = true
+                opt.show_ideal_psf = obj.Plot_ShowIdealPSF
+                opt.surface_sub_sample = obj.Update_GaussFitSubSample
+                opt.show_gauss_surface = obj.Plot_ShowGaussSurface
+                opt.linecut_range = obj.Plot_LineCutRange
             end
-            x_idx = 1:options.gauss_sub_sample:length(obj.DataXRange);
-            y_idx = 1:options.gauss_sub_sample:length(obj.DataYRange);
-            x_range = obj.DataXRange(x_idx);
-            y_range = obj.DataYRange(y_idx);
-            psf = reshape(obj.DataPSF(x_idx, y_idx), length(x_idx), length(y_idx));
-            [y, x, z] = prepareSurfaceData(y_range, x_range, psf);
-            [Y, X] = meshgrid(obj.DataYRange, obj.DataXRange);
+            if opt.show_ideal_psf
+                obj.plotIdealPSF()
+            end
+            if obj.DataSumCount == 0
+                return
+            end
             figure
-            sgtitle(sprintf('%s, NumPeaks: %d', obj.ID, obj.DataNumPeaks))
-            ax1 = subplot(2, 3, [3, 6]);
+            sgtitle(sprintf('%s, Number of peaks: %d', obj.ID, obj.DataNumPeaks))
+            x_idx = 1:opt.surface_sub_sample:length(obj.DataXRange);
+            y_idx = 1:opt.surface_sub_sample:length(obj.DataYRange);
+            xsub_range = obj.DataXRange(x_idx);
+            ysub_range = obj.DataYRange(y_idx);
+            psf_sub = reshape(obj.DataPSF(x_idx, y_idx), length(x_idx), length(y_idx));
+            [y, x, z] = prepareSurfaceData(ysub_range, xsub_range, psf_sub);
+            [Y, X] = meshgrid(obj.DataYRange, obj.DataXRange);
+            psf_airy = obj.DataSumCount*reshape(obj.IdealPSFAiry(X(:), Y(:)), length(obj.DataXRange), length(obj.DataYRange));
+            [val1, range1] = findPSFLineCut(obj.PSF, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 1), obj.GaussGOF.eigen_widths(1)*opt.linecut_range);
+            [val2, range2] = findPSFLineCut(obj.PSF, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 2), obj.GaussGOF.eigen_widths(2)*opt.linecut_range);
+            ax1 = subplot(2, 3, 6);
             subplot(2, 3, 1)
-            imagesc2(obj.DataYRange, obj.DataXRange, ...
-                obj.DataSumCount*reshape(obj.IdealPSFGauss(X(:), Y(:)), size(obj.DataPSF)))
-            xlabel('Y')
-            ylabel('X')
-            title('Ideal Gaussian PSF')
-            subplot(2, 3, 4)
-            % imagesc2(obj.DataYRange, obj.DataXRange, reshape(obj.IdealPSFAiry(X(:), Y(:)), size(obj.DataPSF)))
-            xlabel('Y')
-            ylabel('X')
-            title('Ideal Airy PSF')
+            imagesc2(obj.DataYRange, obj.DataXRange, psf_airy)
+            title(sprintf('Ideal Airy PSF, sigma = %.3g', obj.RayleighResolution/2.9))
+            lims = clim;
             ax2 = subplot(2, 3, 2);
             imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF)
+            clim(lims)
             xlabel('Y')
             ylabel('X')
             title('Real PSF')
-            ax3 = subplot(2, 3, 5);
+            ax3 = subplot(2, 3, 3);
             imagesc2(obj.DataYRange, obj.DataXRange, log(obj.DataPSF))
             xlabel('Y')
             ylabel('X')
             title('Real PSF (log)')
-            if options.show_gauss_surface
+            subplot(2, 3, 4)
+            plot(range1, val1)
+            xlim([min(range1), max(range1)])
+            subplot(2, 3, 5)
+            plot(range2, val2)
+            xlim([min(range2), max(range2)])
+            if opt.show_gauss_surface
                 axes(ax1)
                 plot(obj.GaussPSF, [x, y], z)
-                axis equal
-                ylabel('X')
-                xlabel('Y')
+                axis square
+                ylabel('Y')
+                xlabel('X')
                 title('Real PSF with Gaussian fit')
                 v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
                 v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
@@ -391,8 +405,48 @@ classdef PointSource < BaseObject
             else
                 axes(ax1)
                 scatter3(x, y, z, 10, z, 'filled')
-                axis equal
+                axis square
             end
+        end
+
+        function plotIdealPSF(obj)
+            x_range = obj.RayleighResolution*(-3:0.01:3);
+            y_range = obj.RayleighResolution*(-3:0.01:3);
+            [Y, X] = meshgrid(y_range, x_range);
+            psf_gauss = reshape(obj.IdealPSFGauss(X(:), Y(:)), length(x_range), length(y_range)) / obj.IdealPSFGaussPeakIntensity;
+            psf_airy = reshape(obj.IdealPSFAiry(X(:), Y(:)), length(x_range), length(y_range)) / obj.IdealPSFAiryPeakIntensity;
+            figure
+            sgtitle(sprintf('%s, Ideal PSF', obj.ID))
+            subplot(2, 3, 1)
+            imagesc2(y_range, x_range, psf_gauss)
+            xlabel('Y')
+            ylabel('X')
+            title(sprintf('Ideal Gaussian PSF, sigma = %.3g', obj.RayleighResolution/2.9))
+            subplot(2, 3, 2)
+            imagesc2(y_range, x_range, psf_airy)
+            xlabel('Y')
+            ylabel('X')
+            title('Ideal Airy PSF')
+            subplot(2, 3, 4)
+            imagesc2(y_range, x_range, log(psf_gauss))
+            xlabel('Y')
+            ylabel('X')
+            title(sprintf('Ideal Gaussian PSF (log), sigma = %.3g', obj.RayleighResolution/2.9))
+            subplot(2, 3, 5)
+            imagesc2(y_range, x_range, log(psf_airy))
+            xlabel('Y')
+            ylabel('X')
+            title('Ideal Airy PSF (log)')
+            subplot(2, 3, [3, 6])
+            hold on
+            plot(x_range, log(obj.IdealPSFGauss(x_range, 0) / obj.IdealPSFGaussPeakIntensity), ...
+                'LineWidth', 2, 'DisplayName', 'Gaussian PSF')
+            plot(x_range, log(obj.IdealPSFAiry(x_range, 0) / obj.IdealPSFAiryPeakIntensity), ...
+                'LineWidth', 2, 'DisplayName', 'Airy PSF')
+            ylim([-10, inf])
+            hold off
+            legend()
+            title('Ideal PSF cross section (log)')
         end
 
         function [peak_data, x_range, y_range] = extractPeak(obj, img_all, stats, options)
@@ -453,10 +507,18 @@ classdef PointSource < BaseObject
         end
 
         function val = get.StrehlRatioGauss(obj)
+            if isempty(obj.GaussPSF)
+                val = nan;
+                return
+            end
             val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFGaussPeakIntensity);
         end
 
         function val = get.StrehlRatioAiry(obj)
+            if isempty(obj.GaussPSF)
+                val = nan;
+                return
+            end
             val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFAiryPeakIntensity);
         end
     end
@@ -468,6 +530,11 @@ classdef PointSource < BaseObject
     end
 end
 
+function [val, step_range] = findPSFLineCut(psf, amp, v, step_range)
+    v_range = v .* step_range;
+    val = amp*psf(v_range(1, :)', v_range(2, :)');
+end
+
 function [func, peak_val] = getIdealPSFGauss(resolution)
     sigma = resolution / 2.9;
     func = @(x, y) 1/(2*pi*sigma^2)*exp(-1/2*(x.^2 + y.^2)./sigma^2);
@@ -475,8 +542,11 @@ function [func, peak_val] = getIdealPSFGauss(resolution)
 end
 
 function [func, peak_val] = getIdealPSFAiry(resolution)
-    func = @(x, y) 1;
-    peak_val = 1;
+    r0 = 3.8317;
+    func1 = @(x, y) (2*besselj(1, r0*sqrt(x.^2 + y.^2)/resolution)./(r0*sqrt(x.^2 + y.^2)/resolution)).^2;
+    total = integral2(func1, -20*resolution, 20*resolution, -20*resolution, 20*resolution);
+    func = @(x, y) func1(x, y) / total;
+    peak_val = 1/total;
 end
 
 function plotPeaks(img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats5)
