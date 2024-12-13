@@ -1,34 +1,44 @@
-classdef Projector < BaseProcessor
-    
-    properties (Constant)
-        XPixels = 1482
-        YPixels = 1481
+classdef Projector < BaseRunner
+
+    properties (SetAccess = immutable)
+        ID
     end
 
     properties (SetAccess = {?BaseObject})
-        PatternPath
+        Initialized = false
     end
     
     properties (SetAccess = protected)
-        Pattern
+        StaticPattern
+        StaticPatternReal
     end
 
     methods
-        function set.PatternPath(obj, path)
-            obj.loadPattern(path)
-            obj.PatternPath = path;
-        end
-    end
-
-    methods (Access = protected)
-        function loadPattern(obj, path)
-            pattern = imread(path);
-            if isequal(size(pattern), [obj.XPixels, obj.YPixels])
-                obj.Pattern = pattern;
-            else
-                obj.error("Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
-                    size(pattern, 1), size(pattern, 2), obj.XPixels, obj.YPixels)
+        function obj = Projector(id, config)
+            arguments
+                id = "Test"
+                config = DMDConfig()
             end
+            obj@BaseRunner(config)
+            obj.ID = id;
+        end
+
+        function init(obj)
+            obj.Initialized = true;
+            obj.info('Projector window initialized.')
+        end
+
+        function close(obj)
+            obj.Initialized = false;
+            obj.info('Projector window closed.')
+        end
+
+        function plot(obj)
+            obj.Config.plot()
+        end
+
+        function delete(obj)
+            delete@BaseRunner(obj)
         end
     end
 

@@ -51,6 +51,7 @@ classdef Camera < BaseRunner
         % Close the connection upon delete
         function delete(obj)
             obj.close()
+            delete@BaseRunner(obj)
         end
     end
     

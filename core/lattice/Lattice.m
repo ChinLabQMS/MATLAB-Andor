@@ -76,33 +76,40 @@
         % Initialize the calibration by
         % - setting the lattice center
         % - (or), specify a FFT peak position for getting K and V
-        function init(Lat, R, size_or_K, pos_or_V, options)
+        function init(Lat, R, arg1, arg2, options)
             arguments
                 Lat
                 R = []
-                size_or_K = []
-                pos_or_V = []
+                arg1 = []
+                arg2 = []
                 options.format = "peak_pos"
                 options.verbose = false
             end
-            if ~isempty(pos_or_V) || ~isempty(size_or_K)
-                if options.format == "peak_pos"
-                    if ~isempty(pos_or_V) && ~isempty(size_or_K)
-                        [Lat.K, Lat.V] = convertFFTPeak2K(size_or_K, pos_or_V);
-                    else
-                        Lat.error("Wrong input format.")
-                    end
-                elseif options.format == "KV"
-                    if ~isempty(size_or_K)
-                        Lat.K = size_or_K;
-                    else
-                        Lat.K = inv(pos_or_V)';
-                    end
-                    if ~isempty(pos_or_V)
-                        Lat.V = pos_or_V;
-                    else
-                        Lat.V = inv(size_or_K)';
-                    end
+            if ~isempty(arg2) || ~isempty(arg1)
+                switch options.format
+                    case "peak_pos"
+                        if ~isempty(arg2) && ~isempty(arg1)
+                            [Lat.K, Lat.V] = convertFFTPeak2K(arg1, arg2);
+                        else
+                            Lat.error("Wrong input format for peak_pos.")
+                        end
+                    case "KV"
+                        if ~isempty(arg1)
+                            Lat.K = arg1;
+                        else
+                            Lat.K = inv(arg2)';
+                        end
+                        if ~isempty(arg2)
+                            Lat.V = arg2;
+                        else
+                            Lat.V = inv(arg1)';
+                        end
+                    case "Lat"
+                        Lat.K = arg1.K;
+                        Lat.V = arg1.V;
+                        Lat.R = arg1.R;
+                    otherwise
+                        Lat.error('Unrecongized input format %s.', options.format)
                 end
             end
             if ~isempty(R)
@@ -399,7 +406,7 @@
             Lat.Ostat = table2struct(best);
             Lat.Ostat.BestTransformed = best_transformed;
             Lat.Ostat.OriginalSignal = signal;
-            info_str = sprintf("Center is calibrated to %s, now at (%d, %d) = (%5.2f px, %5.2f px), initially at (%5.2f px, %5.2f px), min dist = %5.3f (%s).", ...
+            info_str = sprintf("Center is calibrated to %s, now at (%d, %d) = (%5.2f, %5.2f) px, initially at (%5.2f, %5.2f) px, min dist = %5.3f among (%s).", ...
                     Lat2.ID, best.Site(1), best.Site(2), best.Center(1), best.Center(2), ...
                     R_init(1), R_init(2), best.SignalDist, join(string(compose('%4.3f', min_val)), ", "));
             if all(best.Site == [0, 0]) && ...
@@ -542,20 +549,16 @@
             V2 = Lat.V(2, :);
             V3 = V1 + V2;
             fprintf('%s: \n', Lat.getStatusLabel())
-            fprintf(['\tNA = %g, ' ...
-                'ImagingWavelength = %g um, ' ...
-                'PixelSize = %g um, ' ...
-                'LatticePhysicalV = %g um, ' ...
-                'ImageMagnification = %g,  ' ...
-                'RayleighResolution = %g px\n'], ...
-                Lat.NA, Lat.ImagingWavelength, Lat.PixelSize, Lat.LatticePhysicalV, ...
-                Lat.ImageMagnification, Lat.RayleighResolution)
+            s = Lat.struct(["NA", "ImagingWavelength", "PixelSize", "LatticePhysicalV", "ImageMagnification", "RayleighResolution"]);
+            disp(s)
+            fprintf('Calibration result:\n')
             fprintf('\tR  = (%7.2f, %7.2f) px\n', Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', V1(1), V1(2), norm(V1))
             fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', V2(1), V2(2), norm(V2))
             fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', V3(1), V3(2), norm(V3))
             fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(V1*V2'/(norm(V1)*norm(V2))))
             fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
+            disp(Lat.PointSource)
         end
 
         function val = get.V_norm(Lat)
@@ -575,9 +578,12 @@
             val = Lat.RayleighResolution / 2.9;
         end
 
-        function s = struct(Lat)
-            s = struct@BaseObject(Lat, ["K", "V", "R", "ID", "NA", ...
-                "ImagingWavelength", "PixelSize", "LatticePhysicalV"]);
+        function s = struct(Lat, fields)
+            arguments
+                Lat
+                fields = ["K", "V", "R", "ID", "NA", "ImagingWavelength", "PixelSize", "LatticePhysicalV"]
+            end
+            s = struct@BaseObject(Lat, fields);
         end
     end
     

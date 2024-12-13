@@ -9,18 +9,18 @@ close all
 p.plotFFT("Andor19330_852")
 
 %% Andor19330: Input center of lattice and initial peak positions as [x1, y1; x2, y2]
-% Select the first and second peaks to the right, clockwise from 12 o'clock
+% Select the *first* and *second* peaks to the right, clockwise from 12 o'clock
 close all
-p.calibrate("Andor19330_852", [122, 236; 181, 279])
+p.calibrate("Andor19330_852", [122, 236; 181, 279], 'plot_diagnosticR', 0, 'plot_diagnosticV', 0)
 
 %% Andor19331
 close all
 p.plotFFT("Andor19331_852")
 
 %% Andor19331: Input the peaks that corresponds to the Andor19330 peaks under its coordinates
-% Select the second and first peaks to the right, clockwise
+% Select the *second* and *first* peaks to the right, clockwise
 close all
-p.calibrate("Andor19331_852", [167, 271; 123, 207])
+p.calibrate("Andor19331_852", [167, 271; 123, 207], 'plot_diagnosticR', 0, 'plot_diagnosticV', 0)
 
 %% Zelux
 close all
@@ -28,7 +28,7 @@ p.plotFFT("Zelux_935")
 
 %% Input the peaks positions in the orientation similar to Andor19330
 close all
-p.calibrate("Zelux_935", [654, 565; 714, 595])
+p.calibrate("Zelux_935", [654, 565; 714, 595], 'plot_diagnosticR', 0, 'plot_diagnosticV', 0)
 
 %% Cross-calibrate Andor19331 to Andor19330
 close all
@@ -36,6 +36,9 @@ p.calibrateO(1, 'sites', Lattice.prepareSite('hex', 'latr', 20))
 
 %% (optional) Calibrate to a different signal index by searching a smaller region
 p.calibrateO(20, 'sites', Lattice.prepareSite('hex', 'latr', 2))
+
+%% Calibrate PSF on different cameras
+
 
 %% Save lattice calibration of all three cameras (default is with today's date)
 p.save()
