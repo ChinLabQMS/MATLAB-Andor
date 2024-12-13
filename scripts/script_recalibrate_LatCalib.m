@@ -1,6 +1,6 @@
 %% Re-calibrate the lattice to a new dataset
-clear; clc; close all
 % Set an initial calibration file location and new data location for re-calibration
+clear; clc; close all
 p = LatCalibrator( ...
     "LatCalibFilePath", "calibration/LatCalib_20241210.mat", ... 
     "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");

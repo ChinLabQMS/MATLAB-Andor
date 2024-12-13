@@ -21,22 +21,22 @@ imagesc2(Signal.Zelux.Pattern_532(:, :, 1))
 
 %%
 p = PointSource("Andor19331");
-p.fit(Signal.Andor19331.Image, 'verbose', 1, 'plot_diagnostic', 0)
+p.fit(Signal.Andor19331.Image, 'plot_diagnostic', 0)
 
 %%
 p.plot()
 
 %%
 p = PointSource("Andor19330");
-p.fit(Signal.Andor19330.Image, 'verbose', 1, 'plot_diagnostic', 0)
+p.fit(Signal.Andor19330.Image, 'plot_diagnostic', 0)
 
 %%
 p.plot()
 
 %%
 p = PointSource("Zelux", 10.6);
-p.fit(Signal.Zelux.Pattern_532(:,:,3), 'verbose', 1, 'plot_diagnostic', 1, ...
-    'filter_box_max', inf, 'filter_gausswid_max', inf, 'refine_method', "COM")
+p.fit(Signal.Zelux.Pattern_532, 'plot_diagnostic', 0, ...
+    'filter_box_min', 0, 'filter_box_max', inf, 'filter_gausswid_max', inf, 'refine_method', "COM")
 
 %%
-p.plot("show_gauss_surface", 1)
+p.plot("show_gauss_surface", 0)

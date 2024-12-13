@@ -9,6 +9,9 @@ classdef LatCalibrator < DataProcessor
         InitCropSize = [200, 200, 800]
         CameraList = ["Andor19330", "Andor19331", "Zelux"]
         LatticeLabel = ["Image", "Image", "Lattice_935"]
+        CameraList2 = "Zelux"
+        PatternLabel = "Pattern_532"
+        ProjectorList = "DMD"
     end
 
     properties (Constant)
@@ -155,7 +158,6 @@ classdef LatCalibrator < DataProcessor
         function calibratePSF(obj)
             for i = 1: length(obj.CameraList)
                 camera = obj.CameraList(i);
-
             end
         end
         

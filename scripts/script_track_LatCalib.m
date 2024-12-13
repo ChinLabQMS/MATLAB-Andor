@@ -1,6 +1,8 @@
 %% Create a Calibrator object
 clear; clc; close all
-p = LatCalibrator("DataPath", "data/2024/11 November/20241126 sparse/normal_upper_not_on_focus.mat");
+p = LatCalibrator( ...
+    "LatCalibFilePath", "calibration/LatCalib_20241210.mat", ... 
+    "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
 
 %% Generate drift report table
 res = p.trackCalib();
