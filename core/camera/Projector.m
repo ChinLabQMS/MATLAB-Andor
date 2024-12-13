@@ -38,6 +38,7 @@ classdef Projector < BaseRunner
         end
 
         function delete(obj)
+            obj.close()
             delete@BaseRunner(obj)
         end
     end
