@@ -1,5 +1,12 @@
-classdef (Abstract) AxesRunner < BaseRunner
+classdef (Abstract) AxesUpdater < BaseProcessor
     %AXESRUNNER Runner for updating axes with live data
+
+    properties (Abstract, SetAccess = {?BaseObject})
+        CameraName
+        ImageLabel
+        Content
+        FuncName
+    end
     
     properties (SetAccess = immutable)
         AxesHandle
@@ -12,43 +19,48 @@ classdef (Abstract) AxesRunner < BaseRunner
     end
 
     methods
-        function obj = AxesRunner(ax, config)
+        function obj = AxesUpdater(ax, varargin)
             arguments
                 ax = []
-                config = AxesConfig()
             end
-            obj@BaseRunner(config)
+            arguments (Repeating)
+                varargin
+            end
+            obj@BaseProcessor(varargin{:})
             obj.AxesHandle = ax;
         end
 
-        function init(~)
-        end
-
         function update(obj, Live)
+            if isempty(obj.AxesHandle)
+                obj.AxesHandle = axes();
+            end
             obj.LiveHandle = Live;
-            if isprop(Live, obj.Config.Content) && isfield(Live.(obj.Config.Content), obj.Config.CameraName) && ...
-                    isfield(Live.(obj.Config.Content).(obj.Config.CameraName), obj.Config.ImageLabel)
+            if isprop(Live, obj.Content) && isfield(Live.(obj.Content), obj.CameraName) && ...
+                    isfield(Live.(obj.Content).(obj.CameraName), obj.ImageLabel)
                 obj.updateContent(Live)
                 return
             elseif ~isempty(Live.LastData)
                 LastLive = Live.LastData;
-                if isfield(LastLive, obj.Config.Content) && isfield(LastLive.(obj.Config.Content), obj.Config.CameraName) && ...
-                        isfield(LastLive.(obj.Config.Content).(obj.Config.CameraName), obj.Config.ImageLabel)
+                if isfield(LastLive, obj.Content) && isfield(LastLive.(obj.Content), obj.CameraName) && ...
+                        isfield(LastLive.(obj.Content).(obj.CameraName), obj.ImageLabel)
                     obj.updateContent(LastLive)
                     return
                 end
             end
-            obj.warn("[%s %s] Not found in Live data.", obj.Config.CameraName, obj.Config.ImageLabel)           
+            obj.warn("[%s %s] Not found in Live data.", obj.CameraName, obj.ImageLabel)           
         end
 
         function config(obj, varargin)
-            config@BaseRunner(obj, varargin{:})
+            config@BaseProcessor(obj, varargin{:})
             if ~isempty(obj.LiveHandle)
                 obj.update(obj.LiveHandle)
             end
         end
 
         function clear(obj)
+            if isempty(obj.AxesHandle)
+                return
+            end
             cla(obj.AxesHandle)
             obj.GraphHandle = [];
         end
@@ -59,7 +71,7 @@ classdef (Abstract) AxesRunner < BaseRunner
             end
             PlotData.XData = obj.GraphHandle.XData; 
             PlotData.YData = obj.GraphHandle.YData; 
-            PlotData.Config = obj.Config.struct(); %#ok<STRNU>
+            PlotData.Config = obj.struct(obj.ConfigurableProp); %#ok<STRNU>
             uisave("PlotData", "PlotData.mat")
         end
     end

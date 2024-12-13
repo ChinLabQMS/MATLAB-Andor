@@ -57,5 +57,5 @@ function [f_res, output] = fitGauss1D(signal, x_range, options)
     foptions.StartPoint = start(parameters);
     foptions.Display = "off";
 
-    [f_res, output] = fit(x_range, z, fit_type, foptions);
+    [f_res, output] = fit(x_range, signal, fit_type, foptions);
 end

@@ -15,13 +15,13 @@ classdef LayoutManager < BaseObject
         function obj = LayoutManager(app, options)
             arguments
                 app = []
-                options.BigAxes1 = @ImageRunner
-                options.BigAxes2 = @ImageRunner
-                options.SmallAxes1 = @LineRunner
-                options.SmallAxes2 = @LineRunner
-                options.SmallAxes3 = @LineRunner
-                options.SmallAxes4 = @LineRunner
-                options.SmallAxes5 = @LineRunner
+                options.BigAxes1 = @ImageUpdater
+                options.BigAxes2 = @ImageUpdater
+                options.SmallAxes1 = @LineUpdater
+                options.SmallAxes2 = @LineUpdater
+                options.SmallAxes3 = @LineUpdater
+                options.SmallAxes4 = @LineUpdater
+                options.SmallAxes5 = @LineUpdater
             end
             % Bound the fields to axes
             for p = obj.VisibleProp
@@ -40,7 +40,9 @@ classdef LayoutManager < BaseObject
                 fields = obj.VisibleProp
             end
             for field = fields
-                obj.(field).init()
+                if isa(obj.(field), "LineUpdater")
+                    obj.(field).clear()
+                end
             end
         end
         

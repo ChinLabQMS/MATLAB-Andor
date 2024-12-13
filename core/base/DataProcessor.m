@@ -27,6 +27,12 @@ classdef (Abstract) DataProcessor < BaseProcessor
             obj.info("Dataset loaded from '%s'", obj.DataPath)
             obj.Signal = Preprocessor().process(Data);
         end
+
+        function checkDataPath(obj)
+            if isempty(obj.DataPath)
+                obj.error('DataPath not set!')
+            end
+        end
     end
     
 end

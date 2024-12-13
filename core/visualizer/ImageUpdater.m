@@ -1,4 +1,11 @@
-classdef ImageRunner < AxesRunner
+classdef ImageUpdater < AxesUpdater
+
+    properties (SetAccess = {?BaseObject})
+        CameraName = "Andor19330"
+        ImageLabel = "Image"
+        Content = "Signal"
+        FuncName = "None"
+    end
 
     properties (Constant)
         Content_LatticeHexR = 20
@@ -16,7 +23,7 @@ classdef ImageRunner < AxesRunner
                 options.transform_scaleV = obj.Content_TransformScaleV
             end
             plotData(obj, Live)
-            switch obj.Config.FuncName
+            switch obj.FuncName
                 case "None"
                     delete(obj.AddonHandle)
                 case "Lattice"
@@ -29,6 +36,8 @@ classdef ImageRunner < AxesRunner
                         'transform_cropRsite', options.transform_cropRsite, ...
                         'transform_scaleV', options.transform_scaleV)
                 case "PSF"
+                otherwise
+                    obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
         end
     end
@@ -36,7 +45,7 @@ classdef ImageRunner < AxesRunner
 end
 
 function plotData(obj, Live)
-    data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
+    data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
     [x_size, y_size] = size(data);
     if isempty(obj.GraphHandle)
         obj.GraphHandle = imagesc(obj.AxesHandle, data);
@@ -67,8 +76,8 @@ function plotLatticeAll(obj, Live, options1)
         options1.lattice_hexr
     end
     Lat = getLatCalib(obj, Live);
-    num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
-    x_size = Live.CameraManager.(obj.Config.CameraName).Config.XPixels;
+    num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+    x_size = Live.CameraManager.(obj.CameraName).Config.XPixels;
     delete(obj.AddonHandle)
     obj.AddonHandle = gobjects(num_frames, 1);
     for i = 1: num_frames
@@ -86,8 +95,8 @@ function plotTransformedLattice(obj, Live, options)
         options.transform_cropRsite
         options.transform_scaleV
     end
-    data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
-    num_frames = Live.CameraManager.(obj.Config.CameraName).Config.NumSubFrames;
+    data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
+    num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
     signal = getSignalSum(data, num_frames, 'first_only', true);
     Lat = getLatCalib(obj, Live);
     [transformed, x_range, y_range, Lat2] = ...
@@ -103,16 +112,16 @@ end
 
 function Lat = getLatCalib(obj, Live)
     try
-        Lat = Live.LatCalib.(getCalibName(obj.Config.CameraName, obj.Config.ImageLabel));
+        Lat = Live.LatCalib.(getCalibName(obj.CameraName, obj.ImageLabel));
     catch
         for calib_name = string(fields(Live.LatCalib))'
             Lat = Live.LatCalib.(calib_name);
-            if calib_name.startsWith(obj.Config.CameraName)
+            if calib_name.startsWith(obj.CameraName)
                 break
             end
         end
         obj.warn('[%s %s] Unable to find calibration data, use %s.', ...
-                    obj.Config.CameraName, obj.Config.ImageLabel, calib_name)
+                    obj.CameraName, obj.ImageLabel, calib_name)
     end
 end
 

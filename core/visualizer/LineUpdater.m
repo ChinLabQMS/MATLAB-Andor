@@ -1,20 +1,23 @@
-classdef LineRunner < AxesRunner
+classdef LineUpdater < AxesUpdater
+
+    properties (SetAccess = {?BaseObject})
+        CameraName = "Andor19330"
+        ImageLabel = "Image"
+        Content = "Signal"
+        FuncName = "Max"
+    end
 
     methods
-        function init(obj)
-            obj.clear()
-        end
-
         function config(obj, varargin)
             obj.clear()
-            config@AxesRunner(obj, varargin{:})
+            config@AxesUpdater(obj, varargin{:})
         end
     end
     
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
         function updateContent(obj, Live)
-            data = Live.(obj.Config.Content).(obj.Config.CameraName).(obj.Config.ImageLabel);
-            switch obj.Config.FuncName
+            data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
+            switch obj.FuncName
                 case "Mean"
                     new = mean(data, "all");
                 case "Max"
@@ -23,10 +26,10 @@ classdef LineRunner < AxesRunner
                     new = var(data(:));
                 otherwise
                     try
-                        new = reshape(data.(obj.Config.FuncName), [], 1);
+                        new = reshape(data.(obj.FuncName), [], 1);
                     catch
                         new = nan;
-                        obj.warnLabel(obj.Config.Content, obj.Config.FuncName, 'Not found in data.')
+                        obj.warnLabel(obj.Content, obj.FuncName, 'Not found in data.')
                     end
             end
             if isempty(obj.GraphHandle)

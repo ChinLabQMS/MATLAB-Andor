@@ -1,11 +1,6 @@
 classdef AxesConfig < BaseObject
 
-    properties (SetAccess = {?BaseObject})
-        CameraName
-        ImageLabel
-        Content
-        FuncName
-    end
+
 
     methods
         function obj = AxesConfig(config)

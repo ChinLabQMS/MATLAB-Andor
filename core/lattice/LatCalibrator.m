@@ -288,9 +288,7 @@ classdef LatCalibrator < DataProcessor
     methods (Access = protected, Hidden)
         % Generate stats (cloud centers, widths, FFT pattern, ...) for lattice calibration
         function init(obj)
-            if isempty(obj.DataPath)
-                obj.error('DataPath not set!')
-            end
+            obj.checkDataPath()
             for i = 1: length(obj.LatCameraList)
                 camera = obj.LatCameraList(i);
                 label = obj.LatImageLabel(i);

@@ -22,10 +22,12 @@ classdef CameraManager < BaseObject
                 obj.Andor19330 = Camera("Andor19330", options.Andor19330);
                 obj.Andor19331 = Camera("Andor19331", options.Andor19331);
                 obj.Zelux = Camera("Zelux", options.Zelux);
+                obj.DMD = Projector("DMD", TestScreenConfig());
             else
                 obj.Andor19330 = AndorCamera(19330, options.Andor19330);
                 obj.Andor19331 = AndorCamera(19331, options.Andor19331);
                 obj.Zelux = ZeluxCamera(0, options.Zelux);
+                obj.DMD = Projector("DMD", DMDConfig());
             end
         end
         
