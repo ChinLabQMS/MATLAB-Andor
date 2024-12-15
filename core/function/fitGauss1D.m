@@ -4,8 +4,8 @@ function [f_res, output] = fitGauss1D(signal, x_range, options)
 % to converge.
 
     arguments
-        signal double
-        x_range {mustBeValidRange(signal, 1, x_range)} = 1: size(signal, 1)
+        signal (1, :) double
+        x_range {mustBeValidRange(signal, 2, x_range)} = 1: size(signal, 2)
         options.sub_sample = 1
         options.offset = 'c'
     end
@@ -36,7 +36,7 @@ function [f_res, output] = fitGauss1D(signal, x_range, options)
     foptions = fitoptions(fit_type);
     
     % Sub-sample the image (to make computation faster)
-    x_size = size(signal);
+    x_size = size(signal, 2);
     signal = signal(1:options.sub_sample:x_size);
     x_range = x_range(1:options.sub_sample:x_size);
 
@@ -57,5 +57,5 @@ function [f_res, output] = fitGauss1D(signal, x_range, options)
     foptions.StartPoint = start(parameters);
     foptions.Display = "off";
 
-    [f_res, output] = fit(x_range, signal, fit_type, foptions);
+    [f_res, output] = fit(x_range', signal', fit_type, foptions);
 end

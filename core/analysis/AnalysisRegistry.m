@@ -1,4 +1,8 @@
 classdef AnalysisRegistry < BaseObject
+    %ANALYSISREGISTRY A collection of wrappers for real-time analysis
+    % The majority part of the code should be written outside of this
+    % class, while leaving only a thin wrapper here to connect to the app
+    % sequence runner.
 
     properties
         FuncHandle
@@ -20,27 +24,27 @@ classdef AnalysisRegistry < BaseObject
     end
 
     enumeration
-        FitCenter (@fitCenter, ...
-                   ["XCenter", "YCenter", "XWidth", "YWidth"], ...
-                   [])
-        FitGauss  (@fitGauss, ...
-                   ["GaussXC", "GaussYC", "GaussXWid", "GaussYWid"], ...
-                   [])
-        CalibLatR (@calibLatR, ...
-                   ["LatX", "LatY"], ...
-                   [])
-        CalibLatO (@calibLatO, ...
-                   ["LatX", "LatY"], ...
-                   [])
-        FitPSF    (@fitPSF, ...
-                   ["SigmaX", "SigmaY", "StrehlRatio"], ...
-                   ["PSFImage"])
+        FitCenter      (@fitCenter, ...
+                       ["XCenter", "YCenter", "XWidth", "YWidth"])
+        FitGauss       (@fitGaussXY_new, ...
+                       ["GaussXC", "GaussYC", "GaussXW", "GaussYW"], ...
+                       ["SumX", "SumY"])
+        CalibLatR      (@calibLatR, ...
+                       ["LatX", "LatY"])
+        CalibLatO      (@calibLatO, ...
+                       ["LatX", "LatY"])
+        FitPSF         (@fitPSF, ...
+                       ["SigmaX", "SigmaY", "StrehlRatio"], ...
+                       ["PSFImage"])
     end
 
 end
 
 %% Registered functions in AnalysisRegistry
 % Format: func(live, info, options)
+%   - info: structure containing 'camera', 'label', 'config' as fields
+%   - options: optional name-value pairs that could be input in the
+%              SequenceTable
 
 function fitCenter(live, info, options)
     arguments
@@ -51,7 +55,7 @@ function fitCenter(live, info, options)
     end
     timer = tic;
     signal = live.Signal.(info.camera).(info.label);
-    signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
+    signal = getSignalSum(signal, info.config.NumSubFrames, "first_only", options.first_only);
     [xc, yc, xw, yw] = fitCenter2D(signal);
     live.Analysis.(info.camera).(info.label).XCenter = xc;
     live.Analysis.(info.camera).(info.label).YCenter = yc;
@@ -62,29 +66,40 @@ function fitCenter(live, info, options)
     end
 end
 
-function fitGauss(live, info)
+function fitGaussXY_new(live, info, options)
+    arguments
+        live
+        info 
+        options.first_only = true
+        options.verbose = false
+    end
     signal = live.Signal.(info.camera).(info.label);
-    signal = getSignalSum(signal, getNumFrames(info.config));
-    f = fitGauss2D(signal);
-    live.Analysis.(info.camera).(info.label).GaussX = f.x0;
-    live.Analysis.(info.camera).(info.label).GaussY = f.y0;
-    live.Analysis.(info.camera).(info.label).GaussXWid = f.s1;
-    live.Analysis.(info.camera).(info.label).GaussYWid = f.s2;
+    signal = getSignalSum(signal, info.config.NumSubFrames, "first_only", options.first_only);
+    [xc, yc, xw, yw, ~, ~, xsum, ysum] = fitGaussXY(signal);
+    live.Analysis.(info.camera).(info.label).GaussXC = xc;
+    live.Analysis.(info.camera).(info.label).GaussYC = yc;
+    live.Analysis.(info.camera).(info.label).GaussXW = xw;
+    live.Analysis.(info.camera).(info.label).GaussYW = yw;
+    live.Analysis.(info.camera).(info.label).SumX = xsum;
+    live.Analysis.(info.camera).(info.label).SumY = ysum;
+    if options.verbose && isa(live, "BaseObject")
+        live.info("Fitting cloud centers (GaussXY) takes %5.3f s.", toc(timer))
+    end
 end
 
 function calibLatR(live, info, options)
     arguments
         live
         info
+        options.binarize = true
         options.first_only = false
         options.verbose = false
     end
     timer = tic;
     signal = live.Signal.(info.camera).(info.label);
-    signal = getSignalSum(signal, getNumFrames(info.config), "first_only", options.first_only);
-    calib_name = getCalibName(info.camera, info.label);
-    Lat = live.LatCalib.(calib_name);
-    Lat.calibrateR(signal)
+    signal = getSignalSum(signal, info.config.NumSubFrames, "first_only", options.first_only);
+    Lat = live.LatCalib.(info.camera);
+    Lat.calibrateR(signal, 'binarize', options.binarize)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
     if options.verbose && isa(live, "BaseObject")
@@ -104,12 +119,12 @@ function calibLatO(live, info, options, options2)
     end
     timer = tic;
     ref_signal = getSignalSum(live.Signal.(options.ref_camera).(options.ref_label), ...
-        getNumFrames(live.CameraManager.(options.ref_camera).Config), "first_only", true);
+        live.CameraManager.(options.ref_camera).Config.NumSubFrames, "first_only", true);
     signal = getSignalSum(live.Signal.(info.camera).(info.label), ...
-        getNumFrames(live.CameraManager.(info.camera)), "first_only", true);
-    Lat = live.LatCalib.(getCalibName(info.camera, info.label));
-    Lat2 = live.LatCalib.(getCalibName(options.ref_camera, options.ref_label));
-    Lat.calibrateOCropSite(Lat2, signal, ref_signal, options.crop_R_site)
+        info.config.NumSubFrames, "first_only", true);
+    Lat = live.LatCalib.(info.camera);
+    Lat_ref = live.LatCalib.(options.ref_camera);
+    Lat.calibrateOCropSite(Lat_ref, signal, ref_signal, options.crop_R_site)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
     if options2.verbose && isa(live, "BaseObject")
@@ -126,3 +141,6 @@ function fitPSF(live, info, options)
         options.verbose = false
     end
 end
+
+%% Other utilities functions
+

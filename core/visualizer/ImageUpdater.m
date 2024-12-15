@@ -111,18 +111,7 @@ function plotTransformedLattice(obj, Live, options)
 end
 
 function Lat = getLatCalib(obj, Live)
-    try
-        Lat = Live.LatCalib.(getCalibName(obj.CameraName, obj.ImageLabel));
-    catch
-        for calib_name = string(fields(Live.LatCalib))'
-            Lat = Live.LatCalib.(calib_name);
-            if calib_name.startsWith(obj.CameraName)
-                break
-            end
-        end
-        obj.warn('[%s %s] Unable to find calibration data, use %s.', ...
-                    obj.CameraName, obj.ImageLabel, calib_name)
-    end
+    Lat = Live.LatCalib.(obj.CameraName);
 end
 
 % Function for preserving hold behavior on exit

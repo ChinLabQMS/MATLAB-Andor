@@ -1,7 +1,9 @@
+%% Introduction
+% Goal: Track the lattice calibration drifts over time on different cameras
+
 %% Create a Calibrator object
 clear; clc; close all
 p = LatCalibrator( ...
-    "LatCalibFilePath", "calibration/LatCalib_20241210.mat", ... 
     "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
 
 %% Generate drift report table
@@ -9,7 +11,7 @@ res = p.trackCalib();
 
 %% Track drift in lattice frame over time
 
-names = ["Andor19331_852", "Andor19330_852", "Zelux_935"];
+names = ["Andor19331", "Andor19330", "Zelux"];
 shiftv = [0, -1, -2];
 
 ref_index = 10;
@@ -41,10 +43,10 @@ ylabel('LatR2')
 
 %% Correlation analysis
 
-x1 = res.Zelux_935.LatR1;
-x2 = res.Zelux_935.LatR2;
-y1 = res.Andor19330_852.LatR1;
-y2 = res.Andor19330_852.LatR2;
+x1 = res.Zelux.LatR1;
+x2 = res.Zelux.LatR2;
+y1 = res.Andor19330.LatR1;
+y2 = res.Andor19330.LatR2;
 
 figure
 subplot(1, 2, 1)

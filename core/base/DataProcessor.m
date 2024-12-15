@@ -13,25 +13,17 @@ classdef (Abstract) DataProcessor < BaseProcessor
 
     methods
         function set.DataPath(obj, path)
+            obj.loadData(path)
             obj.DataPath = path;
-            obj.loadData()
         end
     end
 
     methods (Access = protected, Sealed, Hidden)
-        function loadData(obj)
-            if isempty(obj.DataPath)
-                return
-            end
-            Data = load(obj.DataPath, "Data").Data;
-            obj.info("Dataset loaded from '%s'", obj.DataPath)
+        function loadData(obj, path)
+            obj.checkFilePath(path, 'DataPath')
+            Data = load(path, "Data").Data;
+            obj.info("Dataset loaded from '%s'", path)
             obj.Signal = Preprocessor().process(Data);
-        end
-
-        function checkDataPath(obj)
-            if isempty(obj.DataPath)
-                obj.error('DataPath not set!')
-            end
         end
     end
     

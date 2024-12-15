@@ -59,6 +59,7 @@ classdef (Abstract) Projector < BaseProcessor
 
     methods (Access = protected)
         function loadPattern(obj, path)
+            obj.checkFilePath(path, 'StaticPatternPath')
             pattern = imread(path);
             obj.assert(isequal(size(pattern, 1:2), [obj.PatternSizeX, obj.PatternSizeY]), ...
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...

@@ -1,15 +1,15 @@
 classdef DataStorage < BaseStorage
     % DATAMANAGER Class for storing acquired data.
 
+    properties (SetAccess = immutable)
+        MaxIndexProp = "NumAcquisitions"
+    end
+
     methods (Access = protected, Hidden)
         function data = removeIncomplete(obj, data)
             data = data(:, :, 1:obj.CurrentIndex);
         end
-
-        function initMaxIndex(obj)
-            obj.MaxIndex = obj.AcquisitionConfig.NumAcquisitions;
-        end
-
+        
         function initAnalysisStorage(~, ~, ~)
         end
 

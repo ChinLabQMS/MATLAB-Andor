@@ -1,13 +1,13 @@
 classdef StatStorage < BaseStorage
     % STATMANAGER Class to store analysis results
 
+    properties (SetAccess = immutable)
+        MaxIndexProp = "NumStatistics"
+    end
+
     methods (Access = protected, Hidden)
         function data = removeIncomplete(obj, data)
             data = data(1: obj.CurrentIndex, :);
-        end
-
-        function initMaxIndex(obj)
-            obj.MaxIndex = obj.AcquisitionConfig.NumStatistics;
         end
 
         function initAnalysisStorage(obj, camera, labels)

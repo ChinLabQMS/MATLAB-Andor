@@ -12,8 +12,9 @@ classdef Replayer < BaseSequencer & BaseProcessor
         end
 
         function set.DataPath(obj, path)
+            obj.checkFilePath(path, 'DataPath')
+            data = load(path, "Data").Data;
             obj.DataPath = path;
-            data = load(obj.DataPath, "Data").Data;
             obj.AcquisitionConfig.config(data.AcquisitionConfig)
             obj.CameraManager.config(data)
             obj.DataStorage.config(data, "config_cameras", false, "config_acq", false)

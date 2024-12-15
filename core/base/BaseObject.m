@@ -107,6 +107,20 @@ classdef BaseObject < handle
                 obj.info("Properties configured to structured input [%s].", names)
             end
         end
+        
+        % Check if a path to a file exists
+        function checkFilePath(obj, path, varname)
+            arguments
+                obj
+                path
+                varname = 'File'
+            end
+            if isempty(path)
+                obj.error('%s is not set!', varname)
+            elseif exist(path, 'file') ~= 2
+                obj.error("%s '%s' does not exist!", varname, path)
+            end
+        end
 
         function str = sinfo(obj, info, varargin)
             str = sprintf("[%s] %s: %s", datetime("now", "Format", "uuuu-MMM-dd HH:mm:ss.SSS"), ...

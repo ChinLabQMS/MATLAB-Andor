@@ -23,6 +23,10 @@ classdef (Abstract) BaseStorage < BaseObject
         MaxIndex
     end
 
+    properties (Abstract, SetAccess = immutable)
+        MaxIndexProp
+    end
+
     properties (Dependent, Hidden)
         MemoryUsage
     end
@@ -63,6 +67,9 @@ classdef (Abstract) BaseStorage < BaseObject
                 end
             end
             s.AcquisitionConfig = obj.AcquisitionConfig.struct();
+            if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
+                s.AcqusitionConfig.(obj.MaxIndexProp) = obj.CurrentIndex;
+            end
             for camera = obj.ConfigurableProp
                 if isempty(obj.(camera))
                     continue
@@ -79,6 +86,10 @@ classdef (Abstract) BaseStorage < BaseObject
                     end
                 end
             end
+        end
+        
+        function initMaxIndex(obj)
+            obj.MaxIndex = obj.AcquisitionConfig.(obj.MaxIndexProp);
         end
 
         % Initialize the storage to the acquisition and camera config
@@ -167,7 +178,6 @@ classdef (Abstract) BaseStorage < BaseObject
 
     methods (Access = protected, Abstract, Hidden)
         data = removeIncomplete(obj, data)
-        initMaxIndex(obj)
         initAnalysisStorage(obj, camera, labels)
         initAcquisitionStorage(obj, camera, labels)
         shift(obj, camera, label)

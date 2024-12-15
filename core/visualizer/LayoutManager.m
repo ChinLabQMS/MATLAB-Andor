@@ -40,7 +40,7 @@ classdef LayoutManager < BaseObject
                 fields = obj.VisibleProp
             end
             for field = fields
-                if isa(obj.(field), "LineUpdater")
+                if isa(obj.(field), 'LineUpdater')
                     obj.(field).clear()
                 end
             end

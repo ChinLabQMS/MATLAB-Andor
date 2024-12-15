@@ -1,4 +1,4 @@
-classdef BaseSequencer < BaseObject
+classdef (Abstract) BaseSequencer < BaseObject
     %BASESEQUENCER Base class for all sequence runner.
     
     % Handle to other objects

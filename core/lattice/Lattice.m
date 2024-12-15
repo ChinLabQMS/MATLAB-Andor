@@ -7,6 +7,7 @@
         TransformStandard_Scale = 10
         TransformStandard_XLimSite = [-25, 25]
         TransformStandard_YLimSite = [-25, 25]
+        CalibR_Binarize = true
         CalibR_BinarizeThres = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
@@ -29,11 +30,8 @@
 
     properties (SetAccess = immutable)
         ID
-        NA
-        ImagingWavelength           % um
-        PixelSize                   % um
-        LatticePhysicalV = 0.8815   % um
-        PointSource
+        PixelSize          % um
+        RealSpacing   % um
     end
 
     properties (SetAccess = protected)
@@ -47,27 +45,21 @@
     properties (Dependent, Hidden)
         V_norm
         ImageMagnification
-        RayleighResolution
-        RayleighResolutionGaussSigma
     end
     
     methods
-        function Lat = Lattice(camera, wavelength, pixel_size, NA, options)
+        function Lat = Lattice(id, pixel_size, spacing, options)
             arguments
-                camera = "Standard"
-                wavelength = 0.852
+                id = "Standard"
                 pixel_size = 13
-                NA = 0.8
+                spacing = 0.8815
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
             end
-            ID = camera + "_" + string(round(wavelength * 1000));
-            Lat.ID = ID;
-            Lat.ImagingWavelength = wavelength;
+            Lat.ID = id;
             Lat.PixelSize = pixel_size;
-            Lat.NA = NA;
-            Lat.PointSource = PointSource(ID);
-            if camera == "Standard"
+            Lat.RealSpacing = spacing;
+            if id == "Standard"
                 Lat.init([0, 0], [], [options.v1; options.v2], ...
                     "format", "KV")
             end
@@ -121,11 +113,6 @@
                 end
             end
         end
-
-        function set.V(obj, V)
-            obj.V = V;
-            obj.updateResolution();
-        end
         
         % Convert lattice space coordinates to real space
         function [coor, sites] = convert2Real(Lat, sites, options)
@@ -177,30 +164,38 @@
         end
         
         % Calibrate lattice center (R) by FFT phase
-        function calibrateR(Lat, signal, x_range, y_range, options)
+        function calibrateR(Lat, signal, x_range, y_range, optionsR)
             arguments
                 Lat
                 signal
                 x_range {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
-                options.binarize_thres = Lat.CalibR_BinarizeThres
-                options.min_binarize_thres = Lat.CalibR_MinBinarizeThres
-                options.bootstrapping = Lat.CalibR_Bootstrapping
-                options.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
+                optionsR.binarize = Lat.CalibR_Binarize
+                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThres
+                optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
+                optionsR.bootstrapping = Lat.CalibR_Bootstrapping
+                optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
             end
             % If the image is not directly from imaging lattice, do filtering
-            if Lat.ID ~= "Zelux"
-                signal_modified = filterSignal(signal, options.binarize_thres, options.min_binarize_thres);
+            if optionsR.binarize
+                signal_new = filterSignal(signal, optionsR.binarize_thres_perct, optionsR.min_binarize_thres);
             else
-                signal_modified = signal;
+                signal_new = signal;
             end
-            Lat.Rstat = getSubStat(Lat, signal_modified, x_range, y_range, options.bootstrapping);
+            signal = mean(signal, 3);
+            signal_new = mean(signal_new, 3);
             % Update Lat.R
-            Lat.R = Lat.convertFFTPhase2R(signal_modified, x_range, y_range);
-            if options.plot_diagnosticR
-                figure
-                imagesc2(y_range, x_range, signal_modified, "title", sprintf("%s: Signal (modified)", Lat.ID))
-                Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+            Lat.R = Lat.convertFFTPhase2R(signal_new, x_range, y_range);
+            Lat.Rstat = getSubStat(Lat, signal_new, x_range, y_range, optionsR.bootstrapping);
+            if optionsR.plot_diagnosticR
+                figure('Name', 'Lattice R calibration diagnostics')
+                subplot(1, 2, 1)
+                imagesc2(y_range, x_range, signal, "title", sprintf("%s: Signal", Lat.ID))
+                Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                Lat.plotV()
+                subplot(1, 2, 2)
+                imagesc2(y_range, x_range, signal_new, "title", sprintf("%s: Signal (discrete)", Lat.ID))
+                Lat.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 Lat.plotV()
             end
         end
@@ -229,14 +224,22 @@
                 optionsV.warning_rsquared = Lat.CalibV_WarnRSquared
                 optionsV.warning_latnorm_thres = Lat.CalibV_WarnLatNormThres                
                 optionsV.plot_diagnosticV = Lat.CalibV_PlotDiagnostic
-                optionsR.binarize_thres = Lat.CalibR_BinarizeThres
+                optionsR.binarize = Lat.CalibR_Binarize
+                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThres
                 optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
             end
             LatInit = Lat.struct();
-            signal_fft = abs(fftshift(fft2(signal)));
-            xy_size = size(signal);
+            % If the image is not directly from imaging lattice, do filtering
+            if optionsR.binarize
+                signal_new = filterSignal(signal, optionsR.binarize_thres_perct, optionsR.min_binarize_thres);
+            else
+                signal_new = signal;
+            end
+            signal_new = mean(signal_new, 3);
+            signal_fft = abs(fftshift(fft2(signal_new)));
+            xy_size = size(signal_new, [1, 2]);
             % Start from initial calibration, find FFT peaks
             peak_init = convertK2FFTPeak(xy_size, Lat.K);
             [peak_pos, peak_info] = fitFFTPeaks(signal_fft, peak_init, optionsV.R_fit);
@@ -245,7 +248,7 @@
                     Lat.warn('FFT peak fit at (%5.2f, %5.2f) might be off (rsquare=%.3f).', ...
                         peak.PeakFit.x0, peak.PeakFit.y0, peak.GOF.rsquare)
                 end
-            end            
+            end
             % Use fitted FFT peak position to get new calibration
             [Lat.K, Lat.V] = convertFFTPeak2K(xy_size, peak_pos);
             % Re-calibrate lattice centers to snap it into grid
@@ -261,10 +264,6 @@
             end
             if optionsV.plot_diagnosticV
                 plotFFT(signal_fft, peak_init, peak_pos, peak_info, Lat.ID)
-                figure
-                imagesc2(y_range, x_range, signal, "title", sprintf("%s: Signal", Lat.ID))
-                Lat.plot([], 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
-                Lat.plotV()
             end
         end
 
@@ -541,24 +540,26 @@
 
         % Display lattice calibration details
         function disp(Lat)
-            if isempty(Lat.K)
-                fprintf('%s: Not initialized.\n', Lat.getStatusLabel())
+            fprintf('%s: \n', Lat.getStatusLabel())
+            if ~isempty(Lat.K)
+                s = Lat.struct(["ID", "PixelSize", "RealSpacing", "ImageMagnification"]);
+                disp(s)
+            else
+                s = Lat.struct(["ID", "PixelSize", "RealSpacing"]);
+                disp(s)
+                fprintf('Lattice calibration is not initialized.\n\n')
                 return
             end
             V1 = Lat.V(1, :);
             V2 = Lat.V(2, :);
-            V3 = V1 + V2;
-            fprintf('%s: \n', Lat.getStatusLabel())
-            s = Lat.struct(["NA", "ImagingWavelength", "PixelSize", "LatticePhysicalV", "ImageMagnification", "RayleighResolution"]);
-            disp(s)
+            V3 = V1 + V2;            
             fprintf('Calibration result:\n')
             fprintf('\tR  = (%7.2f, %7.2f) px\n', Lat.R(1), Lat.R(2))
             fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', V1(1), V1(2), norm(V1))
             fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', V2(1), V2(2), norm(V2))
             fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', V3(1), V3(2), norm(V3))
             fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(V1*V2'/(norm(V1)*norm(V2))))
-            fprintf('\tAngle<V1,V3> = %6.2f deg\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
-            disp(Lat.PointSource)
+            fprintf('\tAngle<V1,V3> = %6.2f deg\n\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
         end
 
         function val = get.V_norm(Lat)
@@ -567,21 +568,21 @@
         end
 
         function val = get.ImageMagnification(Lat)
-            val = (Lat.V_norm * Lat.PixelSize) / Lat.LatticePhysicalV;
+            val = (Lat.V_norm * Lat.PixelSize) / Lat.RealSpacing;
         end
 
-        function val = get.RayleighResolution(Lat)
-            val = 0.61 * Lat.ImagingWavelength / Lat.NA * Lat.ImageMagnification / Lat.PixelSize;
-        end
-
-        function val = get.RayleighResolutionGaussSigma(Lat)
-            val = Lat.RayleighResolution / 2.9;
-        end
+        % function val = get.RayleighResolution(Lat)
+        %     val = 0.61 * Lat.ImagingWavelength / Lat.NA * Lat.ImageMagnification / Lat.PixelSize;
+        % end
+        % 
+        % function val = get.RayleighResolutionGaussSigma(Lat)
+        %     val = Lat.RayleighResolution / 2.9;
+        % end
 
         function s = struct(Lat, fields)
             arguments
                 Lat
-                fields = ["K", "V", "R", "ID", "NA", "ImagingWavelength", "PixelSize", "LatticePhysicalV"]
+                fields = ["K", "V", "R", "ID"]
             end
             s = struct@BaseObject(Lat, fields);
         end
@@ -662,6 +663,7 @@
                 fprintf('(V%d)\t|V| = %14.2f px,\t|V''| = %14.2f px,\tDiff = %9.2f px (%5.3f%%)\n', ...
                     i, norm1, norm2, norm2 - norm1, 100*(norm2 - norm1)/norm1)
             end
+            fprintf('\n')
         end
     end
     
@@ -797,7 +799,7 @@ end
 function plotSimilarityMap(x_range, y_range, score, best)
     empty_image = zeros(length(x_range), length(y_range));
     score.Similarity = max(score.SignalDist) - score.SignalDist;
-    figure
+    figure('Name', 'Cross-calibration: Similarity map with scanning lattice origin')
     imagesc2(y_range, x_range, empty_image, "title", 'Similarity between images from different cameras')
     hold on
     scatter(best.Center(2), best.Center(1), 100, "red")
@@ -806,7 +808,7 @@ end
 
 function plotTransformation(Lat, Lat2, R_init, signal, signal2, best_transformed, ...
                 x_range, y_range, x_range2, y_range2)
-    figure
+    figure('Name', 'Cross-calibrated transformed images')
     subplot(1, 3, 1)
     imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
     Lat2.plot()

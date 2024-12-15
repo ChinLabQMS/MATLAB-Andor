@@ -1,7 +1,7 @@
 # Matlab-Andor
 
 ## Introduction
-MATLAB image acquisition and analysis code for site-resolved atom imaging and manipulation.
+Image acquisition and analysis framework for site-resolved atom imaging and manipulation. Developed with object-oriented programming (OOP) in MATLAB.
 
 ### Main modules
 - Camera control and image acquisition
@@ -9,11 +9,15 @@ MATLAB image acquisition and analysis code for site-resolved atom imaging and ma
 - Image visualization
 
 ### Dependencies
-- Camera control and image acquisition
+- External libraries
     - Andor SDK3
     - Thorlabs Camera SDK
-- Image processing and analysis
-- Image visualization
+- MATLAB toolboxes
+    - Curve Fitting Toolbox
+    - Image Processing Toolbox
+    - Statistics and Machine Learning Toolbox
+
+## How to use
 
 ## Camera control and image acquisition
 ## Image processing and analysis

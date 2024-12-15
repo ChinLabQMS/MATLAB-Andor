@@ -25,17 +25,17 @@ classdef Preprocessor < BaseProcessor
 
     methods
         function set.BackgroundFilePath(obj, path)
+            obj.loadBackgroundFile(path)
             obj.BackgroundFilePath = path;
-            obj.loadBackgroundFile()
         end
 
-        function [signal, leakage] = process(obj, raw, varargin)
+        function [signal, leakage, noise] = process(obj, raw, varargin)
             if isnumeric(raw)
-                [signal, leakage] = obj.processSingleLabel(raw, varargin{:});
+                [signal, leakage, noise] = obj.processSingleLabel(raw, varargin{:});
             elseif isfield(raw, 'Config')
-                [signal, leakage] = obj.processSingleData(raw, varargin{:});
+                [signal, leakage, noise] = obj.processSingleData(raw, varargin{:});
             elseif isfield(raw, 'AcquisitionConfig')
-                [signal, leakage] = obj.processData(raw, varargin{:});
+                [signal, leakage, noise] = obj.processData(raw, varargin{:});
             else
                 obj.error("Unreconginized input format.")
             end
@@ -43,7 +43,7 @@ classdef Preprocessor < BaseProcessor
     end
 
     methods (Access = protected)
-        function [signal, leakage] = processSingleLabel(obj, raw, info, opt, opt1, opt2, opt3)
+        function [signal, leakage, noise] = processSingleLabel(obj, raw, info, opt, opt1, opt2, opt3)
             arguments
                 obj
                 raw
@@ -65,6 +65,7 @@ classdef Preprocessor < BaseProcessor
             if ~ismember(info.camera, opt.camera_list)
                 signal = double(raw);
                 leakage = zeros(size(signal));
+                noise = [];
                 return
             end
             args1 = namedargs2cell(opt1);
@@ -72,39 +73,42 @@ classdef Preprocessor < BaseProcessor
             args3 = namedargs2cell(opt3);
             signal = subtractBackground(obj, raw, info, args1{:});
             signal = removeOutlier(obj, signal, info, args2{:});
-            [signal, leakage] = correctOffset(obj, signal, info, args3{:});
+            [signal, leakage, ~, noise] = correctOffset(obj, signal, info, args3{:});
             if opt.verbose
                 obj.info("[%s %s] Preprocessing completed in %.3f s.", info.camera, info.label, toc(timer))
             end
         end
 
-        function [Signal, Leakage] = processSingleData(obj, Data, varargin)
-            Signal = Data;
-            Leakage = Data;
+        function [Signal, Leakage, Noise] = processSingleData(obj, Data, varargin)
             for label = string(fields(Data))'
                 if label == "Config"
+                    Signal.Config = Data.Config;
+                    Leakage.Config = Data.Config;
+                    Noise.Config = Data.Config;
                     continue
                 end
                 info = {'camera', Data.Config.CameraName, 'label', label, 'config', Data.Config};
-                [Signal.(label), Leakage.(label)] = obj.process(Data.(label), info{:}, varargin{:});
+                [Signal.(label), Leakage.(label), Noise.(label)] = obj.process(Data.(label), info{:}, varargin{:});
             end
         end
 
-        function [Signal, Leakage] = processData(obj, Data, varargin)
+        function [Signal, Leakage, Noise] = processData(obj, Data, varargin)
             Signal = struct('AcquisitionConfig', Data.AcquisitionConfig);
             Leakage = struct('AcquisitionConfig', Data.AcquisitionConfig);
+            Noise = struct('AcquisitionConfig', Data.AcquisitionConfig);
             active_cameras = SequenceRegistry.getActiveCameras(Data.AcquisitionConfig.SequenceTable);
             for camera = active_cameras
-                [Signal.(camera), Leakage.(camera)] = obj.processSingleData(Data.(camera), varargin{:});
+                [Signal.(camera), Leakage.(camera), Noise.(camera)] = obj.processSingleData(Data.(camera), varargin{:});
             end
             obj.info("Dataset is pre-processed.")
         end
     end
 
-    methods (Access = protected, Hidden)
-        function loadBackgroundFile(obj)
-            obj.Background = load(obj.BackgroundFilePath);
-            obj.info("Background file loaded from '%s'.", obj.BackgroundFilePath)
+    methods (Access = protected, Sealed, Hidden)
+        function loadBackgroundFile(obj, path)
+            obj.checkFilePath(path)
+            obj.Background = load(path);
+            obj.info("Background file loaded from '%s'.", path)
         end
 
         function signal = subtractBackground(obj, raw, info, opt1)
@@ -149,7 +153,7 @@ classdef Preprocessor < BaseProcessor
             end
         end
         
-        function [signal, leakage, variance] = correctOffset(obj, raw, info, opt3)
+        function [signal, leakage, variance, noise] = correctOffset(obj, raw, info, opt3)
             arguments
                 obj
                 raw
@@ -160,7 +164,7 @@ classdef Preprocessor < BaseProcessor
                 opt3.warn_var_thres
             end
             assert(all(isfield(info, ["camera", "label", "config"])))
-            [leakage, variance] = cancelOffset(raw, getNumFrames(info.config), opt3.region_width); 
+            [leakage, variance, noise] = cancelOffset(raw, info.config.NumSubFrames, opt3.region_width); 
             signal = raw - leakage;
             if opt3.warning
                 if any(abs(leakage) > opt3.warn_offset_thres)

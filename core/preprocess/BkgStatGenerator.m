@@ -3,6 +3,9 @@ classdef BkgStatGenerator < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
         DataDir = "data/2024/09 September/20240926 camera readout noise/"
+        CameraList = ["Andor19330", "Andor19331"]
+        ImageLabel = ["Image", "Image"]
+        SettingList = ["Full_1MHz", "Full_3MHz", "Full_5MHz", "Cropped_1MHz", "Cropped_3MHz", "Cropped_5MHz"]
         Full_1MHz = "clean_bg_1MHz.mat"
         Full_3MHz = "clean_bg_3MHz.mat"
         Full_5MHz = "clean_bg_5MHz.mat"
@@ -12,10 +15,6 @@ classdef BkgStatGenerator < BaseProcessor
     end
 
     properties (Constant)
-        CameraList = ["Andor19330", "Andor19331"]
-        ImageLabel = ["Image", "Image"]
-        SettingList = ["Full_1MHz", "Full_3MHz", "Full_5MHz", ...
-                       "Cropped_1MHz", "Cropped_3MHz", "Cropped_5MHz"]
         GetBkgStat_FilterFFTThres = 7.7
         GetBkgStat_RemoveOutlierThres = 15
     end
@@ -27,10 +26,6 @@ classdef BkgStatGenerator < BaseProcessor
     end
     
     methods
-        function obj = BkgStatGenerator(varargin)
-            obj@BaseProcessor(varargin{:})
-        end
-
         function process(obj)
             for setting = obj.SettingList
                 obj.BkgStat.(setting) = getBkgStat(obj, obj.BkgData.(setting));
@@ -66,7 +61,9 @@ classdef BkgStatGenerator < BaseProcessor
     methods (Access = protected, Hidden)
         function init(obj)
             for field = obj.SettingList
-                obj.BkgData.(field) = load(fullfile(obj.DataDir, obj.(field))).Data;
+                path = fullfile(obj.DataDir, obj.(field));
+                obj.checkFilePath(path)
+                obj.BkgData.(field) = load(path).Data;
             end
             obj.info("All data loaded.")
         end

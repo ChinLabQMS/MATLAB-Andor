@@ -2,10 +2,10 @@ classdef CameraManager < BaseObject
     %CAMERAMANAGER Manage multiple cameras and projectors
 
     properties (SetAccess = immutable)
-        Andor19330 (1, 1) Camera
-        Andor19331 (1, 1) Camera
-        Zelux (1, 1) Camera
-        DMD (1, 1) Projector
+        Andor19330
+        Andor19331
+        Zelux
+        DMD
     end
 
     methods
