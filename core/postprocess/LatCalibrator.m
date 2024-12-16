@@ -216,7 +216,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             end
             for camera = obj.InitCameraName
                 if isempty(obj.LatCalib.(camera).K)
-                    obj.warn("Camera %s is not calibrated.", camera)
+                    obj.warn2("Camera %s is not calibrated.", camera)
                 end
             end
             LatAll = obj.LatCalib;
@@ -292,7 +292,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         end
 
         function disp(obj)
-            disp@BaseProcessor(obj)
+            disp@LatProcessor(obj)
             for c = string(fields(obj.LatCalib))'
                 disp(obj.LatCalib.(c))
             end

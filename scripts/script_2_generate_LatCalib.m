@@ -90,8 +90,7 @@ p.save()
 
 %% [IMPORTANT] Update the class definition
 % Update the 'LatCalibFilePath' in those classes after each (re)calibration
-% - Analyzer: "/core/analysis/Analyzer.m"
-%       This is to use the new calibration in the live analysis
+% to make sure the future analysis will be with up-to-date calibration
 % - LatProcessor: "/core/postprocess/LatProcessor.m"
 %       This is to use the new calibration as default for future 
-%       lattice-related post-analysis
+%       lattice-related live and post-analysis

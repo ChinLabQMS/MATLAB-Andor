@@ -354,9 +354,9 @@ classdef PointSource < BaseProcessor
                             "StrehlRatioGauss", "StrehlRatioAiry"]);
             disp(s)
             if ~isempty(obj.GaussPSF)
-                fprintf('\nGaussian PSF fit:\n')
+                fprintf('\nGaussian PSF fit, %s:\n', obj.getStatusLabel())
                 disp(obj.GaussPSF)
-                fprintf('\nGoodness of fit:\n')
+                fprintf('\nGoodness of fit, %s:\n', obj.getStatusLabel())
                 disp(obj.GaussGOF)
             end
         end

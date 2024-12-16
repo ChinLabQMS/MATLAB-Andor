@@ -44,7 +44,7 @@
 
     properties (Dependent, Hidden)
         V_norm
-        ImageMagnification
+        Magnification
     end
     
     methods
@@ -542,7 +542,7 @@
         function disp(Lat)
             fprintf('%s: \n', Lat.getStatusLabel())
             if ~isempty(Lat.K)
-                s = Lat.struct(["ID", "PixelSize", "RealSpacing", "ImageMagnification"]);
+                s = Lat.struct(["ID", "PixelSize", "RealSpacing", "Magnification"]);
                 disp(s)
             else
                 s = Lat.struct(["ID", "PixelSize", "RealSpacing"]);
@@ -567,7 +567,7 @@
             val = mean([norm(Lat.V(1, :)), norm(Lat.V(2, :))]);
         end
 
-        function val = get.ImageMagnification(Lat)
+        function val = get.Magnification(Lat)
             val = (Lat.V_norm * Lat.PixelSize) / Lat.RealSpacing;
         end
 
