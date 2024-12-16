@@ -31,7 +31,9 @@ classdef StatStorage < BaseStorage
 
         function addNew(obj, new, camera, label)
             index = min(obj.MaxIndex, obj.CurrentIndex);
-            obj.(camera).(label)(index, :) = struct2table(new);
+            new = struct2table(new);
+            new = new(:, obj.(camera).(label).Properties.VariableNames);
+            obj.(camera).(label)(index, :) = new;
         end
     end
 

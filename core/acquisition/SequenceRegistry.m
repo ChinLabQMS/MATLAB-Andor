@@ -22,13 +22,23 @@ classdef SequenceRegistry < BaseObject
             ["Zelux", "Zelux", "Zelux", "Zelux", "Andor19330", "Andor19331", "Andor19330", "Andor19331", "Andor19330", "Andor19331"], ...
             ["Lattice_935", "Pattern_532", "Lattice_935", "Pattern_532", "Image", "Image", "Image", "Image", "Image", "Image"], ...
             ["Start+Acquire", "Start+Acquire", "Analysis", "Analysis", "Start", "Start", "Acquire", "Acquire", "Analysis", "Analysis"], ...
-            ["", "", "CalibLatR", "FitCenter", "", "", "", "", "FitCenter, CalibLatR", "FitCenter, CalibLatO"])
+            ["", "", "CalibLatR, binarize=0", "FitCenter", "", "", "", "", "FitCenter, CalibLatR", "FitCenter, CalibLatO"])
     end
 
     methods (Static)
+        function active_devices = getActiveDevices(sequence)
+            active_devices = string(unique(sequence.Camera))';
+            active_devices = active_devices(active_devices ~= "--inactive--");
+        end
+
         function active_cameras = getActiveCameras(sequence)
-            active_cameras = unique(sequence.Camera);
-            active_cameras = string(active_cameras(active_cameras ~= "--inactive--"))';
+            active_cameras = SequenceRegistry.getActiveDevices(sequence);
+            active_cameras = active_cameras(~active_cameras.startsWith("DMD"));
+        end
+
+        function active_projectors = getActiveProjectors(sequence)
+            active_projectors = SequenceRegistry.getActiveDevices(sequence);
+            active_projectors = active_projectors(active_projectors.startsWith("DMD"));
         end
 
         function active_sequence = getActiveSequence(sequence)
@@ -65,15 +75,15 @@ function sequence = makeSequence(cameras, labels, types, notes, empty_rows)
         empty_rows = 2
     end
     num_command = length(cameras) + empty_rows;
-    default_camera = "--inactive--";
-    all_camera = ["Andor19330", "Andor19331", "Zelux", "DMD", "--inactive--"];
+    default_device = "--inactive--";
+    all_devices = ["Andor19330", "Andor19331", "Zelux", "DMD", "--inactive--"];
     default_label = "";
     default_type = "Analysis";
     all_type = ["Start+Acquire", "Start", "Acquire", "Analysis", "Projection"];
     default_note = "";
     Order = (1: num_command)';
-    Camera = [cameras, repmat(default_camera, 1, empty_rows)]';
-    Camera = categorical(Camera, all_camera, 'Ordinal', true);
+    Camera = [cameras, repmat(default_device, 1, empty_rows)]';
+    Camera = categorical(Camera, all_devices, 'Ordinal', true);
     Label = [labels, repmat(default_label, 1, empty_rows)]';
     Type = [types, repmat(default_type, 1, empty_rows)]';
     Type = categorical(Type, all_type, 'Ordinal', true);

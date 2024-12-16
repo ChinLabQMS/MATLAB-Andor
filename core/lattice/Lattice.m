@@ -8,7 +8,7 @@
         TransformStandard_XLimSite = [-25, 25]
         TransformStandard_YLimSite = [-25, 25]
         CalibR_Binarize = true
-        CalibR_BinarizeThres = 0.5
+        CalibR_BinThresholdPerct = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
@@ -171,7 +171,7 @@
                 x_range {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 optionsR.binarize = Lat.CalibR_Binarize
-                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThres
+                optionsR.binarize_thres_perct = Lat.CalibR_BinThresholdPerct
                 optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
@@ -225,7 +225,7 @@
                 optionsV.warning_latnorm_thres = Lat.CalibV_WarnLatNormThres                
                 optionsV.plot_diagnosticV = Lat.CalibV_PlotDiagnostic
                 optionsR.binarize = Lat.CalibR_Binarize
-                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThres
+                optionsR.binarize_thres_perct = Lat.CalibR_BinThresholdPerct
                 optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
@@ -571,18 +571,10 @@
             val = (Lat.V_norm * Lat.PixelSize) / Lat.RealSpacing;
         end
 
-        % function val = get.RayleighResolution(Lat)
-        %     val = 0.61 * Lat.ImagingWavelength / Lat.NA * Lat.ImageMagnification / Lat.PixelSize;
-        % end
-        % 
-        % function val = get.RayleighResolutionGaussSigma(Lat)
-        %     val = Lat.RayleighResolution / 2.9;
-        % end
-
         function s = struct(Lat, fields)
             arguments
                 Lat
-                fields = ["K", "V", "R", "ID"]
+                fields = ["K", "V", "R", "ID", "PixelSize", "RealSpacing"]
             end
             s = struct@BaseObject(Lat, fields);
         end
@@ -709,7 +701,7 @@ end
 function signal_modified = filterSignal(signal, binarize_thres, min_binarize_thres)
     signal_modified = signal;
     thres = max(binarize_thres * max(signal(:)), min_binarize_thres);
-    signal_modified((signal_modified < thres)) = 0;
+    signal_modified(signal_modified < thres) = 0;
 end
 
 % Partition signal into 4 equal size subareas

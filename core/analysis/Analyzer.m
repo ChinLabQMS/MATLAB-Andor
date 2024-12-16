@@ -1,20 +1,7 @@
-classdef Analyzer < BaseProcessor
+classdef Analyzer < LatProcessor
     %ANALYZER Live analyzer
     
-    properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241215.mat"
-    end
-
-    properties (SetAccess = protected)
-        LatCalib
-    end
-    
     methods
-        function set.LatCalibFilePath(obj, path)
-            obj.loadLatCalibFile(path)
-            obj.LatCalibFilePath = path;
-        end
-
         function analyze(obj, live, info, options)
             arguments
                 obj
@@ -45,14 +32,6 @@ classdef Analyzer < BaseProcessor
         end
 
         function analysis = analyzeData(obj, data, options)
-        end
-    end
-
-    methods (Access = protected, Hidden)
-        function loadLatCalibFile(obj, path)
-            obj.checkFilePath(path, 'LatCalib')
-            obj.LatCalib = load(path);
-            obj.info("Lattice calibration file loaded from '%s'.", path)
         end
     end
 

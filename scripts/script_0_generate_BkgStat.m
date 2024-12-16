@@ -29,13 +29,14 @@ p = BkgStatGenerator( ...
     "Cropped_3MHz", "clean_bg_3MHz_cropped.mat", ...
     "Full_5MHz", "clean_bg_5MHz.mat", ...
     "Cropped_5MHz", "clean_bg_5MHz_cropped.mat");
-disp(p)
 
 %% Process the data and generate background statistics
 % Internally, it filters outliers, calculate mean images and performs
-% Fourier filtering to obtain a smoothed mean
+% Fourier filtering to obtain a smoothed mean.
 
 p.process()
+
+% Display results
 disp(p.BkgSummary)
 
 %% Plot some diagnostic figures to check if there is any residual pattern

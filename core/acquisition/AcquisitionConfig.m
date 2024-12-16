@@ -9,11 +9,14 @@ classdef AcquisitionConfig < BaseProcessor
         SampleInterval = 1
         DropBadFrames = true
         AbortAtEnd = true
+        Projectors = "DMD"
     end
     
     % Properties that updates with SequenceTable
     properties (SetAccess = protected)
+        ActiveDevices
         ActiveCameras
+        ActiveProjectors
         ActiveSequence
         ActiveAcquisition
         ActiveAnalysis
@@ -27,10 +30,7 @@ classdef AcquisitionConfig < BaseProcessor
 
     methods
         function set.SequenceTable(obj, sequence)
-            arguments
-                obj
-                sequence {mustBeValidSequence(obj, sequence)}
-            end
+            mustBeValidSequence(obj, sequence)
             obj.SequenceTable = sequence;
             obj.updateProp()
         end
@@ -56,7 +56,9 @@ classdef AcquisitionConfig < BaseProcessor
         function updateProp(obj)
             [params, obj.AnalysisOutVars, obj.AnalysisOutData] = parseParams(obj, obj.SequenceTable);
             sequence = [obj.SequenceTable, params];
+            obj.ActiveDevices = SequenceRegistry.getActiveDevices(sequence);
             obj.ActiveCameras = SequenceRegistry.getActiveCameras(sequence);
+            obj.ActiveProjectors = SequenceRegistry.getActiveProjectors(sequence);
             obj.ActiveSequence = SequenceRegistry.getActiveSequence(sequence);
             obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(sequence);
             obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(sequence);
@@ -235,29 +237,29 @@ function mustBeValidSequence(obj, sequence)
         obj
         sequence (:, 5) table
     end
-    active_cameras = SequenceRegistry.getActiveCameras(sequence);
-    if isempty(active_cameras)
-        obj.error("Invalid sequence, no active camera.")
+    active_devices = SequenceRegistry.getActiveDevices(sequence);
+    if isempty(active_devices)
+        obj.error("Invalid sequence, no active device.")
     end
-    for camera = active_cameras
-        camera_seq = sequence(sequence.Camera == camera, :);
+    for device = active_devices
+        device_seq = sequence(sequence.Camera == device, :);
         started = string.empty;
         acquired = string.empty;
-        for i = 1:height(camera_seq)
-            label = string(camera_seq.Label(i));
-            newerror = @(info) obj.error("[%s %s] Invalid sequence, %s.", camera, label, info);
-            operation = string(camera_seq.Type(i));
+        for i = 1:height(device_seq)
+            label = string(device_seq.Label(i));
+            newerror = @(info) obj.error("[%s %s] Invalid sequence, %s.", device, label, info);
+            operation = string(device_seq.Type(i));
             if label == ""
                 newerror("empty label")
             end
             if label == "Config"
                 newerror("'Config' is reserved and can not be used as label")
             end
-            if operation == "Projection" && camera.startsWith("DMD")
+            if operation == "Projection" && device.startsWith("DMD")
                 continue
             elseif operation == "Projection"
                 newerror("'Projection' is only available for DMD")
-            elseif camera.startsWith("DMD")
+            elseif device.startsWith("DMD")
                 newerror("DMD can only use 'Projection'")
             end
             if operation == "Start" || operation == "Start+Acquire"
@@ -281,7 +283,7 @@ function mustBeValidSequence(obj, sequence)
         end
         if ~isempty(started)
             obj.error("Invalid sequence, missing acquire command for camera %s, labels %s.", ...
-                camera, strjoin(started, ","))
+                device, strjoin(started, ","))
         end
     end
 end

@@ -80,8 +80,8 @@ function fitGaussXY_new(live, info, options)
     live.Analysis.(info.camera).(info.label).GaussYC = yc;
     live.Analysis.(info.camera).(info.label).GaussXW = xw;
     live.Analysis.(info.camera).(info.label).GaussYW = yw;
-    live.Analysis.(info.camera).(info.label).SumX = xsum;
-    live.Analysis.(info.camera).(info.label).SumY = ysum;
+    live.Analysis.(info.camera).(info.label).SumX = {xsum};
+    live.Analysis.(info.camera).(info.label).SumY = {ysum};
     if options.verbose && isa(live, "BaseObject")
         live.info("Fitting cloud centers (GaussXY) takes %5.3f s.", toc(timer))
     end

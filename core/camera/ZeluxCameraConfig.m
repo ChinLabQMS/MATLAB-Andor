@@ -1,4 +1,4 @@
-classdef ZeluxCameraConfig < BaseObject
+classdef ZeluxCameraConfig < BaseConfig
     % Configuration file for ZeluxCamera
     
     properties (SetAccess = {?BaseObject})
@@ -13,12 +13,6 @@ classdef ZeluxCameraConfig < BaseObject
         MaxPixelValue = 1022
         NumSubFrames = 1
         PixelSize = 3.45
-    end
-
-    methods
-        function s = struct(obj)
-            s = struct@BaseObject(obj, obj.VisibleProp);
-        end
     end
     
     methods (Static)

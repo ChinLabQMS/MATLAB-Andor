@@ -1,4 +1,4 @@
-classdef AppConfig < BaseObject
+classdef AppConfig < BaseConfig
 
     properties (Constant)
         BaseAnalysis = ["Signal: Max", "Background: Max", "Background: Variance"]

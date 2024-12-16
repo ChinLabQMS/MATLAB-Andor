@@ -9,6 +9,8 @@ classdef (Abstract) DataProcessor < BaseProcessor
     
     properties (SetAccess = protected)
         Signal
+        Leakage
+        Noise
     end
 
     methods
@@ -23,7 +25,15 @@ classdef (Abstract) DataProcessor < BaseProcessor
             obj.checkFilePath(path, 'DataPath')
             Data = load(path, "Data").Data;
             obj.info("Dataset loaded from '%s'", path)
-            obj.Signal = Preprocessor().process(Data);
+            [obj.Signal, obj.Leakage, obj.Noise] = Preprocessor().process(Data);
+        end
+    end
+
+    methods (Access = protected, Hidden)
+        function init(obj)
+            if isempty(obj.DataPath)
+                obj.error('DataPath unset!')
+            end
         end
     end
     

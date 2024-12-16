@@ -1,4 +1,4 @@
-classdef (Abstract) Projector < BaseProcessor
+classdef (Abstract) Projector < BaseProcessor & BaseConfig
 
     properties (SetAccess = immutable)
         ID
@@ -28,7 +28,7 @@ classdef (Abstract) Projector < BaseProcessor
             arguments
                 id = "Test"
             end
-            obj@BaseProcessor()
+            obj@BaseProcessor('reset_fields', false, 'init', false)
             obj.ID = id;
             obj.StaticPatternPath = obj.DefaultStaticPatternPath;
         end
@@ -36,6 +36,7 @@ classdef (Abstract) Projector < BaseProcessor
         function set.StaticPatternPath(obj, path)
             obj.loadPattern(path)
             obj.StaticPatternPath = path;
+            obj.updateStaticPatternReal()
         end
 
         function close(obj)
@@ -67,6 +68,10 @@ classdef (Abstract) Projector < BaseProcessor
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
         end
+    end
+
+    methods (Abstract, Access = protected)
+        updateStaticPatternReal(obj)
     end
 
 end

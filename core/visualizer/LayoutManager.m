@@ -1,4 +1,4 @@
-classdef LayoutManager < BaseObject
+classdef LayoutManager < BaseManager
     %LAYOUTMANAGER Manage layout of axes for visualization
 
     properties (SetAccess = immutable)
@@ -26,7 +26,7 @@ classdef LayoutManager < BaseObject
             % Bound the fields to axes
             for p = obj.VisibleProp
                 if isprop(app, p)
-                    obj.(p) = options.(p)(app.(p));
+                    obj.(p) = options.(p)(app.(p), p);
                 else
                     obj.warn("Field %s is not a valid property of app.", p)
                 end

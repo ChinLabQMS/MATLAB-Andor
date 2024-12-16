@@ -9,6 +9,7 @@ classdef (Abstract) AxesUpdater < BaseProcessor
     end
     
     properties (SetAccess = immutable)
+        AxesID
         AxesHandle
     end
 
@@ -19,15 +20,17 @@ classdef (Abstract) AxesUpdater < BaseProcessor
     end
 
     methods
-        function obj = AxesUpdater(ax, varargin)
+        function obj = AxesUpdater(ax, id, varargin)
             arguments
                 ax = []
+                id = "TestAxes"
             end
             arguments (Repeating)
                 varargin
             end
             obj@BaseProcessor(varargin{:})
             obj.AxesHandle = ax;
+            obj.AxesID = id;
         end
 
         function update(obj, Live)
@@ -50,13 +53,6 @@ classdef (Abstract) AxesUpdater < BaseProcessor
             obj.warn("[%s %s] Not found in Live data.", obj.CameraName, obj.ImageLabel)           
         end
 
-        function config(obj, varargin)
-            config@BaseProcessor(obj, varargin{:})
-            if ~isempty(obj.LiveHandle)
-                obj.update(obj.LiveHandle)
-            end
-        end
-
         function clear(obj)
             if isempty(obj.AxesHandle)
                 return
@@ -73,6 +69,14 @@ classdef (Abstract) AxesUpdater < BaseProcessor
             PlotData.YData = obj.GraphHandle.YData; 
             PlotData.Config = obj.struct(obj.ConfigurableProp); %#ok<STRNU>
             uisave("PlotData", "PlotData.mat")
+        end
+    end
+
+    methods (Access = protected)
+        function init(obj)
+            if ~isempty(obj.LiveHandle)
+                obj.update(obj.LiveHandle)
+            end
         end
     end
 

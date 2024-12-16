@@ -9,6 +9,7 @@ classdef (Abstract) BaseStorage < BaseObject
         Andor19330
         Andor19331
         Zelux
+        DMD
     end
     
     % Handles to track acquisition settings
@@ -68,7 +69,7 @@ classdef (Abstract) BaseStorage < BaseObject
             end
             s.AcquisitionConfig = obj.AcquisitionConfig.struct();
             if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
-                s.AcqusitionConfig.(obj.MaxIndexProp) = obj.CurrentIndex;
+                s.AcquisitionConfig.(obj.MaxIndexProp) = obj.CurrentIndex;
             end
             for camera = obj.ConfigurableProp
                 if isempty(obj.(camera))
@@ -79,7 +80,9 @@ classdef (Abstract) BaseStorage < BaseObject
                 if options.completed_only && (obj.CurrentIndex < obj.MaxIndex)
                     for label = string(fields(s.(camera)))'
                         if label == "Config"
-                            s.(camera).Config.DataTimestamp = s.(camera).Config.DataTimestamp(1: obj.CurrentIndex);
+                            if isfield(s.(camera).Config, "DataTimestamp")
+                                s.(camera).Config.DataTimestamp = s.(camera).Config.DataTimestamp(1: obj.CurrentIndex);
+                            end
                         else
                             s.(camera).(label) = obj.removeIncomplete(s.(camera).(label));
                         end
@@ -106,19 +109,27 @@ classdef (Abstract) BaseStorage < BaseObject
                 obj.(camera).Config.CameraName = camera;
                 obj.(camera).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(camera);
                 obj.(camera).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
-                acquisition_labels = string(fields(obj.(camera).Config.AcquisitionNote))';
-                obj.initAcquisitionStorage(camera, acquisition_labels)
+                labels = string(fields(obj.(camera).Config.AcquisitionNote))';
+                obj.initAcquisitionStorage(camera, labels)
                 if isfield(obj.AcquisitionConfig.AnalysisNote, camera)
                     obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
                     analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
                     obj.initAnalysisStorage(camera, analysis_labels)
                 end
             end
-            obj.info("Storage initialized for %d cameras, total memory is %g MB.", ...
-                     length(obj.AcquisitionConfig.ActiveCameras), obj.MemoryUsage)
+            for projector = obj.AcquisitionConfig.Projectors
+                obj.(projector).Config = obj.CameraManager.(projector).struct();
+                obj.(projector).Config.ProjectorName = projector;
+                if ismember(projector, obj.AcquisitionConfig.ActiveProjectors)
+                    obj.(projector).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
+                end
+            end
+            obj.info("Storage initialized for %d devices, total memory is %g MB.", ...
+                     length(obj.AcquisitionConfig.ActiveDevices), obj.MemoryUsage)
+            
         end
 
-        % Add new data to the storage
+        % Add new acquired image data to the storage
         function add(obj, new, options)
             arguments
                 obj
@@ -150,7 +161,8 @@ classdef (Abstract) BaseStorage < BaseObject
                 obj.info('New data added to index %d in %.3f s', obj.CurrentIndex, toc(timer))
             end
         end
-
+        
+        % Configure the storage to a structure or another storage
         function config(obj, data, options)
             arguments
                 obj

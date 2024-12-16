@@ -7,10 +7,10 @@ function [xc, yc, xw, yw, gfitx, gfity, signal_x, signal_y] = fitGaussXY(signal,
     arguments (Repeating)
         varargin
     end
-    signal_x = sum(signal, 2);
+    signal_x = sum(signal, 2)';
     signal_y = sum(signal, 1);
-    gfitx = fitGauss1D(signal_x(:)', x_range, varargin{:});
-    gfity = fitGauss1D(signal_y(:)', y_range, varargin{:});
+    gfitx = fitGauss1D(signal_x, x_range, varargin{:});
+    gfity = fitGauss1D(signal_y, y_range, varargin{:});
     xc = gfitx.x0;
     yc = gfity.x0;
     xw = gfitx.s1;

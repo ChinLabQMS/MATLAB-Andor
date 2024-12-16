@@ -9,9 +9,9 @@ classdef DMD < Projector
         DefaultStaticPatternPath = "calibration/example_pattern/DMD_RGB.bmp"
     end
 
-    methods (Access = protected)
-        function updateStaticPatternPath(obj, path)
-            updateStaticPatternPath@ProjectorConfig(obj, path)
+    methods (Access = protected, Hidden)
+        function updateStaticPatternReal(obj)
+            obj.StaticPatternReal = obj.StaticPattern;
         end
     end
 

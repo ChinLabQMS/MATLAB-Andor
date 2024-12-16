@@ -89,7 +89,8 @@ classdef BaseObject < handle
                         obj.(args{i}) = args{i + 1};
                         names = names + " " + args{i};
                     catch me
-                        obj.warn2("Error occurs during setting property [%s]\n\t%s", args{i}, me.message)
+                        obj.warn2("Error occurs during setting property [%s]\n\t%s\n", args{i}, me.message)
+                        rethrow(me)
                     end
                 elseif ~struct_input
                     if isprop(obj, args{i})

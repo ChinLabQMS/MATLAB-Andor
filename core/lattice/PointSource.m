@@ -30,13 +30,14 @@ classdef PointSource < BaseProcessor
 
     properties (SetAccess = immutable)
         ID
-    end
-
-    properties (SetAccess = {?BaseObject})
-        RayleighResolution
+        NA
+        PixelSize
+        ImagingWavelength
+        Magnification
     end
 
     properties (SetAccess = protected)
+        RayleighResolution
         IdealPSFGauss
         IdealPSFAiry
         IdealPSFGaussPeakIntensity
@@ -65,19 +66,22 @@ classdef PointSource < BaseProcessor
     end
 
     methods
-        function obj = PointSource(id, resolution)
+        function obj = PointSource(id, pixel_size, wavelength, magnification, na)
             arguments
                 id = "Test"
-                resolution = 4.43
+                pixel_size = 13
+                wavelength = 0.852
+                magnification = 89
+                na = 0.8
             end
-            obj@BaseProcessor("RayleighResolution", resolution)
             obj.ID = id;
-        end
-
-        function set.RayleighResolution(obj, resolution)
-            obj.RayleighResolution = resolution;
-            obj.reset()
-            obj.updateProp2Resolution()
+            obj.NA = na;
+            obj.PixelSize = pixel_size;
+            obj.ImagingWavelength = wavelength;
+            obj.Magnification = magnification;
+            obj.RayleighResolution =  0.61 * obj.ImagingWavelength / obj.NA * obj.Magnification / obj.PixelSize;
+            [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
+            [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
         end
 
         function fit(obj, img_data, opt, opt1, opt2)
@@ -408,7 +412,7 @@ classdef PointSource < BaseProcessor
             ylabel('X')
             title(sprintf('Real PSF, max: %.5g', max(obj.DataPSF(:))))
             ax3 = subplot(2, 3, 3);
-            imagesc2(obj.DataYRange, obj.DataXRange, log(obj.DataPSF - min(obj.DataPSF(:)) + 0.001))
+            imagesc2(obj.DataYRange, obj.DataXRange, log(obj.DataPSF - min(obj.DataPSF(:)) + 1))
             xlabel('Y')
             ylabel('X')
             title('Real PSF (log)')
@@ -554,17 +558,12 @@ classdef PointSource < BaseProcessor
             val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFAiryPeakIntensity);
         end
 
-        function val = get.RayleighResolutionGaussSigma(obj)
-            val = obj.RayleighResolution / 2.9;
+        function val = get.RayleighResolutionGaussSigma(Lat)
+            val = Lat.RayleighResolution / 2.9;
         end
     end
 
     methods (Access = protected, Hidden)
-        function updateProp2Resolution(obj)
-            [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
-            [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
-        end
-
         function label = getStatusLabel(obj)
             label = sprintf('%s (%s)', class(obj), obj.ID);
         end

@@ -2,6 +2,9 @@
 % Goal: Generate a file containing lattice calibration for different 
 % cameras. Lattice calibrations are labeled as its corresponding camera
 % name.
+% The physical lattice spacing is assumed to be equal for all the
+% frames, which is 2*0.935/(3*sin(45 deg)) = 0.8815 um. This value
+% serves as a ruler to calibrate the imaging magnification.
 
 % Note that this script is for **FIRST** calibration that starts from no
 % prior knowledge of the lattice geometry. Script_3 is available for 
@@ -15,7 +18,7 @@
 
 % Both lattice calibration (V, R) and PSF calibration are necessary to
 % reconstruct counts at a given lattice site. To calibrate PSF, run the
-% script_4.
+% script_6.
 
 %% Create a LatCalibrator object
 % Configurable settings:
@@ -30,9 +33,9 @@
 %                  calibration
 
 clear; clc; close all
-p = LatCalibrator( ...
-    "LatCalibFilePath", [], ... 
-    "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2.mat", ...
+p = LatCalibrator( ... 
+    "LatCalibFilePath", [], ...
+    "DataPath", "calibration/example_data/20241205_example_data.mat", ...% "data/2024/12 December/20241205/sparse_with_532_r=2.mat", ...
     "InitCameraName", ["Andor19330", "Andor19331", "Zelux", "DMD"], ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"]);
@@ -61,11 +64,16 @@ close all
 p.calibrate("Andor19331", [167, 271; 123, 207], 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
 
 %% Zelux: Plot FFT of the entire image
+% Note that Zelux image has larger magnification and more noisy.
+% Discretization improves the signal for atom image, but not for lattice
+% images.
+
 close all
 p.plotFFT("Zelux")
 
 %% Zelux: Input the peaks positions
-% Input in the orientation similar to Andor19330
+% Input in the orientation similar to Andor19330 to align lattice vectors
+% Set 'binarize' to 0 to disable binarization in the calibration
 
 close all
 p.calibrate("Zelux", [658, 565; 714, 595], 'binarize', 0, 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
@@ -81,8 +89,9 @@ p.calibrateO(20, 'sites', Lattice.prepareSite('hex', 'latr', 2), 'plot_diagnosti
 p.save()
 
 %% [IMPORTANT] Update the class definition
+% Update the 'LatCalibFilePath' in those classes after each (re)calibration
 % - Analyzer: "/core/analysis/Analyzer.m"
 %       This is to use the new calibration in the live analysis
-% - LatCalibrator: "/core/postprocess/LatCalibrator.m"
+% - LatProcessor: "/core/postprocess/LatProcessor.m"
 %       This is to use the new calibration as default for future 
-%       re-calibration.
+%       lattice-related post-analysis

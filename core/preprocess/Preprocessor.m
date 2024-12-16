@@ -93,9 +93,9 @@ classdef Preprocessor < BaseProcessor
         end
 
         function [Signal, Leakage, Noise] = processData(obj, Data, varargin)
-            Signal = struct('AcquisitionConfig', Data.AcquisitionConfig);
-            Leakage = struct('AcquisitionConfig', Data.AcquisitionConfig);
-            Noise = struct('AcquisitionConfig', Data.AcquisitionConfig);
+            Signal = Data;
+            Leakage = Data;
+            Noise = Data;
             active_cameras = SequenceRegistry.getActiveCameras(Data.AcquisitionConfig.SequenceTable);
             for camera = active_cameras
                 [Signal.(camera), Leakage.(camera), Noise.(camera)] = obj.processSingleData(Data.(camera), varargin{:});

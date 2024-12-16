@@ -1,4 +1,4 @@
-classdef CameraManager < BaseObject
+classdef CameraManager < BaseManager
     %CAMERAMANAGER Manage multiple cameras and projectors
 
     properties (SetAccess = immutable)

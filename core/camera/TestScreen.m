@@ -9,4 +9,10 @@ classdef TestScreen < Projector
         DefaultStaticPatternPath = "calibration/example_pattern/TestScreen_helloworld_1080x1920.bmp"
     end
     
+    methods (Access = protected, Hidden)
+        function updateStaticPatternReal(obj)
+            obj.StaticPatternReal = obj.StaticPattern;
+        end
+    end
+
 end

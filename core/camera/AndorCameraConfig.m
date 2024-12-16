@@ -1,4 +1,4 @@
-classdef AndorCameraConfig < BaseObject
+classdef AndorCameraConfig < BaseConfig
     % Configuration file for AndorCamera
     
     properties (SetAccess = {?BaseObject})
@@ -7,8 +7,7 @@ classdef AndorCameraConfig < BaseObject
         XPixels = 1024
         YPixels = 1024
         Cropped = false
-        FastKinetic = false
-        FastKineticSeriesLength = 2
+        NumSubFrames = 1
         HSSpeed = 2  % Horizontal speed. 0 = 5 MHz, 1 = 3 MHz, 2 = 1 MHz, 3 = 50 kHz
         VSSpeed = 1  % Vertical Shift speed. 0 = 2.25 us, 1 = 4.25 us, 2 = 8.25 us, 3 = 16.25 us, 4 = 32.25 us, 5 = 64.25 us
     end
@@ -20,30 +19,27 @@ classdef AndorCameraConfig < BaseObject
     end
 
     properties (Dependent)
+        FastKinetic
+        FastKineticSeriesLength
         FastKineticExposedRows
         FastKineticOffset
-        NumSubFrames
     end
 
     methods
-        function rows = get.FastKineticExposedRows(obj)
-           rows = floor(obj.XPixels / obj.FastKineticSeriesLength);
+        function val = get.FastKinetic(obj)
+            val = obj.NumSubFrames > 1;
         end
 
-        function offset = get.FastKineticOffset(obj)
-           offset = obj.XPixels - obj.FastKineticExposedRows;
+        function val = get.FastKineticSeriesLength(obj)
+            val = obj.NumSubFrames;
+        end
+        
+        function val = get.FastKineticExposedRows(obj)
+           val = floor(obj.XPixels / obj.NumSubFrames);
         end
 
-        function val = get.NumSubFrames(obj)
-            if obj.FastKinetic
-                val = obj.FastKineticSeriesLength;
-            else
-                val = 1;
-            end
-        end
-
-        function s = struct(obj)
-            s = struct@BaseObject(obj, obj.VisibleProp);
+        function val = get.FastKineticOffset(obj)
+           val = obj.XPixels - obj.FastKineticExposedRows;
         end
     end
 
