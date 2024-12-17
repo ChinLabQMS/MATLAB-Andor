@@ -77,6 +77,10 @@ classdef (Abstract) AxesUpdater < BaseProcessor
                 obj.update(obj.LiveHandle)
             end
         end
+        
+        function label = getStatusLabel(obj)
+            label = string(class(obj)) + string(obj.AxesID);
+        end
     end
 
     methods (Access = protected, Abstract)

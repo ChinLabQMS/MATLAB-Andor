@@ -32,13 +32,17 @@ classdef BaseObject < handle
         end
 
         % (Iterative) converts the object to a (value class) structure
-        function s = struct(obj, fields)
+        function s = struct(obj, fields, options)
             arguments
                 obj
                 fields = obj.ParameterProp % Default is all parameters, i.e. constant + configurable
+                options.exclude = string.empty
             end
             s = struct();
             for f = fields
+                if ismember(f, options.exclude)
+                    continue
+                end
                 if ~isprop(obj, f)
                     obj.warn("[%s] is not a property of class.", f)
                     continue

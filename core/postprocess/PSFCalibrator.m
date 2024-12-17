@@ -6,6 +6,7 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
     properties (SetAccess = {?BaseObject})
         PSFCameraList = ["Andor19330", "Andor19331", "Zelux"]
         PSFImageLabel = ["Image", "Image", "Pattern_532"]
+        PSFInitRatio = [1.3, 1.5, 4]
     end
 
     properties (SetAccess = protected)
@@ -19,13 +20,24 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
             obj@LatProcessor(varargin{:}, 'reset_fields', true, 'init', true)
         end
 
-        function fit(obj, camera, varargin)
+        function fit(obj, camera, idx_range, varargin)
+            arguments
+                obj
+                camera
+                idx_range = []
+            end
+            arguments (Repeating)
+                varargin
+            end
+            if isempty(idx_range)
+                idx_range = 1:size(obj.Stat.(camera), 3);
+            end
             p = obj.PSFCalib.(camera);
-            signal = obj.Stat.(camera);
+            signal = obj.Stat.(camera)(:, :, idx_range);
             p.fit(signal, varargin{:})
         end
 
-        function plot(obj, index)
+        function plotSignal(obj, index)
             if nargin == 1
                 index = 1;
             end
@@ -39,30 +51,30 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
             end
         end
 
-        function plotPSF(obj, camera)
-            obj.PSFCalib.(camera).plot()
-        end
-
-         % Save the calibration result to file
-        function save(obj, filename)
+        % Save the calibration result to file
+        function save(obj, filename, options)
             arguments
                 obj
                 filename = sprintf("calibration/PSFCalib_%s", datetime("now", "Format","uuuuMMdd"))
+                options.clear_before_save = true
             end
+            calib = obj.PSFCalib;
+            calib.Config = obj.struct();
             for camera = obj.PSFCameraList
-                if isempty(obj.PSFCalib.(camera).PSF)
+                if isempty(calib.(camera).PSF)
                     obj.warn2("Camera %s is not calibrated.", camera)
                 end
+                if options.clear_before_save
+                    calib.(camera).clear()
+                end
             end
-            PSFAll = obj.PSFCalib;
-            PSFAll.Config = obj.struct();
             if filename.endsWith('.mat')
                 filename = filename.extractBefore('.mat');
             end
             if isfile(filename + ".mat")
                 filename = filename + sprintf("_%s", datetime("now", "Format", "HHmmss"));
             end
-            save(filename, "-struct", "PSFAll")
+            save(filename, "-struct", "calib")
             obj.info("PSF calibration saved as '%s'.", filename)
         end
     end
@@ -82,7 +94,8 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
                 obj.PSFCalib.(camera) = PointSource(camera, ...
                     obj.Signal.(camera).Config.PixelSize, ...
                     double(wavelength) / 1000, ...
-                    obj.LatCalib.(camera).Magnification);
+                    obj.LatCalib.(camera).Magnification, ...
+                    obj.PSFInitRatio(i));
                 obj.info('Empty PointSource object created for camera %s.', camera)
             end
         end

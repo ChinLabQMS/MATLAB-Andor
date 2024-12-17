@@ -5,25 +5,28 @@ classdef PointSource < BaseProcessor
         Fit_Reset = true
         Fit_AutoResetWhenReachNumPeaks = 200
         Fit_AutoResetWhenReachRunNum = 5
+        FitPeaksAroundPos_Verbose = false
         FindPeaks_BinThresholdMin = 20
         FindPeaks_BinThresholdMax = 50
         FindPeaks_BinThresholdPerct = 0.15
         FindPeaks_BinConnectivity = 8
         FindPeaks_FilterAreaMin = 4
-        FindPeaks_DbscanDist = 2.5 % Multiply by RayleighResolution
+        FindPeaks_DbscanDist = 2 % Multiply by RayleighResolution
         FindPeaks_DbscanSingleOnly = false
         FindPeaks_FilterIntensityMin = 50
-        FindPeaks_FilterBoxSizeMin = 0.3 % Multiply by RayleighResolution
-        FindPeaks_FilterBoxSizeMax = 3.4 % Multiply by RayleighResolution
-        FindPeaks_GaussFitCropRadius = 2.3 % Multiply by RayleighResolution
-        FindPeaks_FilterGaussWidthMax = 0.8 % Multiply by RayleighResolution
+        FindPeaks_FilterBoxSizeMin = 0.2 % Multiply by RayleighResolution
+        FindPeaks_FilterBoxSizeMax = 2.5 % Multiply by RayleighResolution
+        FindPeaks_GaussFitCropRadius = 2 % Multiply by RayleighResolution
+        FindPeaks_FilterGaussWidthMax = 0.5 % Multiply by RayleighResolution
         FindPeaks_RefineMethod = "Gaussian"
         FindPeaks_PlotDiagnostic = false
-        MergePeaks_SuperSample = 50 % Divided by RayleighResolution
-        MergePeaks_CropRadius = 4.5 % Multiply by RayleighResolution 
+        MergePeaks_SuperSample = 70 % Divided by RayleighResolution
+        MergePeaks_CropRadius = 3 % Multiply by RayleighResolution 
+        Update_WarnThreshold = 0.1
         Update_NormalizeMethod = "Gaussian" 
-        Update_GaussFitCropRadius = 2.5 % Multiply by RayleighResolution 
-        Update_GaussFitSubSample = 50 % Divided by RayleighResolution
+        Update_GaussFitCropRadius = 2 % Multiply by RayleighResolution 
+        Update_GaussFitSubSample = 70 % Divided by RayleighResolution
+        Update_UpdateResolutionRatio = false
         Plot_ShowGaussSurface = true
         Plot_ShowIdealPSF = false
         Plot_LineCutRange = -10:0.01:10
@@ -35,6 +38,10 @@ classdef PointSource < BaseProcessor
         PixelSize
         ImagingWavelength
         Magnification
+    end
+
+    properties (SetAccess = {?BaseObject})
+        InitResolutionRatio
     end
 
     properties (SetAccess = protected)
@@ -60,6 +67,7 @@ classdef PointSource < BaseProcessor
 
     properties (Dependent)
         RayleighResolutionGaussSigma
+        GaussResolutionRatio
         DataPSFNormalized
         DataNumPeaks
         DataPeakCount
@@ -70,12 +78,13 @@ classdef PointSource < BaseProcessor
     end
 
     methods
-        function obj = PointSource(id, pixel_size, wavelength, magnification, na)
+        function obj = PointSource(id, pixel_size, wavelength, magnification, init_resol, na)
             arguments
                 id = "Test"
                 pixel_size = 13
                 wavelength = 0.852
                 magnification = 89
+                init_resol = 1
                 na = 0.8
             end
             obj.ID = id;
@@ -86,9 +95,19 @@ classdef PointSource < BaseProcessor
             obj.RayleighResolution =  0.61 * obj.ImagingWavelength / obj.NA * obj.Magnification / obj.PixelSize;
             [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
             [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
+            obj.InitResolutionRatio = init_resol;
         end
 
-        function fit(obj, img_data, opt, opt1, opt2)
+        function stats_all = fitPeaksAroundPos(obj, img_all, positions, options)
+            arguments
+                obj
+                img_all 
+                positions = []
+                options.verbose = obj.FitPeaksAroundPos_Verbose
+            end
+        end
+
+        function fit(obj, img_data, opt, opt1, opt2, opt3)
             arguments
                 obj
                 img_data
@@ -100,22 +119,28 @@ classdef PointSource < BaseProcessor
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
                 opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
                 opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
-                opt1.dbscan_distance = obj.RayleighResolution * obj.FindPeaks_DbscanDist
+                opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
                 opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
                 opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
-                opt1.filter_box_min = obj.RayleighResolution * obj.FindPeaks_FilterBoxSizeMin
-                opt1.filter_box_max = obj.RayleighResolution * obj.FindPeaks_FilterBoxSizeMax
-                opt1.gauss_crop_radius = round(obj.RayleighResolution * obj.FindPeaks_GaussFitCropRadius)
-                opt1.filter_gausswid_max = obj.RayleighResolution * obj.FindPeaks_FilterGaussWidthMax
+                opt1.filter_box_min = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMin
+                opt1.filter_box_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMax
                 opt1.refine_method = obj.FindPeaks_RefineMethod
+                opt1.gauss_refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussFitCropRadius)
+                opt1.filter_gausswid_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterGaussWidthMax
                 opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
                 opt1.verbose = obj.Fit_Verbose
-                opt2.super_sample = round(obj.MergePeaks_SuperSample / obj.RayleighResolution)
-                opt2.crop_radius = round(obj.MergePeaks_CropRadius * obj.RayleighResolution)
+                opt2.super_sample = round(obj.MergePeaks_SuperSample / (obj.InitResolutionRatio * obj.RayleighResolution))
+                opt2.crop_radius = round(obj.MergePeaks_CropRadius * (obj.InitResolutionRatio * obj.RayleighResolution))
+                opt3.warn_thres = obj.Update_WarnThreshold
+                opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
+                opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
+                opt3.normalize_method = obj.Update_NormalizeMethod
+                opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
             timer = tic;
             args1 = namedargs2cell(opt1);
             args2 = namedargs2cell(opt2);
+            args3 = namedargs2cell(opt3);
             obj.RunNumber = obj.RunNumber + 1;
             obj.DataLastImages = img_data;
             if opt.reset
@@ -130,7 +155,7 @@ classdef PointSource < BaseProcessor
             obj.DataLastStats = stats;
             if height(stats) > 0
                 [psf, x_range, y_range] = obj.mergePeaks(img_data, stats, args2{:});
-                obj.updatePSF(stats, psf, x_range, y_range)
+                obj.updatePSF(stats, psf, x_range, y_range, args3{:})
             else
                 obj.warn('No peak found from data!')
             end
@@ -149,14 +174,14 @@ classdef PointSource < BaseProcessor
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
                 opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
                 opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
-                opt1.dbscan_distance = obj.RayleighResolution * obj.FindPeaks_DbscanDist
+                opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
                 opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
                 opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
-                opt1.filter_box_min = obj.RayleighResolution * obj.FindPeaks_FilterBoxSizeMin
-                opt1.filter_box_max = obj.RayleighResolution * obj.FindPeaks_FilterBoxSizeMax
-                opt1.gauss_crop_radius = round(obj.RayleighResolution * obj.FindPeaks_GaussFitCropRadius)
-                opt1.filter_gausswid_max = obj.RayleighResolution * obj.FindPeaks_FilterGaussWidthMax
+                opt1.filter_box_min = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMin
+                opt1.filter_box_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMax
                 opt1.refine_method = obj.FindPeaks_RefineMethod
+                opt1.gauss_refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussFitCropRadius)
+                opt1.filter_gausswid_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterGaussWidthMax
                 opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
                 opt1.verbose = obj.Fit_Verbose
             end
@@ -225,10 +250,10 @@ classdef PointSource < BaseProcessor
                 stats.RefinedRSquare = nan(height(stats), 1);
                 for j = 1: height(stats)
                     center = round(stats.WeightedCentroid(j, :));
-                    x_range = center(2) + (-opt1.gauss_crop_radius(1): opt1.gauss_crop_radius(1));
-                    y_range = center(1) + (-opt1.gauss_crop_radius(end): opt1.gauss_crop_radius(end));
+                    x_range = center(2) + (-opt1.gauss_refine_radius(1): opt1.gauss_refine_radius(1));
+                    y_range = center(1) + (-opt1.gauss_refine_radius(end): opt1.gauss_refine_radius(end));
                     x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
-                    y_range = y_range((y_range > 0) & (y_range <= size(img_data, 1)));
+                    y_range = y_range((y_range > 0) & (y_range <= size(img_data, 2)));
                     spot = img_data(x_range, y_range);
                     switch opt1.refine_method
                         case "Gaussian"
@@ -237,6 +262,10 @@ classdef PointSource < BaseProcessor
                             stats.RefinedWidth(j, :) = gof.eigen_widths;
                             stats.RefinedAngle(j, :) = gof.eigen_angles;
                             stats.RefinedRSquare(j) = gof.rsquare;
+                        case "GaussXY"
+                            [xc, yc, xw, yw] = fitGaussXY(spot, x_range, y_range);
+                            stats.RefinedCentroid(j, :) = [yc, xc];
+                            stats.RefinedWidth(j, :) = sort([yw, xw]);
                         case "COM"
                             [xc, yc, xw, yw] = fitCenter2D(spot, x_range, y_range);
                             stats.RefinedCentroid(j, :) = [yc, xc];
@@ -244,14 +273,14 @@ classdef PointSource < BaseProcessor
                     end
                 end
                 stats.MaxRefinedWidth = stats.RefinedWidth(:, 2);
-                stats = stats(stats.MaxRefinedWidth < opt1.filter_gausswid_max, :);                
+                stats = stats(stats.MaxRefinedWidth < opt1.filter_gausswid_max, :);       
                 
                 % Add result to table
                 stats.ImageIndex = repmat(i, height(stats), 1);
                 stats_all = [stats_all; stats]; %#ok<AGROW>
                 
                 if opt1.plot_diagnostic
-                    plotPeaks(img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats)
+                    plotPeaks(obj.ID, img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats)
                 end
                 if opt1.verbose
                     obj.info('Found %d (%d/%d/%d/%d/%d) peaks, elapsed time is %g s.', ...
@@ -269,8 +298,8 @@ classdef PointSource < BaseProcessor
                 obj
                 img_all
                 stats
-                opt2.super_sample = round(obj.MergePeaks_SuperSample / obj.RayleighResolution)
-                opt2.crop_radius = round(obj.MergePeaks_CropRadius * obj.RayleighResolution)
+                opt2.super_sample = round(obj.MergePeaks_SuperSample / (obj.InitResolutionRatio * obj.RayleighResolution))
+                opt2.crop_radius = round(obj.MergePeaks_CropRadius * (obj.InitResolutionRatio * obj.RayleighResolution))
             end
             peaks = repmat(zeros(opt2.super_sample * (2*opt2.crop_radius + 1)), ...
                            1, 1, height(stats));
@@ -303,21 +332,29 @@ classdef PointSource < BaseProcessor
             psf = mean(peaks, 3);
         end
 
-        function updatePSF(obj, stats, psf, x_range, y_range, options)
+        function updatePSF(obj, stats, psf, x_range, y_range, opt3)
             arguments
                 obj
                 stats
                 psf
                 x_range = 1: size(psf, 1)
                 y_range = 1: size(psf, 2)
-                options.gauss_crop_radius = round(obj.RayleighResolution * obj.Update_GaussFitCropRadius)
-                options.gauss_sub_sample = round(obj.Update_GaussFitSubSample / obj.RayleighResolution)
-                options.normalize_method = obj.Update_NormalizeMethod
+                opt3.warn_thres = obj.Update_WarnThreshold
+                opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
+                opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
+                opt3.normalize_method = obj.Update_NormalizeMethod
+                opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
             if (~isempty(obj.DataXRange) && (~isequal(x_range, obj.DataXRange)) || ...
                     (~isempty(obj.DataYRange) && ~isequal(y_range, obj.DataYRange)))
                 obj.warn2('Unable to add fitted PSF to the existing result, range does not match. Reset result to add new data.')
                 obj.reset()
+            end
+            old_width = obj.DataWidthMean;
+            new_width = mean(stats.RefinedWidth); 
+            if ~isempty(old_width) && any(abs(new_width ./ old_width - 1) > opt3.warn_thres)
+                obj.warn('PSF width changed significantly from (%.3g, %.3g) to (%.3g, %.3g), consider reset the fitting.', ...
+                    old_width(1), old_width(2), new_width(1), new_width(2))
             end
             obj.DataXRange = x_range;
             obj.DataYRange = y_range;
@@ -328,21 +365,21 @@ classdef PointSource < BaseProcessor
             obj.DataStats = [obj.DataStats; stats];
             if isempty(obj.DataPSF)
                 obj.DataPSF = psf;
-                obj.DataWidthMean = mean(stats.RefinedWidth);
+                obj.DataWidthMean = new_width;
                 obj.DataWidthCov = cov(stats.RefinedWidth);
             else
                 obj.DataPSF = obj.DataPSF*old_weight + psf*new_weight;
-                obj.DataWidthMean = obj.DataWidthMean*old_weight + mean(stats.RefinedWidth)*new_weight;
+                obj.DataWidthMean = old_width*old_weight + new_width*new_weight;
                 obj.DataWidthCov = (obj.DataWidthCov*(old_num - 1) + cov(stats.RefinedWidth)*(new_num - 1))/(old_num + new_num - 1);
             end
-            fit_x = (x_range >= -options.gauss_crop_radius(1)) & (x_range <= options.gauss_crop_radius(1));
-            fit_y = (y_range >= -options.gauss_crop_radius(end)) & (y_range <= options.gauss_crop_radius(end));
+            fit_x = (x_range >= -opt3.gauss_crop_radius(1)) & (x_range <= opt3.gauss_crop_radius(1));
+            fit_y = (y_range >= -opt3.gauss_crop_radius(end)) & (y_range <= opt3.gauss_crop_radius(end));
             fit_data = obj.DataPSF(fit_x, fit_y);
             fit_x_range = x_range(fit_x);
             fit_y_range = y_range(fit_y);
             [obj.GaussPSF, obj.GaussGOF] = fitGauss2D(fit_data, fit_x_range, fit_y_range, ...
-                'cross_term', true, 'sub_sample', options.gauss_sub_sample, 'offset', 'linear');
-            switch options.normalize_method
+                'cross_term', true, 'sub_sample', opt3.gauss_sub_sample, 'offset', 'linear');
+            switch opt3.normalize_method
                 case "Gaussian"
                     sum_count = 2*pi*obj.GaussPSF.a* ...
                         obj.GaussGOF.eigen_widths(1)*obj.GaussGOF.eigen_widths(2);
@@ -352,21 +389,14 @@ classdef PointSource < BaseProcessor
             obj.DataSumCount = obj.DataSumCount*old_weight + sum_count*new_weight;
             [Y, X] = meshgrid(y_range, x_range);
             obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF / obj.DataSumCount, y, x);
+            if opt3.update_ratio
+                obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
+            end
         end
         
-        function disp(obj)
-            fprintf('%s: \n', obj.getStatusLabel())
-            s = obj.struct(["DataNumPeaks", "DataPeakCount", ...
-                            "DataSumCount", "DataWidthMean", ...
-                            "RayleighResolution", "RayleighResolutionGaussSigma", ...
-                            "StrehlRatioGauss", "StrehlRatioAiry"]);
-            disp(s)
-            if ~isempty(obj.GaussPSF)
-                fprintf('%s, Goodness of Gaussian fit:\n', obj.getStatusLabel())
-                disp(obj.GaussGOF)
-                fprintf('%s, Gaussian PSF fit results:\n', obj.getStatusLabel())
-                disp(obj.GaussPSF)
-            end
+        function clear(obj)
+            obj.DataLastImages = [];
+            obj.DataLastStats = [];
         end
 
         function reset(obj)
@@ -379,12 +409,59 @@ classdef PointSource < BaseProcessor
             obj.DataSumCount = 0;
             obj.DataStats = [];
         end
+        
+        function disp(obj)
+            fprintf('%s: \n', obj.getStatusLabel())
+            s = obj.struct(["DataNumPeaks", "DataPeakCount", "DataSumCount", "DataWidthMean", ...
+                            "RayleighResolution", "RayleighResolutionGaussSigma", "GaussResolutionRatio", ...
+                            "StrehlRatioGauss", "StrehlRatioAiry", "InitResolutionRatio"]);
+            disp(s)
+            if ~isempty(obj.GaussPSF)
+                fprintf('%s, Goodness of Gaussian fit:\n', obj.getStatusLabel())
+                disp(obj.GaussGOF)
+                fprintf('%s, Gaussian PSF fit results:\n', obj.getStatusLabel())
+                disp(obj.GaussPSF)
+            end
+        end
 
-        function varargout = plot(obj, opt)
+        function varargout = plot(obj, ax)
+            arguments
+                obj
+                ax = gca()
+            end
+            h = imagesc(ax, obj.DataYRange, obj.DataXRange, obj.DataPSF);
+            if nargout == 1
+                varargout{1} = h;
+            end
+        end
+
+        function varargout = plotV(obj, ax, options)
+            arguments
+                obj
+                ax = gca()
+                options.scale = 1
+            end
+            c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
+            v1 = options.scale * obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
+            v2 = options.scale * obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
+            hold(ax, "on")
+            h(1) = quiver(ax, 0, 0, v1(2), v1(1), ...
+                'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, ...
+                'DisplayName', sprintf("major width: %.3g", obj.GaussGOF.eigen_widths(1)));
+            h(2) = quiver(ax, 0, 0, v2(2), v2(1), ...
+                'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
+                'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)));
+            legend(ax, 'Interpreter', 'none')
+            if nargout == 1
+                varargout{1} = h;
+            end
+        end
+
+        function plotPSF(obj, opt)
             arguments
                 obj
                 opt.show_ideal_psf = obj.Plot_ShowIdealPSF
-                opt.surface_sub_sample = round(obj.Update_GaussFitSubSample / obj.RayleighResolution)
+                opt.surface_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
                 opt.show_gauss_surface = obj.Plot_ShowGaussSurface
                 opt.linecut_range = obj.Plot_LineCutRange
             end
@@ -395,7 +472,7 @@ classdef PointSource < BaseProcessor
                 obj.warn('No peak data stored.')
                 return
             end
-            h = figure;
+            figure
             sgtitle(sprintf('%s, Number of peaks: %d', obj.ID, obj.DataNumPeaks))
             x_idx = 1:opt.surface_sub_sample:length(obj.DataXRange);
             y_idx = 1:opt.surface_sub_sample:length(obj.DataYRange);
@@ -438,32 +515,19 @@ classdef PointSource < BaseProcessor
             legend()
             if opt.show_gauss_surface
                 axes(ax1)
-                plot(obj.GaussPSF, [x, y], z)
+                h = plot(obj.GaussPSF, [x, y], z);
+                h(2).MarkerSize = 2;
                 axis square
                 ylabel('Y')
                 xlabel('X')
                 title('Real PSF with Gaussian fit')
-                v1 = obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
-                v2 = obj.GaussGOF.eigen_widths(2) * obj.GaussGOF.eigen_vectors(:, 2);
                 for ax = [ax2, ax3]
-                    axes(ax)
-                    hold on
-                    quiver(0, 0, v1(2), v1(1), ...
-                        'LineWidth', 2, 'Color', 'r', 'MaxHeadSize', 10, ...
-                        'DisplayName', sprintf("major width: %.3g", obj.GaussGOF.eigen_widths(1)))
-                    quiver(0, 0, v2(2), v2(1), ...
-                        'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
-                        'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)))
-                    hold off
-                    legend()
+                    obj.plotV(ax)
                 end
             else
                 axes(ax1)
                 scatter3(x, y, z, 10, z, 'filled')
                 axis square
-            end
-            if nargout == 1
-                varargout{1} = h;
             end
         end
 
@@ -516,6 +580,9 @@ classdef PointSource < BaseProcessor
             figure
             scatter3(obj.DataStats.RefinedWidth(:, 1), obj.DataStats.RefinedWidth(:, 2), prob, 20, ...
                 obj.DataStats.MaxIntensity)
+            xlabel('Major width')
+            ylabel('Minor width')
+            zlabel('Normalized probability density')
         end
 
         function val = get.DataNumPeaks(obj)
@@ -550,6 +617,10 @@ classdef PointSource < BaseProcessor
             psf = obj.DataPSF / obj.DataSumCount;
         end
 
+        function val = get.RayleighResolutionGaussSigma(obj)
+            val = obj.RayleighResolution / 2.9;
+        end
+
         function val = get.StrehlRatioGauss(obj)
             if isempty(obj.GaussPSF)
                 val = nan;
@@ -566,8 +637,12 @@ classdef PointSource < BaseProcessor
             val = obj.GaussPSF.a / (obj.DataSumCount * obj.IdealPSFAiryPeakIntensity);
         end
 
-        function val = get.RayleighResolutionGaussSigma(Lat)
-            val = Lat.RayleighResolution / 2.9;
+        function val = get.GaussResolutionRatio(obj)
+            if isempty(obj.GaussPSF)
+                val = nan;
+                return
+            end
+            val = obj.GaussGOF.eigen_widths / obj.RayleighResolutionGaussSigma;
         end
     end
 
@@ -598,8 +673,9 @@ function [func, peak_val] = getIdealPSFAiry(resolution)
     peak_val = 1/total;
 end
 
-function plotPeaks(img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats5)
+function plotPeaks(id, img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats5)
     figure
+    sgtitle(id)
     subplot(2, 3, 1)
     imagesc2(img_bin.*img_data, 'title', sprintf('0.Discretized: %d', size(stats0, 1)))
     viscircles(stats0.WeightedCentroid, sqrt(stats0.Area)/2);

@@ -61,7 +61,7 @@ function fitCenter(live, info, options)
     live.Analysis.(info.camera).(info.label).XWidth = xw;
     live.Analysis.(info.camera).(info.label).YWidth = yw;
     if options.verbose
-        live.info("Fitting cloud centers takes %5.3f s.", toc(timer))
+        live.info("[%s %s] Fitting cloud centers takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
@@ -82,7 +82,7 @@ function fitGaussXY_new(live, info, options)
     live.Analysis.(info.camera).(info.label).SumX = {xsum};
     live.Analysis.(info.camera).(info.label).SumY = {ysum};
     if options.verbose
-        live.info("Fitting cloud centers (GaussXY) takes %5.3f s.", toc(timer))
+        live.info("[%s %s] Fitting cloud centers (GaussXY) takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
@@ -106,7 +106,7 @@ function calibLatR(live, info, varargin, options)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
     if options.verbose
-        live.info("Calibrating lattice R takes %5.3f s.", toc(timer))
+        live.info("[%s %s] Calibrating lattice R takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
@@ -137,7 +137,7 @@ function calibLatO(live, info, varargin, options)
     live.Analysis.(info.camera).(info.label).LatX = Lat.R(1);
     live.Analysis.(info.camera).(info.label).LatY = Lat.R(2);
     if options.verbose
-        live.info("Cross calibrating lattice R takes %5.3f s.", toc(timer))
+        live.info("[%s %s] Cross calibrating lattice R takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
@@ -161,15 +161,11 @@ function fitPSF(live, info, varargin, options)
         live.Analysis.(info.camera).(info.label).PSFGaussYWid = PS.GaussGOF.eigen_widths(2);
         live.Analysis.(info.camera).(info.label).StrehlRatioAiry = PS.StrehlRatioAiry;
         live.Analysis.(info.camera).(info.label).NumIsolatedPeaks = PS.DataNumPeaks;
-        live.Temporary.(info.camera).(info.label).PSFCenters = PS.DataLastStats.RefinedCentroid;
-        live.Temporary.(info.camera).(info.label).PSFWidth = PS.DataLastStats.MaxRefinedWidth;
-        live.Temporary.(info.camera).(info.label).PSFImage = PS.DataPSF;
-        live.Temporary.(info.camera).(info.label).PSFXRange = PS.DataXRange;
-        live.Temporary.(info.camera).(info.label).PSFYRange = PS.DataYRange;
     end
     if options.verbose
-        live.info("Fitting PSF takes %5.3f s.", toc(timer))
+        live.info("[%s %s] Fitting PSF takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
 %% Other utilities functions
+

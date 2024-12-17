@@ -515,7 +515,7 @@
             h(2) = quiver(ax, options.origin(2), options.origin(1), options.scale * Lat.V(2, 2), options.scale * Lat.V(2, 1), 'off', ...
                 'LineWidth', 2, 'DisplayName', sprintf("%s: V2", Lat.ID), 'MaxHeadSize', 10, 'Color', 'm');
             if options.add_legend
-                legend('Interpreter', 'none')
+                legend(ax, 'Interpreter', 'none')
             end
             if nargout == 1
                 varargout{1} = h;
@@ -820,11 +820,4 @@ function plotTransformation(Lat, Lat2, R_init, signal, signal2, best_transformed
     Lat.plotV()
     viscircles(R_init(2:-1:1), 0.5*Lat.V_norm, 'Color', 'w', ...
         'EnhanceVisibility', false, 'LineWidth', 0.5);
-end
-
-% Function for preserving hold behavior on exit
-function preserveHold(was_hold_on,ax)
-    if ~was_hold_on
-        hold(ax,'off');
-    end
 end

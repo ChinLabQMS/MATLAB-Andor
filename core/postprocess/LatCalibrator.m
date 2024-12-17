@@ -214,20 +214,20 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 obj
                 filename = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
             end
+            calib = obj.LatCalib;
+            calib.Config = obj.struct();
             for camera = obj.InitCameraName
-                if isempty(obj.LatCalib.(camera).K)
+                if isempty(calib.(camera).K)
                     obj.warn2("Camera %s is not calibrated.", camera)
                 end
             end
-            LatAll = obj.LatCalib;
-            LatAll.Config = obj.struct();
             if filename.endsWith('.mat')
                 filename = filename.extractBefore('.mat');
             end
             if isfile(filename + ".mat")
                 filename = filename + sprintf("_%s", datetime("now", "Format", "HHmmss"));
             end
-            save(filename, "-struct", "LatAll")
+            save(filename, "-struct", "calib")
             obj.info("Lattice calibration saved as '%s'.", filename)
         end
 
