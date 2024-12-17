@@ -77,14 +77,15 @@ classdef (Abstract) BaseSequencer < BaseObject
                 obj.info2("Sequence completed in %.3f s.", toc(timer))
             end
         end
-
+        
+        % Perform input arguments parsing at the beginning
         function initSequence(obj)
             obj.StatStorage.init()
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.init()
             end
             obj.Timer = tic;
-            obj.Live = LiveData(obj.CameraManager, obj.Analyzer.LatCalib);
+            obj.Live = LiveData(obj.CameraManager, obj.Analyzer.LatCalib, obj.Analyzer.PSFCalib);
             active_sequence = obj.AcquisitionConfig.ActiveSequence;
             steps = {};
             for i = 1: height(active_sequence)
@@ -139,9 +140,10 @@ classdef (Abstract) BaseSequencer < BaseObject
         end
 
         function preprocess(obj, camera, label, varargin)
-            [signal, background] = obj.Preprocessor.process(obj.Live.Raw.(camera).(label), varargin{:});
+            [signal, background, noise] = obj.Preprocessor.process(obj.Live.Raw.(camera).(label), varargin{:});
             obj.Live.Signal.(camera).(label) = signal;
             obj.Live.Background.(camera).(label) = background;
+            obj.Live.Noise.(camera).(label) = noise;
         end
         
         function analyze(obj, ~, ~, varargin)

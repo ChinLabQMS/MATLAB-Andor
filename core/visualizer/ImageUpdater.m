@@ -13,7 +13,18 @@ classdef ImageUpdater < AxesUpdater
         Content_TransformScaleV = 5
     end
 
+    properties (SetAccess = protected)
+        AddonHandle
+    end
+
     methods (Access = protected)
+        function resetAddon(obj)
+            if ~isempty(obj.AddonHandle)
+                delete(obj.AddonHandle)
+                obj.AddonHandle = [];
+            end
+        end
+
         function updateContent(obj, Live, options)
             arguments
                 obj
@@ -23,9 +34,9 @@ classdef ImageUpdater < AxesUpdater
                 options.transform_scaleV = obj.Content_TransformScaleV
             end
             plotData(obj, Live)
+            obj.resetAddon()
             switch obj.FuncName
                 case "None"
-                    delete(obj.AddonHandle)
                 case "Lattice"
                     plotLattice(obj, Live, 'lattice_hexr', options.lattice_hexr)
                 case "Lattice All"
@@ -36,6 +47,7 @@ classdef ImageUpdater < AxesUpdater
                         'transform_cropRsite', options.transform_cropRsite, ...
                         'transform_scaleV', options.transform_scaleV)
                 case "PSF"
+                    plotPSF(obj, Live)
                 otherwise
                     obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
@@ -43,6 +55,8 @@ classdef ImageUpdater < AxesUpdater
     end
 
 end
+
+%% Functions for updating the image
 
 function plotData(obj, Live)
     data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
@@ -64,7 +78,6 @@ function plotLattice(obj, Live, options1)
         options1.lattice_hexr
     end
     Lat = getLatCalib(obj, Live);
-    delete(obj.AddonHandle)
     obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
             Lattice.prepareSite("hex", "latr", options1.lattice_hexr), 'filter', false);
 end
@@ -78,8 +91,6 @@ function plotLatticeAll(obj, Live, options1)
     Lat = getLatCalib(obj, Live);
     num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
     x_size = Live.CameraManager.(obj.CameraName).Config.XPixels;
-    delete(obj.AddonHandle)
-    obj.AddonHandle = gobjects(num_frames, 1);
     for i = 1: num_frames
         obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
             Lattice.prepareSite("hex", "latr", options1.lattice_hexr), ...
@@ -103,12 +114,29 @@ function plotTransformedLattice(obj, Live, options)
         Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
     c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
     hold(obj.AxesHandle, "on")
-    delete(obj.AddonHandle)
     obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
     obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
         Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
     obj.AddonHandle(3:4) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
 end
+
+function plotPSF(obj, Live)
+    try
+        centers = Live.Temporary.(obj.CameraName).(obj.ImageLabel).PSFCenters;
+        radius = 2*Live.Temporary.(obj.CameraName).(obj.ImageLabel).PSFWidth;
+        x_range = Live.Temporary.(obj.CameraName).(obj.ImageLabel).PSFXRange;
+        y_range = Live.Temporary.(obj.CameraName).(obj.ImageLabel).PSFYRange;
+        psf = Live.Temporary.(obj.CameraName).(obj.ImageLabel).PSFImage;
+        c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
+        hold(obj.AxesHandle, "on")
+        obj.AddonHandle(1) = viscircles(obj.AxesHandle, centers, radius, 'LineWidth', 0.5);
+        obj.AddonHandle(2) = imagesc(obj.AxesHandle, y_range, x_range, psf);
+    catch
+        obj.warn2("[%s %s] Unable to display PSF. Please check if 'fitPSF' is set in SequenceTable.", obj.CameraName, obj.ImageLabel)
+    end
+end
+
+%% Other utilities functions
 
 function Lat = getLatCalib(obj, Live)
     Lat = Live.LatCalib.(obj.CameraName);

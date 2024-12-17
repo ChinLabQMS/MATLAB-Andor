@@ -20,20 +20,16 @@ classdef (Abstract) DataProcessor < BaseProcessor
         end
     end
 
-    methods (Access = protected, Sealed, Hidden)
+    methods (Access = protected, Hidden)
         function loadData(obj, path)
             obj.checkFilePath(path, 'DataPath')
             Data = load(path, "Data").Data;
             obj.info("Dataset loaded from '%s'", path)
             [obj.Signal, obj.Leakage, obj.Noise] = Preprocessor().process(Data);
         end
-    end
 
-    methods (Access = protected, Hidden)
         function init(obj)
-            if isempty(obj.DataPath)
-                obj.error('DataPath unset!')
-            end
+            obj.assert(~isempty(obj.DataPath), 'DataPath is unset!')
         end
     end
     

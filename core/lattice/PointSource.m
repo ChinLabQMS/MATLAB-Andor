@@ -1,6 +1,10 @@
 classdef PointSource < BaseProcessor
 
     properties (Constant)
+        Fit_Verbose = false
+        Fit_Reset = true
+        Fit_AutoResetWhenReachNumPeaks = 200
+        Fit_AutoResetWhenReachRunNum = 5
         FindPeaks_BinThresholdMin = 20
         FindPeaks_BinThresholdMax = 50
         FindPeaks_BinThresholdPerct = 0.15
@@ -20,9 +24,6 @@ classdef PointSource < BaseProcessor
         Update_NormalizeMethod = "Gaussian" 
         Update_GaussFitCropRadius = 2.5 % Multiply by RayleighResolution 
         Update_GaussFitSubSample = 50 % Divided by RayleighResolution
-        Fit_Verbose = true
-        Fit_Reset = false
-        Fit_AutoResetWhenReachNumPeaks = inf
         Plot_ShowGaussSurface = true
         Plot_ShowIdealPSF = false
         Plot_LineCutRange = -10:0.01:10
@@ -37,6 +38,7 @@ classdef PointSource < BaseProcessor
     end
 
     properties (SetAccess = protected)
+        RunNumber
         RayleighResolution
         IdealPSFGauss
         IdealPSFAiry
@@ -50,6 +52,8 @@ classdef PointSource < BaseProcessor
         DataYRange
         DataSumCount = 0
         DataStats
+        DataLastStats
+        DataLastImages
         DataWidthMean
         DataWidthCov
     end
@@ -89,7 +93,8 @@ classdef PointSource < BaseProcessor
                 obj
                 img_data
                 opt.reset = obj.Fit_Reset
-                opt.auto_reset_freq = obj.Fit_AutoResetWhenReachNumPeaks
+                opt.auto_reset_runnum = obj.Fit_AutoResetWhenReachRunNum
+                opt.auto_reset_preaknum = obj.Fit_AutoResetWhenReachNumPeaks
                 opt1.bin_threshold_min = obj.FindPeaks_BinThresholdMin
                 opt1.bin_threshold_max = obj.FindPeaks_BinThresholdMax
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
@@ -111,16 +116,19 @@ classdef PointSource < BaseProcessor
             timer = tic;
             args1 = namedargs2cell(opt1);
             args2 = namedargs2cell(opt2);
-            if obj.DataNumPeaks >= opt.auto_reset_freq
+            obj.RunNumber = obj.RunNumber + 1;
+            obj.DataLastImages = img_data;
+            if opt.reset
+                obj.reset()
+                obj.info('PSF data is reset.')
+            elseif (obj.DataNumPeaks >= opt.auto_reset_preaknum) || ...
+                    (rem(obj.RunNumber, opt.auto_reset_runnum) == 0)
                 obj.reset()
                 obj.info('Reset frequency reached, PSF data is reset.')
             end
             stats = obj.findPeaks(img_data, args1{:});
+            obj.DataLastStats = stats;
             if height(stats) > 0
-                if opt.reset
-                    obj.reset()
-                    obj.info('PSF data is reset.')
-                end
                 [psf, x_range, y_range] = obj.mergePeaks(img_data, stats, args2{:});
                 obj.updatePSF(stats, psf, x_range, y_range)
             else
@@ -354,10 +362,10 @@ classdef PointSource < BaseProcessor
                             "StrehlRatioGauss", "StrehlRatioAiry"]);
             disp(s)
             if ~isempty(obj.GaussPSF)
-                fprintf('\nGaussian PSF fit, %s:\n', obj.getStatusLabel())
-                disp(obj.GaussPSF)
-                fprintf('\nGoodness of fit, %s:\n', obj.getStatusLabel())
+                fprintf('%s, Goodness of Gaussian fit:\n', obj.getStatusLabel())
                 disp(obj.GaussGOF)
+                fprintf('%s, Gaussian PSF fit results:\n', obj.getStatusLabel())
+                disp(obj.GaussPSF)
             end
         end
 

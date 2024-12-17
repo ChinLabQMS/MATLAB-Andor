@@ -201,13 +201,8 @@ function str = parseConfig(config)
 end
 
 function [offset, variance, residuals] = cancelOffset(signal, num_frames, region_width)
-    arguments
-        signal
-        num_frames (1,1) double = 1
-        region_width (1,1) double = 100
-    end
-    signal = mean(signal, 3);
-    [x_pixels, y_pixels] = size(signal);
+    [x_pixels, y_pixels, num_acq] = size(signal, [1, 2, 3]);
+    signal_mean = mean(signal, 3);
     x_size = x_pixels / num_frames;
     if y_pixels < 2*region_width + 200
         error('Not enough edge space to calibrate background offset!')
@@ -215,22 +210,20 @@ function [offset, variance, residuals] = cancelOffset(signal, num_frames, region
     offset = zeros(x_pixels, y_pixels);
     y_range1 = 1:region_width;
     y_range2 = y_pixels + (1-region_width:0);
-    residuals = zeros(x_pixels, 2*region_width);
+    residuals = zeros(x_pixels, 2*region_width, num_acq);
     for i = 1:num_frames
         x_range = (i-1)*x_size + (1:x_size);
-        bg_box1 = signal(x_range, y_range1);
-        bg_box2 = signal(x_range, y_range2);
+        bg_box1 = signal_mean(x_range, y_range1);
+        bg_box2 = signal_mean(x_range, y_range2);
         [XOut1, YOut1, ZOut1] = prepareSurfaceData(x_range, y_range1', bg_box1');
         [XOut2, YOut2, ZOut2] = prepareSurfaceData(x_range, y_range2', bg_box2');
         XYFit = fit([[XOut1; XOut2], [YOut1; YOut2]], [ZOut1; ZOut2], 'poly11');
-
         % Background offset canceling with fitted plane
         offset(x_range,:) = XYFit.p00 + XYFit.p10*x_range' + XYFit.p01*(1:y_pixels);
-
-        res1 = bg_box1 - offset(x_range, y_range1);
-        res2 = bg_box2 - offset(x_range, y_range2);
-        res = [res1, res2];    
-        residuals(x_range, :) = res;
+        res1 = signal(x_range, y_range1, :) - offset(x_range, y_range1);
+        res2 = signal(x_range, y_range2, :) - offset(x_range, y_range2);
+        res = [res1, res2];
+        residuals(x_range, :, :) = res;
     end
     variance = var(residuals(:));
 end

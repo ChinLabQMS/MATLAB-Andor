@@ -8,7 +8,7 @@
         TransformStandard_XLimSite = [-25, 25]
         TransformStandard_YLimSite = [-25, 25]
         CalibR_Binarize = true
-        CalibR_BinThresholdPerct = 0.5
+        CalibR_BinarizeThresPerct = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
@@ -171,7 +171,7 @@
                 x_range {mustBeValidRange(signal, 1, x_range)} = 1:size(signal, 1)
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 optionsR.binarize = Lat.CalibR_Binarize
-                optionsR.binarize_thres_perct = Lat.CalibR_BinThresholdPerct
+                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThresPerct
                 optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
@@ -225,7 +225,7 @@
                 optionsV.warning_latnorm_thres = Lat.CalibV_WarnLatNormThres                
                 optionsV.plot_diagnosticV = Lat.CalibV_PlotDiagnostic
                 optionsR.binarize = Lat.CalibR_Binarize
-                optionsR.binarize_thres_perct = Lat.CalibR_BinThresholdPerct
+                optionsR.binarize_thres_perct = Lat.CalibR_BinarizeThresPerct
                 optionsR.min_binarize_thres = Lat.CalibR_MinBinarizeThres
                 optionsR.bootstrapping = Lat.CalibR_Bootstrapping
                 optionsR.plot_diagnosticR = Lat.CalibR_PlotDiagnostic
@@ -376,8 +376,10 @@
             end
             Lat.checkInitialized()
             Lat2.checkInitialized()
-            if options.calib_R
+            if options.calib_R(1)
                 Lat.calibrateR(signal, x_range, y_range, "bootstrapping", options.calib_R_bootstrap)
+            end
+            if options.calib_R(end)
                 Lat2.calibrateR(signal2, x_range2, y_range2, "bootstrapping", options.calib_R_bootstrap)
             end
             R_init = Lat.R;
@@ -403,6 +405,7 @@
             others = score(min_idx(2:end), :);
             Lat.R = best.Center;
             Lat.Ostat = table2struct(best);
+            Lat.Ostat.Others = others;
             Lat.Ostat.BestTransformed = best_transformed;
             Lat.Ostat.OriginalSignal = signal;
             info_str = sprintf("Center is calibrated to %s, now at (%d, %d) = (%5.2f, %5.2f) px, initially at (%5.2f, %5.2f) px, min dist = %5.3f among (%s).", ...

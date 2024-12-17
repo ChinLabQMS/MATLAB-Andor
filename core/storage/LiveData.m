@@ -1,13 +1,14 @@
 classdef LiveData < BaseObject
     
     properties (SetAccess = {?BaseObject})
-        RunNumber = 0
         Raw
         Signal
         Background
+        Noise
         Analysis
         Temporary
-        BadFrameDetected
+        RunNumber = 0
+        BadFrameDetected = false
     end
 
     properties (SetAccess = protected)
@@ -17,12 +18,19 @@ classdef LiveData < BaseObject
     properties (SetAccess = immutable)
         CameraManager
         LatCalib
+        PSFCalib
     end
 
     methods
-        function obj = LiveData(cameras, calib)
+        function obj = LiveData(cameras, lat_calib, psf_calib)
+            arguments
+                cameras = CameraManager()
+                lat_calib = []
+                psf_calib = []
+            end
             obj.CameraManager = cameras;
-            obj.LatCalib = calib;
+            obj.LatCalib = lat_calib;
+            obj.PSFCalib = psf_calib;
         end
 
         function init(obj)
@@ -32,6 +40,7 @@ classdef LiveData < BaseObject
             obj.Raw = [];
             obj.Signal = [];
             obj.Background = [];
+            obj.Noise = [];
             obj.Analysis = [];
             obj.Temporary = [];
         end
@@ -40,6 +49,7 @@ classdef LiveData < BaseObject
             s = struct@BaseObject(obj);
             s.CameraManager = obj.CameraManager;
             s.LatCalib = obj.LatCalib;
+            s.PSFCalib = obj.PSFCalib;
         end
     end
 

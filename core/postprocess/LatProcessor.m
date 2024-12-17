@@ -15,7 +15,7 @@ classdef (Abstract) LatProcessor < BaseProcessor
         end
     end
 
-    methods (Access = protected, Sealed, Hidden)
+    methods (Access = protected, Hidden)
         function loadLatCalibFile(obj, path)
             if isempty(path)
                 obj.LatCalib = [];
@@ -25,6 +25,10 @@ classdef (Abstract) LatProcessor < BaseProcessor
             obj.checkFilePath(path)
             obj.LatCalib = load(path);
             obj.info("Pre-calibration loaded from: '%s'.", path)
+        end
+
+        function init(obj)
+            obj.assert(~isempty(obj.LatCalibFilePath), 'PSFCalibFilePath is unset!')
         end
     end
 

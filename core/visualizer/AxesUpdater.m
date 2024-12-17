@@ -15,7 +15,6 @@ classdef (Abstract) AxesUpdater < BaseProcessor
 
     properties (SetAccess = protected)
         GraphHandle
-        AddonHandle
         LiveHandle
     end
 

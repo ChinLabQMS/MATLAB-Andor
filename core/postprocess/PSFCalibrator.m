@@ -8,12 +8,6 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
         PSFImageLabel = ["Image", "Image", "Pattern_532"]
     end
 
-    properties (Constant)
-        Process_FilterGaussWidthMax = 3.5
-        Process_RefineMethod = "Gaussian"
-        Process_FilterBoxSizeMax = 15
-    end
-
     properties (SetAccess = protected)
         PSFCalib
         Stat
@@ -25,28 +19,24 @@ classdef PSFCalibrator < LatProcessor & DataProcessor
             obj@LatProcessor(varargin{:}, 'reset_fields', true, 'init', true)
         end
 
-        function process(obj, camera, options)
-            arguments
-                obj
-                camera
-                options.filter_box_max = obj.Process_FilterBoxSizeMax
-                options.filter_gausswid_max = obj.Process_FilterGaussWidthMax
-                options.refine_method = obj.Process_RefineMethod
-            end
+        function fit(obj, camera, varargin)
             p = obj.PSFCalib.(camera);
             signal = obj.Stat.(camera);
-            args = namedargs2cell(options);
-            p.fit(signal, args{:}, 'reset', true) 
+            p.fit(signal, varargin{:})
         end
 
-        function plotSignal(obj, camera, index)
-            arguments
-                obj
-                camera
-                index = 1
+        function plot(obj, index)
+            if nargin == 1
+                index = 1;
             end
+            num_cameras = length(obj.PSFCameraList);
             figure
-            imagesc2(obj.Stat.(camera)(:, :, index))
+            sgtitle(sprintf('Image index: %d', index))
+            for i = 1: num_cameras
+                camera = obj.PSFCameraList(i);
+                subplot(1, num_cameras, i)
+                imagesc2(obj.Stat.(camera)(:, :, index), 'title', camera)
+            end
         end
 
         function plotPSF(obj, camera)

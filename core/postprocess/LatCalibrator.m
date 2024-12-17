@@ -14,7 +14,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         Process_BinThresholdPerct = 0.3
         Process_CropSize = [200; 200; inf]
         Calibrate_Binarize = true
-        Calibrate_BinThresholdPerct = 0.3
+        Calibrate_BinarizeThresPerct = 0.3
         Calibrate_PlotDiagnosticR = true
         Calibrate_PlotDiagnosticV = true
         CalibO_CropRSite = 20
@@ -121,7 +121,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 peak_init = []
                 center = []
                 opt.binarize = obj.Calibrate_Binarize
-                opt.binarize_thres_perct = obj.Calibrate_BinThresholdPerct
+                opt.binarize_thres_perct = obj.Calibrate_BinarizeThresPerct
                 opt.plot_diagnosticR = obj.Calibrate_PlotDiagnosticR
                 opt.plot_diagnosticV = obj.Calibrate_PlotDiagnosticV
             end
@@ -301,6 +301,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
 
     methods (Access = protected, Hidden)
         function init(obj)
+            init@DataProcessor(obj)
             for i = 1: length(obj.InitCameraName)
                 camera = obj.InitCameraName(i);
                 if ~isfield(obj.LatCalib, camera)

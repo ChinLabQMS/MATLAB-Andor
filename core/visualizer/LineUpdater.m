@@ -25,11 +25,11 @@ classdef LineUpdater < AxesUpdater
                 case "Variance"
                     new = var(data(:));
                 otherwise
-                    try
+                    if isfield(data, obj.FuncName)
                         new = reshape(data.(obj.FuncName), [], 1);
-                    catch
+                    else
                         new = nan;
-                        obj.warnLabel(obj.Content, obj.FuncName, 'Not found in data.')
+                        obj.warn2('[%s %s] Not found in live data.', obj.Content, obj.FuncName)
                     end
             end
             if isempty(obj.GraphHandle)

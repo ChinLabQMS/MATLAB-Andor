@@ -1,7 +1,12 @@
-classdef Analyzer < LatProcessor
+classdef Analyzer < LatProcessor & PSFProcessor
     %ANALYZER Live analyzer
     
     methods
+        function obj = Analyzer(varargin)
+            obj@LatProcessor('reset_fields', false, 'init', false)
+            obj@PSFProcessor(varargin{:}, 'reset_fields', true, 'init', true)
+        end
+
         function analyze(obj, live, info, options)
             arguments
                 obj
@@ -24,7 +29,12 @@ classdef Analyzer < LatProcessor
         end
     end
 
-    methods (Access = protected)
+    methods (Access = protected, Hidden)
+        function init(obj)
+            init@LatProcessor(obj)
+            init@PSFProcessor(obj)
+        end
+
         function analysis = analyzeSingleLabel(obj, signal, info, options)
         end
 
