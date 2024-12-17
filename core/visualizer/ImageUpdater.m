@@ -8,10 +8,10 @@ classdef ImageUpdater < AxesUpdater
     end
 
     properties (Constant)
-        Content_LatticeHexR = 20
-        Content_TransformCropRSite = 20
-        Content_TransformScaleV = 5
-        Content_PSFScaleV = 1
+        PlotLattice_HexR = 20
+        PlotLattice_TransformCropRSite = 20
+        PlotLattice_TransformScaleV = 5
+        PlotPSF_ScaleV = 1
     end
 
     properties (SetAccess = protected)
@@ -31,9 +31,8 @@ classdef ImageUpdater < AxesUpdater
             arguments
                 obj
                 Live
-                options.lattice_hexr = obj.Content_LatticeHexR
-                options.transform_cropRsite = obj.Content_TransformCropRSite
-                options.transform_scaleV = obj.Content_TransformScaleV
+                options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
+                options.transform_scaleV = obj.PlotLattice_TransformScaleV
             end
             c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
             plotData(obj, Live)
@@ -41,16 +40,13 @@ classdef ImageUpdater < AxesUpdater
             switch obj.FuncName
                 case "None"
                 case "Lattice"
-                    plotLattice(obj, Live, 'lattice_hexr', options.lattice_hexr)
+                    obj.plotLattice(Live)
                 case "Lattice All"
-                    plotLatticeAll(obj, Live, 'lattice_hexr', options.lattice_hexr)
+                    obj.plotLatticeAll(Live)
                 case "Transformed with Lattice"
-                    plotTransformedLattice(obj, Live, ...
-                        'lattice_hexr', options.lattice_hexr, ...
-                        'transform_cropRsite', options.transform_cropRsite, ...
-                        'transform_scaleV', options.transform_scaleV)
+                    obj.plotTransformedLattice(Live)
                 case "PSF"
-                    plotPSF(obj, Live)
+                    obj.plotPSF(Live)
                 otherwise
                     obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
@@ -69,29 +65,29 @@ classdef ImageUpdater < AxesUpdater
             end
         end
         
-        function plotLattice(obj, Live, options1)
+        function plotLattice(obj, Live, options)
             arguments
                 obj
                 Live
-                options1.lattice_hexr
+                options.lattice_hexr = obj.PlotLattice_HexR
             end
             Lat = getLatCalib(obj, Live);
             obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
-                    Lattice.prepareSite("hex", "latr", options1.lattice_hexr), 'filter', false);
+                    Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
         end
         
-        function plotLatticeAll(obj, Live, options1)
+        function plotLatticeAll(obj, Live, options)
             arguments
                 obj
                 Live
-                options1.lattice_hexr
+                options.lattice_hexr = obj.PlotLattice_HexR
             end
             Lat = getLatCalib(obj, Live);
             num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
             x_size = Live.CameraManager.(obj.CameraName).Config.XPixels;
             for i = 1: num_frames
                 obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
-                    Lattice.prepareSite("hex", "latr", options1.lattice_hexr), ...
+                    Lattice.prepareSite("hex", "latr", options.lattice_hexr), ...
                     'center', Lat.R + [x_size / num_frames * (i - 1), 0], 'filter', false);
             end
         end
@@ -100,9 +96,9 @@ classdef ImageUpdater < AxesUpdater
             arguments
                 obj
                 Live
-                options.lattice_hexr
-                options.transform_cropRsite
-                options.transform_scaleV
+                options.lattice_hexr = obj.PlotLattice_HexR
+                options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
+                options.transform_scaleV = obj.PlotLattice_TransformScaleV
             end
             data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
             num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
@@ -117,7 +113,12 @@ classdef ImageUpdater < AxesUpdater
             obj.AddonHandle(3:4) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
         end
         
-        function plotPSF(obj, Live)
+        function plotPSF(obj, Live, options)
+            arguments
+                obj
+                Live
+                options.scale_V = obj.PlotPSF_ScaleV
+            end
             try
                 PS = Live.PSFCalib.(obj.CameraName);
                 centers = PS.DataLastStats.RefinedCentroid;
@@ -125,7 +126,7 @@ classdef ImageUpdater < AxesUpdater
                 hold(obj.AxesHandle, "on")
                 obj.AddonHandle(1) = viscircles(obj.AxesHandle, centers, radius, 'LineWidth', 0.5);
                 obj.AddonHandle(2) = PS.plot(obj.AxesHandle);
-                obj.AddonHandle(3:4) = PS.plotV(obj.AxesHandle);
+                obj.AddonHandle(3:4) = PS.plotV(obj.AxesHandle, "scale", options.scale_V);
             catch
                 obj.warn2("[%s %s] Can not find last PSF fitting data. Please check if 'fitPSF' exists in SequenceTable.", obj.CameraName, obj.ImageLabel)
             end
