@@ -47,7 +47,7 @@ classdef CameraManager < BaseManager
         % Configure cameras with a structure (similar to Data)
         function config(obj, data)
             for camera = obj.VisibleProp
-                if ~isa(obj.(camera), "Camera")
+                if isa(obj.(camera), "Projector")
                     continue
                 end
                 if (isfield(data, camera) || isprop(data, camera)) && ...

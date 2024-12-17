@@ -36,6 +36,7 @@ function [f_res, output] = fitGauss1D(signal, x_range, options)
     foptions = fitoptions(fit_type);
     
     % Sub-sample the image (to make computation faster)
+    options.sub_sample = max(options.sub_sample, 1);
     x_size = size(signal, 2);
     signal = signal(1:options.sub_sample:x_size);
     x_range = x_range(1:options.sub_sample:x_size);

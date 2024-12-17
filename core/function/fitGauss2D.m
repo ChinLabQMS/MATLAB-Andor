@@ -76,6 +76,7 @@ function [f_res, output, x, y, z] = fitGauss2D(signal, x_range, y_range, options
     foptions = fitoptions(fit_type);
     
     % Sub-sample the image (to make computation faster)
+    options.sub_sample = max(options.sub_sample, 1);
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal);
     signal = signal(1:options.sub_sample:x_size, 1:options.sub_sample:y_size);

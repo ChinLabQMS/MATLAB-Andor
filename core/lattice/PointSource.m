@@ -1,4 +1,4 @@
-classdef PointSource < BaseProcessor
+classdef PointSource < BaseComputer
 
     properties (Constant)
         Fit_Verbose = false
@@ -16,7 +16,8 @@ classdef PointSource < BaseProcessor
         FindPeaks_FilterIntensityMin = 50
         FindPeaks_FilterBoxSizeMin = 0.2 % Multiply by RayleighResolution
         FindPeaks_FilterBoxSizeMax = 2.5 % Multiply by RayleighResolution
-        FindPeaks_GaussFitCropRadius = 2 % Multiply by RayleighResolution
+        FindPeaks_RefineCropRadius = 2 % Multiply by RayleighResolution
+        FindPeaks_GaussRefineSubSample = 0.3 % Multiply by RayleighResolution
         FindPeaks_FilterGaussWidthMax = 0.5 % Multiply by RayleighResolution
         FindPeaks_RefineMethod = "Gaussian"
         FindPeaks_PlotDiagnostic = false
@@ -33,20 +34,16 @@ classdef PointSource < BaseProcessor
     end
 
     properties (SetAccess = immutable)
-        ID
         NA
         PixelSize
         ImagingWavelength
         Magnification
     end
 
-    properties (SetAccess = {?BaseObject})
-        InitResolutionRatio
-    end
-
     properties (SetAccess = protected)
         RunNumber
         RayleighResolution
+        InitResolutionRatio
         IdealPSFGauss
         IdealPSFAiry
         IdealPSFGaussPeakIntensity
@@ -87,7 +84,7 @@ classdef PointSource < BaseProcessor
                 init_resol = 1
                 na = 0.8
             end
-            obj.ID = id;
+            obj@BaseComputer(id)
             obj.NA = na;
             obj.PixelSize = pixel_size;
             obj.ImagingWavelength = wavelength;
@@ -125,7 +122,8 @@ classdef PointSource < BaseProcessor
                 opt1.filter_box_min = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMin
                 opt1.filter_box_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMax
                 opt1.refine_method = obj.FindPeaks_RefineMethod
-                opt1.gauss_refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussFitCropRadius)
+                opt1.refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_RefineCropRadius)
+                opt1.gauss_refine_subsample = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussRefineSubSample)
                 opt1.filter_gausswid_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterGaussWidthMax
                 opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
                 opt1.verbose = obj.Fit_Verbose
@@ -180,7 +178,8 @@ classdef PointSource < BaseProcessor
                 opt1.filter_box_min = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMin
                 opt1.filter_box_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMax
                 opt1.refine_method = obj.FindPeaks_RefineMethod
-                opt1.gauss_refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussFitCropRadius)
+                opt1.refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_RefineCropRadius)
+                opt1.gauss_refine_subsample = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussRefineSubSample)
                 opt1.filter_gausswid_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterGaussWidthMax
                 opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
                 opt1.verbose = obj.Fit_Verbose
@@ -250,20 +249,20 @@ classdef PointSource < BaseProcessor
                 stats.RefinedRSquare = nan(height(stats), 1);
                 for j = 1: height(stats)
                     center = round(stats.WeightedCentroid(j, :));
-                    x_range = center(2) + (-opt1.gauss_refine_radius(1): opt1.gauss_refine_radius(1));
-                    y_range = center(1) + (-opt1.gauss_refine_radius(end): opt1.gauss_refine_radius(end));
+                    x_range = center(2) + (-opt1.refine_radius(1): opt1.refine_radius(1));
+                    y_range = center(1) + (-opt1.refine_radius(end): opt1.refine_radius(end));
                     x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
                     y_range = y_range((y_range > 0) & (y_range <= size(img_data, 2)));
                     spot = img_data(x_range, y_range);
                     switch opt1.refine_method
                         case "Gaussian"
-                            [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true);
+                            [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true, 'sub_sample', opt1.gauss_refine_subsample);
                             stats.RefinedCentroid(j, :) = [f.y0, f.x0];
                             stats.RefinedWidth(j, :) = gof.eigen_widths;
                             stats.RefinedAngle(j, :) = gof.eigen_angles;
                             stats.RefinedRSquare(j) = gof.rsquare;
                         case "GaussXY"
-                            [xc, yc, xw, yw] = fitGaussXY(spot, x_range, y_range);
+                            [xc, yc, xw, yw] = fitGaussXY(spot, x_range, y_range, 'sub_sample', opt1.gauss_refine_subsample);
                             stats.RefinedCentroid(j, :) = [yc, xc];
                             stats.RefinedWidth(j, :) = sort([yw, xw]);
                         case "COM"
@@ -643,12 +642,6 @@ classdef PointSource < BaseProcessor
                 return
             end
             val = obj.GaussGOF.eigen_widths / obj.RayleighResolutionGaussSigma;
-        end
-    end
-
-    methods (Access = protected, Hidden)
-        function label = getStatusLabel(obj)
-            label = sprintf('%s (%s)', class(obj), obj.ID);
         end
     end
 end

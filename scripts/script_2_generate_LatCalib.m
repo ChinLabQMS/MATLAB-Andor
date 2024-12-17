@@ -85,7 +85,8 @@ p.calibrateO(1, 'sites', Lattice.prepareSite('hex', 'latr', 20), 'plot_diagnosti
 %% (optional) Calibrate to a different signal index by searching a smaller region
 p.calibrateO(20, 'sites', Lattice.prepareSite('hex', 'latr', 2), 'plot_diagnosticO', 0)
 
-%% Save lattice calibration of all three cameras (default is with today's date)
+%% Save lattice calibration of all three cameras
+% Default is "calibration/LatCalib_<today's date>.mat"
 p.save()
 
 %% [IMPORTANT] Update the class definition

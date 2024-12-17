@@ -50,13 +50,19 @@ p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
 %% Zelux
-% Note that for Zelux that has larger magnification, it is better to use a
-% different parameter for better recognition and faster execution
-p.fit('Zelux', [], 'verbose', 1, 'refine_method', "COM", 'filter_gausswid_max', inf)
+p.fit('Zelux', [], 'verbose', 1)
 p.PSFCalib.Zelux.plotWidthDist()
 p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux
 
-%%
+%% Save the fitted PSF to a calibration file
+% Default is "calibration/PSFCalib_<today's date>.mat"
 close all
 p.save()
+
+%% [IMPORTANT] Update the class definition
+% Update the 'PSFCalibFilePath' in those classes after each (re)calibration
+% to make sure the future analysis will be with up-to-date calibration
+% - LatProcessor: "/core/postprocess/PSFProcessor.m"
+%       This is to use the new calibration as default for future 
+%       psf-related live and post-analysis
