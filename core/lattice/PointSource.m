@@ -207,26 +207,28 @@ classdef PointSource < BaseComputer
             
                 % Use dbscan to find clusters of peaks
                 stats1 = stats;
-                labels = zeros(size(img_data));
-                for j = 1: height(stats)
-                    labels(stats.PixelIdxList{j}) = j;
-                end
-                [Y, X] = meshgrid(1:size(labels, 2), 1:size(labels, 1));
-                pix_x = X(labels > 0);
-                pix_y = Y(labels > 0);
-                clusters = dbscan([pix_x, pix_y], opt1.dbscan_distance, 1);
-                labels(sub2ind(size(labels), pix_x, pix_y)) = clusters;
-                for j = 1:height(stats)
-                    stats.Cluster(j) = mode(labels(stats.PixelIdxList{j}));
-                end
-                stats = convertvars(stats, 'Cluster', 'categorical');
-                stats = join(stats, groupsummary(stats, "Cluster"));
-                if opt1.dbscan_single_only
-                    % Only look at singly isolated peaks
-                    stats = stats(stats.GroupCount == 1, :);
-                else
-                    % Merge peaks by cluster assignment to get a shorter stats
-                    stats = regionprops("table", labels, img_data, props);
+                if height(stats) ~= 0
+                    labels = zeros(size(img_data));
+                    for j = 1: height(stats)
+                        labels(stats.PixelIdxList{j}) = j;
+                    end
+                    [Y, X] = meshgrid(1:size(labels, 2), 1:size(labels, 1));
+                    pix_x = X(labels > 0);
+                    pix_y = Y(labels > 0);
+                    clusters = dbscan([pix_x, pix_y], opt1.dbscan_distance, 1);
+                    labels(sub2ind(size(labels), pix_x, pix_y)) = clusters;
+                    for j = 1:height(stats)
+                        stats.Cluster(j) = mode(labels(stats.PixelIdxList{j}));
+                    end
+                    stats = convertvars(stats, 'Cluster', 'categorical');
+                    stats = join(stats, groupsummary(stats, "Cluster"));
+                    if opt1.dbscan_single_only
+                        % Only look at singly isolated peaks
+                        stats = stats(stats.GroupCount == 1, :);
+                    else
+                        % Merge peaks by cluster assignment to get a shorter stats
+                        stats = regionprops("table", labels, img_data, props);
+                    end
                 end
             
                 % Filter again by intensity and bounding box size

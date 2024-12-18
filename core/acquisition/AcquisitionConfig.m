@@ -125,7 +125,7 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
             continue
         end
         switch operation
-            case {"Start", "Projection"}
+            case {"Start", "Project"}
                 Params{i} = parseString2Args(obj, note);
             case "Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
@@ -255,12 +255,12 @@ function mustBeValidSequence(obj, sequence)
             if label == "Config"
                 newerror("'Config' is reserved and can not be used as label")
             end
-            if operation == "Projection" && device.startsWith("DMD")
+            if operation == "Project" && device.startsWith("DMD")
                 continue
-            elseif operation == "Projection"
-                newerror("'Projection' is only available for DMD")
+            elseif operation == "Project"
+                newerror("'Project' is only available for DMD")
             elseif device.startsWith("DMD")
-                newerror("DMD can only use 'Projection'")
+                newerror("DMD can only use 'Project'")
             end
             if operation == "Start" || operation == "Start+Acquire"
                 started = [started, label]; %#ok<AGROW>
