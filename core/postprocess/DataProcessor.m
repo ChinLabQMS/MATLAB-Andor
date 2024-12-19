@@ -8,6 +8,7 @@ classdef (Abstract) DataProcessor < BaseProcessor
     end
     
     properties (SetAccess = protected)
+        Raw
         Signal
         Leakage
         Noise
@@ -23,9 +24,9 @@ classdef (Abstract) DataProcessor < BaseProcessor
     methods (Access = protected, Hidden)
         function loadData(obj, path)
             obj.checkFilePath(path, 'DataPath')
-            Data = load(path, "Data").Data;
+            obj.Raw = load(path, "Data").Data;
             obj.info("Dataset loaded from '%s'", path)
-            [obj.Signal, obj.Leakage, obj.Noise] = Preprocessor().process(Data);
+            [obj.Signal, obj.Leakage, obj.Noise] = Preprocessor().process(obj.Raw);
         end
 
         function init(obj)

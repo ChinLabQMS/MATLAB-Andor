@@ -1,29 +1,30 @@
-classdef Replayer < BaseSequencer & BaseProcessor
+classdef Replayer < BaseSequencer & DataProcessor
     
     properties (SetAccess = {?BaseObject})
-        DataPath = "calibration/example_data/20241126_normal_upper_not_on_focus.mat"
         CurrentIndex
     end
 
     methods
         function obj = Replayer(varargin)
             obj@BaseSequencer(varargin{:})
-            obj@BaseProcessor()
-        end
-
-        function set.DataPath(obj, path)
-            obj.checkFilePath(path, 'DataPath')
-            data = load(path, "Data").Data;
-            obj.DataPath = path;
-            obj.AcquisitionConfig.config(data.AcquisitionConfig)
-            obj.CameraManager.config(data)
-            obj.DataStorage.config(data, "config_cameras", false, "config_acq", false)
-            obj.initSequence()
-            obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
+            obj@DataProcessor()
         end
     end
 
     methods (Access = protected, Hidden)
+        function init(obj)
+            init@DataProcessor(obj)
+            obj.AcquisitionConfig.config(obj.Raw.AcquisitionConfig)
+            obj.CameraManager.config(obj.Raw)
+            obj.DataStorage.config(obj.Raw, "config_cameras", false, "config_acq", false)
+            obj.initSequence()
+            obj.Raw = [];
+            obj.Signal = [];
+            obj.Leakage = [];
+            obj.Noise = [];
+            obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
+        end
+
         function start(~, ~, ~, varargin)
         end
         

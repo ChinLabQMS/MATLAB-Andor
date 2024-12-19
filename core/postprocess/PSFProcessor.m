@@ -1,7 +1,7 @@
 classdef (Abstract) PSFProcessor < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
-        PSFCalibFilePath = "calibration/PSFCalib_20241217.mat"
+        PSFCalibFilePath = "calibration/PSFCalib.mat"
     end
     
     properties (SetAccess = protected)

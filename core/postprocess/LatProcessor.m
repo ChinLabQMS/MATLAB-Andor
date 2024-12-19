@@ -1,7 +1,7 @@
 classdef (Abstract) LatProcessor < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
-        LatCalibFilePath = "calibration/LatCalib_20241213.mat"
+        LatCalibFilePath = "calibration/LatCalib.mat"
     end
 
     properties (SetAccess = protected)

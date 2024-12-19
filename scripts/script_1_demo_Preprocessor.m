@@ -20,7 +20,7 @@ p = Preprocessor();
 disp(p)
 
 %% Load a dataset from file and plot raw images
-Data = load("calibration/example_data/20241126_normal_upper_not_on_focus.mat").Data;
+Data = load("calibration/example_data/20241217_white_array_on_black_full_spacing=100_r=2.mat").Data;
 
 idx = 1;
 % cam = "Andor19330";

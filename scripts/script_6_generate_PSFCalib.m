@@ -8,61 +8,66 @@
 %             should work in sparse settings
 % - PSFCameraList: list of camera names for calibrating PSF
 % - PSFImageLabel: corresponding list of image labels for PSF calibration
-% - PSFInitRatio: ratio of resolution to the ideal Rayleigh resolution,
-%                 when using a value larger than 1, it assumes a worse
-%                 area when doing fit and filtering
 
 clear; clc; close all
 p = PSFCalibrator( ...
-    "DataPath", "calibration/example_data/20241205_example_data.mat", ...
+    "DataPath", "data/2024/12 December/20241217/white_array_on_black_full_spacing=100_r=2.mat", ...
     "PSFCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
-    "PSFImageLabel", ["Image", "Image", "Pattern_532"], ...
-    "PSFInitRatio", [1.3, 1.5, 4]);
+    "PSFImageLabel", ["Image", "Image", "Pattern_532"]);
 
 %% Check signals, should be sparse
 p.plotSignal()
 
 %% Process single image, to check whether the filtering parameters are good
+% Input format: 
+%  - camera_name
+%  - index_range (empty to process all shots)
+%  - resolution_ratio, ratio of resolution to the ideal Rayleigh resolution,
+%    when using a value larger than 1, it assumes a worse than ideal 
+%    resolution when doing fit and filtering
+
 close all
-p.fit('Andor19330', 1, 'plot_diagnostic', 1)
-p.PSFCalib.Andor19330.plotPSF()
+p.fit('Andor19330', 1, 1.3, 'plot_diagnostic', 1)
+% p.PSFCalib.Andor19330.plotPSF()
+p.PSFCalib.Andor19330
 
 %% Andor19331
 close all
-p.fit('Andor19331', 1, 'plot_diagnostic', 1)
+p.fit('Andor19331', 1, 1.5, 'plot_diagnostic', 1)
+% p.PSFCalib.Andor19331.plotPSF()
+p.PSFCalib.Andor19331
 
 %% Zelux
 close all
-p.fit('Zelux', 1, 'plot_diagnostic', 1)
+p.fit('Zelux', 1, 4, 'plot_diagnostic', 1)
+% p.PSFCalib.Zelux.plotPSF()
+p.PSFCalib.Zelux
 
 %% Process all data for each camera
 close all
-p.fit('Andor19330', [], 'verbose', 1)
+p.fit('Andor19330', [], 1.2, 'verbose', 1)
 p.PSFCalib.Andor19330.plotWidthDist()
 p.PSFCalib.Andor19330.plotPSF()
 p.PSFCalib.Andor19330
 
 %% Andor19331
 close all
-p.fit('Andor19331', [], 'verbose', 1)
+p.fit('Andor19331', [], 2, 'verbose', 1)
 p.PSFCalib.Andor19331.plotWidthDist()
 p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
 %% Zelux
-p.fit('Zelux', [], 'verbose', 1)
+p.fit('Zelux', [], 4, 'refine_method', 'COM', 'filter_gausswid_max', inf, 'verbose', 1)
 p.PSFCalib.Zelux.plotWidthDist()
 p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux
 
+%% Check all cameras PSF
+p.plotPSF()
+
 %% Save the fitted PSF to a calibration file
 % Default is "calibration/PSFCalib_<today's date>.mat"
+% It will also update the default LatCalib file "calibration/LatCalib.mat"
 close all
 p.save()
-
-%% [IMPORTANT] Update the class definition
-% Update the 'PSFCalibFilePath' in those classes after each (re)calibration
-% to make sure the future analysis will be with up-to-date calibration
-% - LatProcessor: "/core/postprocess/PSFProcessor.m"
-%       This is to use the new calibration as default for future 
-%       psf-related live and post-analysis

@@ -122,14 +122,13 @@ function calibLatO(live, info, varargin, options)
         options.ref_camera = "Andor19330"
         options.ref_label = "Image"
         options.crop_R_site = 15
-        options.first_only = true
         options.verbose = false
     end
     timer = tic;
     ref_signal = getSignalSum(live.Signal.(options.ref_camera).(options.ref_label), ...
         live.CameraManager.(options.ref_camera).Config.NumSubFrames, "first_only", true);
     signal = getSignalSum(live.Signal.(info.camera).(info.label), ...
-        info.config.NumSubFrames, "first_only", options.first_only);
+        info.config.NumSubFrames, "first_only", true);
     Lat = live.LatCalib.(info.camera);
     Lat_ref = live.LatCalib.(options.ref_camera);
     Lat.calibrateOCropSite(Lat_ref, signal, ref_signal, options.crop_R_site, ...
@@ -150,17 +149,26 @@ function fitPSF(live, info, varargin, options)
         varargin
     end
     arguments
+        options.ratio = []
         options.verbose = false
     end
     timer = tic;
     PS = live.PSFCalib.(info.camera);
     signal = live.Signal.(info.camera).(info.label);
+    if ~isempty(options.ratio)
+        PS.setRatio(options.ratio)
+    end
     PS.fit(signal, varargin{:})
     if PS.DataNumPeaks > 0
         live.Analysis.(info.camera).(info.label).PSFGaussXWid = PS.GaussGOF.eigen_widths(1);
         live.Analysis.(info.camera).(info.label).PSFGaussYWid = PS.GaussGOF.eigen_widths(2);
         live.Analysis.(info.camera).(info.label).StrehlRatioAiry = PS.StrehlRatioAiry;
         live.Analysis.(info.camera).(info.label).NumIsolatedPeaks = PS.DataNumPeaks;
+    else
+        live.Analysis.(info.camera).(info.label).PSFGaussXWid = nan;
+        live.Analysis.(info.camera).(info.label).PSFGaussYWid = nan;
+        live.Analysis.(info.camera).(info.label).StrehlRatioAiry = nan;
+        live.Analysis.(info.camera).(info.label).NumIsolatedPeaks = nan;
     end
     if options.verbose
         live.info("[%s %s] Fitting PSF takes %5.3f s.", info.camera, info.label, toc(timer))

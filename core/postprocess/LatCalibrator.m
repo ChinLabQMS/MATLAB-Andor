@@ -13,6 +13,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
     properties (Constant)
         Process_BinThresholdPerct = 0.3
         Process_CropSize = [200; 200; inf]
+        Process_SignalLowerCrop = 8
         Calibrate_Binarize = true
         Calibrate_BinarizeThresPerct = 0.3
         Calibrate_PlotDiagnosticR = true
@@ -26,7 +27,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibO_SignalIndex = 1
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
-        CalibO_Sites = Lattice.prepareSite('hex', 'latr', 5)
+        CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_Debug = false
         Recalib_ResetCenters = false
@@ -56,6 +57,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 obj
                 options.bin_threshold_perct = obj.Process_BinThresholdPerct
                 options.crop_size = obj.Process_CropSize
+                options.signal_lower_crop = obj.Process_SignalLowerCrop
             end
             for i = 1: length(obj.LatCameraList)
                 camera = obj.LatCameraList(i);
@@ -67,7 +69,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 s.Image = signal;
                 s.MeanImage = getSignalSum(signal, obj.Signal.(camera).Config.NumSubFrames);
                 s.MeanImageBin = getSignalSum(signal_bin, obj.Signal.(camera).Config.NumSubFrames);
-                [xc, yc, xw, yw] = fitGaussXY(s.MeanImage);
+                [xc, yc, xw, yw] = fitGaussXY(s.MeanImage( ...
+                    1: (size(s.MeanImage, 1) - options.signal_lower_crop), :));
                 if isempty(options.crop_size) || size(options.crop_size, 1) < i || all(options.crop_size(i, :) == 0)
                     options.crop_size(i, :) = 2 * [xw, yw];
                 end
@@ -83,19 +86,46 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             end
             obj.info("Finish processing to get averaged images and basic statistics.")
         end
+    
+        % Plot an example of single shot signal
+        function plotSignal(obj, index)
+            if nargin == 1
+                index = 1;
+            end
+            num_cameras = length(obj.LatCameraList);
+            figure
+            sgtitle(sprintf('Image index: %d', index))
+            for i = 1: num_cameras
+                camera = obj.LatCameraList(i);
+                lat = obj.LatCalib.(camera);
+                s = obj.Stat.(camera);
+                signal = s.Image(:, :, index);
+                subplot(1, num_cameras, i)
+                imagesc2(signal, 'title', camera)
+                if ~isempty(obj.LatCalib.(camera).K)
+                    lat.calibrateR(s.FFTImageAll(:, :, index), s.FFTX, s.FFTY)
+                    lat.plot()
+                end
+                viscircles(s.Center([2, 1]), mean(s.Width), ...
+                    'Color', 'w', 'LineWidth', 0.5, 'LineStyle','--', 'EnhanceVisibility', 0);
+            end
+        end
 
         % Plot FFT pattern of images for calibrating specific camera
         function plotFFT(obj, camera)
+            s = obj.Stat.(camera);
             figure
             subplot(2, 2, 1)
-            imagesc2(obj.Stat.(camera).MeanImage, 'title', sprintf("%s mean", camera))
+            imagesc2(s.MeanImage, 'title', sprintf("%s mean", camera))
+            viscircles(s.Center([2, 1]), mean(s.Width), ...
+                'Color', 'w', 'LineWidth', 0.5, 'LineStyle', '--', 'EnhanceVisibility', 0);
             subplot(2, 2, 2)
-            imagesc2(obj.Stat.(camera).MeanImageBin, 'title', sprintf("%s filtered mean", camera))
+            imagesc2(s.MeanImageBin, 'title', sprintf("%s filtered mean", camera))
             subplot(2, 2, 3)
-            imagesc2(log(obj.Stat.(camera).FFTPattern), 'title', sprintf("%s FFT (log) mean", camera))
+            imagesc2(log(s.FFTPattern), 'title', sprintf("%s FFT (log) mean", camera))
             addCircles()
             subplot(2, 2, 4)
-            imagesc2(log(obj.Stat.(camera).FFTPatternBin), 'title', sprintf("%s FFT (log) filtered mean", camera))
+            imagesc2(log(s.FFTPatternBin), 'title', sprintf("%s FFT (log) filtered mean", camera))
             addCircles()
             function addCircles()
                 if ~isempty(obj.LatCalib.(camera).K)
@@ -209,10 +239,11 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         end
         
         % Save the calibration result to file
-        function save(obj, filename)
+        function save(obj, filename, most_recent_filename)
             arguments
                 obj
                 filename = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
+                most_recent_filename = "calibration/LatCalib.mat"
             end
             calib = obj.LatCalib;
             calib.Config = obj.struct();
@@ -228,9 +259,11 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 filename = filename + sprintf("_%s", datetime("now", "Format", "HHmmss"));
             end
             save(filename, "-struct", "calib")
-            obj.info("Lattice calibration saved as '%s'.", filename)
+            save(most_recent_filename, "-struct", "calib")
+            obj.info("Lattice calibration saved as '%s' and '%s'.", filename, most_recent_filename)
         end
-
+        
+        % Track the lattice phase over frames
         function result = trackCalib(obj, options)
             arguments
                 obj
@@ -247,7 +280,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 obj.info('Cross calibration on the first image...')
                 obj.calibrateO(1, "crop_R_site", options.crop_R_site, ...
                     "plot_diagnosticO", false, "verbose", true, ...
-                    "sites", Lattice.prepareSite('hex', 'latr', 20))
+                    "sites", SiteGrid.prepareSite('Hex', 'latr', 20))
             end
             for i = 1: num_acq
                 if options.calibO_every

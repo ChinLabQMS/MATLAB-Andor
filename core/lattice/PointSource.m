@@ -41,9 +41,9 @@ classdef PointSource < BaseComputer
     end
 
     properties (SetAccess = protected)
+        InitResolutionRatio = 1
         RunNumber
         RayleighResolution
-        InitResolutionRatio
         IdealPSFGauss
         IdealPSFAiry
         IdealPSFGaussPeakIntensity
@@ -75,13 +75,12 @@ classdef PointSource < BaseComputer
     end
 
     methods
-        function obj = PointSource(id, pixel_size, wavelength, magnification, init_resol, na)
+        function obj = PointSource(id, pixel_size, wavelength, magnification, na)
             arguments
                 id = "Test"
                 pixel_size = 13
                 wavelength = 0.852
                 magnification = 89
-                init_resol = 1
                 na = 0.8
             end
             obj@BaseComputer(id)
@@ -89,10 +88,7 @@ classdef PointSource < BaseComputer
             obj.PixelSize = pixel_size;
             obj.ImagingWavelength = wavelength;
             obj.Magnification = magnification;
-            obj.RayleighResolution =  0.61 * obj.ImagingWavelength / obj.NA * obj.Magnification / obj.PixelSize;
-            [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
-            [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
-            obj.InitResolutionRatio = init_resol;
+            obj.init()
         end
 
         function stats_all = fitPeaksAroundPos(obj, img_all, positions, options)
@@ -140,7 +136,7 @@ classdef PointSource < BaseComputer
             args2 = namedargs2cell(opt2);
             args3 = namedargs2cell(opt3);
             obj.RunNumber = obj.RunNumber + 1;
-            obj.DataLastImages = img_data;
+            obj.DataLastImages = img_data;            
             if opt.reset
                 obj.reset()
                 obj.info('PSF data is reset.')
@@ -231,16 +227,16 @@ classdef PointSource < BaseComputer
                     end
                 end
             
-                % Filter again by intensity and bounding box size
+                % Filter again by bounding box size and intensity
                 stats2 = stats;
-                threshold = max(opt1.filter_intensity_min, ...
-                    opt1.bin_threshold_perct * max(img_data(:)));
-                stats = stats(stats.MaxIntensity >= threshold, :);
-                stats3 = stats;
                 stats = stats((stats.BoundingBox(:, 3) <= opt1.filter_box_max(end)) & ...
                               (stats.BoundingBox(:, 4) <= opt1.filter_box_max(1)), :);
                 stats = stats((stats.BoundingBox(:, 3) >= opt1.filter_box_min(end)) & ...
                               (stats.BoundingBox(:, 4) >= opt1.filter_box_min(1)), :);
+                stats3 = stats;
+                threshold = max(opt1.filter_intensity_min, ...
+                    opt1.bin_threshold_perct * max(img_data(:)));
+                stats = stats(stats.MaxIntensity >= threshold, :);
             
                 % Refine the centroids by fitting 2D Gaussian and filter by width
                 stats4 = stats;
@@ -394,6 +390,10 @@ classdef PointSource < BaseComputer
                 obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
             end
         end
+
+        function setRatio(obj, ratio)
+            obj.InitResolutionRatio = ratio;
+        end
         
         function clear(obj)
             obj.DataLastImages = [];
@@ -491,7 +491,7 @@ classdef PointSource < BaseComputer
             subplot(2, 3, 1)
             imagesc2(obj.DataYRange, obj.DataXRange, psf_airy)
             title(sprintf('Ideal Airy PSF, sigma: %.3g, max: %.5g', ...
-                obj.RayleighResolution/2.9, max(psf_airy(:))))
+                obj.RayleighResolutionGaussSigma, max(psf_airy(:))))
             ax2 = subplot(2, 3, 2);
             imagesc2(obj.DataYRange, obj.DataXRange, obj.DataPSF)
             xlabel('Y')
@@ -646,6 +646,14 @@ classdef PointSource < BaseComputer
             val = obj.GaussGOF.eigen_widths / obj.RayleighResolutionGaussSigma;
         end
     end
+
+    methods (Access = protected)
+        function init(obj)
+            obj.RayleighResolution =  0.61 * obj.ImagingWavelength / obj.NA * obj.Magnification / obj.PixelSize;
+            [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
+            [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
+        end
+    end
 end
 
 function [val, s_range] = findPSFLineCut(psf, amp, v, step_range)
@@ -664,8 +672,12 @@ function [func, peak_val] = getIdealPSFAiry(resolution)
     r0 = 3.8317;
     func1 = @(x, y) (2*besselj(1, r0*sqrt(x.^2 + y.^2)/resolution)./(r0*sqrt(x.^2 + y.^2)/resolution)).^2;
     total = integral2(func1, -20*resolution, 20*resolution, -20*resolution, 20*resolution);
-    func = @(x, y) func1(x, y) / total;
+    func = @idealAiry;
     peak_val = 1/total;
+    function z = idealAiry(x, y)
+        z = func1(x, y) / total;
+        z(isnan(z)) = 1 / total;
+    end
 end
 
 function plotPeaks(id, img_data, img_bin, stats0, stats1, stats2, stats3, stats4, stats5)
@@ -683,11 +695,11 @@ function plotPeaks(id, img_data, img_bin, stats0, stats1, stats2, stats3, stats4
     viscircles(stats1.WeightedCentroid, sqrt(stats1.Area)/2, 'Color', 'w', 'LineWidth', 0.5);
     viscircles(stats2.WeightedCentroid, sqrt(stats2.Area)/2);
     subplot(2, 3, 4)
-    imagesc2(img_data, 'title', sprintf('3.After filter low-intensity: %d', size(stats3, 1)))
+    imagesc2(img_data, 'title', sprintf('4.After filter bounding box size: %d', size(stats3, 1)))
     viscircles(stats2.WeightedCentroid, sqrt(stats2.Area)/2, 'Color', 'w', 'LineWidth', 0.5);
     viscircles(stats3.WeightedCentroid, sqrt(stats3.Area)/2);
     subplot(2, 3, 5)
-    imagesc2(img_data, 'title', sprintf('4.After filter bounding box size: %d', size(stats4, 1)))
+    imagesc2(img_data, 'title', sprintf('4.After filter low-intensity: %d', size(stats4, 1)))
     viscircles(stats3.WeightedCentroid, sqrt(stats3.Area)/2, 'Color', 'w', 'LineWidth', 0.5);
     viscircles(stats4.WeightedCentroid, sqrt(stats4.Area)/2);
     subplot(2, 3, 6)

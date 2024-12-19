@@ -35,7 +35,7 @@
 clear; clc; close all
 p = LatCalibrator( ... 
     "LatCalibFilePath", [], ...
-    "DataPath", "calibration/example_data/20241205_example_data.mat", ...% "data/2024/12 December/20241205/sparse_with_532_r=2.mat", ...
+    "DataPath", "data/2024/12 December/20241217/white_cross_on_black_width=10_angle=0_new.mat", ...
     "InitCameraName", ["Andor19330", "Andor19331", "Zelux", "DMD"], ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"]);
@@ -80,18 +80,12 @@ p.calibrate("Zelux", [658, 565; 714, 595], 'binarize', 0, 'plot_diagnosticR', 1,
 
 %% Cross-calibrate Andor19331 to Andor19330
 close all
-p.calibrateO(1, 'sites', Lattice.prepareSite('hex', 'latr', 20), 'plot_diagnosticO', 1)
+p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnosticO', 1)
 
 %% (optional) Calibrate to a different signal index by searching a smaller region
-p.calibrateO(20, 'sites', Lattice.prepareSite('hex', 'latr', 2), 'plot_diagnosticO', 0)
+p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnosticO', 0)
 
 %% Save lattice calibration of all three cameras
-% Default is "calibration/LatCalib_<today's date>.mat"
+% Default is "calibration/LatCalib_<today's date>.mat" for a record
+% It will also update the default LatCalib file "calibration/LatCalib.mat"
 p.save()
-
-%% [IMPORTANT] Update the class definition
-% Update the 'LatCalibFilePath' in those classes after each (re)calibration
-% to make sure the future analysis will be with up-to-date calibration
-% - LatProcessor: "/core/postprocess/LatProcessor.m"
-%       This is to use the new calibration as default for future 
-%       lattice-related live and post-analysis

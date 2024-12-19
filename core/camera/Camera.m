@@ -13,7 +13,7 @@ classdef Camera < BaseRunner
 
     properties (Access = private)
         AcquisitionStartTime
-        ExampleLocation = "calibration/example_data/20241205_sparse_with_532_r=2.mat"
+        ExampleLocation = "calibration/example_data/20241217_white_array_on_black_full_spacing=100_r=2.mat"
         ExampleImage
         CurrentIndex = 0
     end

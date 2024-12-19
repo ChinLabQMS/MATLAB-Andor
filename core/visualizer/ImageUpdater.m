@@ -27,12 +27,13 @@ classdef ImageUpdater < AxesUpdater
             end
         end
 
-        function updateContent(obj, Live, options)
+        function updateContent(obj, Live, varargin)
             arguments
                 obj
                 Live
-                options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
-                options.transform_scaleV = obj.PlotLattice_TransformScaleV
+            end
+            arguments (Repeating)
+                varargin
             end
             c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
             plotData(obj, Live)
@@ -40,13 +41,13 @@ classdef ImageUpdater < AxesUpdater
             switch obj.FuncName
                 case "None"
                 case "Lattice"
-                    obj.plotLattice(Live)
+                    obj.plotLattice(Live, varargin{:})
                 case "Lattice All"
-                    obj.plotLatticeAll(Live)
+                    obj.plotLatticeAll(Live, varargin{:})
                 case "Transformed with Lattice"
-                    obj.plotTransformedLattice(Live)
+                    obj.plotTransformedLattice(Live, varargin{:})
                 case "PSF"
-                    obj.plotPSF(Live)
+                    obj.plotPSF(Live, varargin{:})
                 otherwise
                     obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
@@ -73,7 +74,8 @@ classdef ImageUpdater < AxesUpdater
             end
             Lat = getLatCalib(obj, Live);
             obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
-                    Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
+                SiteGrid.prepareSite('Hex', 'latr', options.lattice_hexr), ...
+                'filter', false);
         end
         
         function plotLatticeAll(obj, Live, options)
@@ -84,12 +86,11 @@ classdef ImageUpdater < AxesUpdater
             end
             Lat = getLatCalib(obj, Live);
             num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
-            x_size = Live.CameraManager.(obj.CameraName).Config.XPixels;
-            for i = 1: num_frames
-                obj.AddonHandle(i) = Lat.plot(obj.AxesHandle, ...
-                    Lattice.prepareSite("hex", "latr", options.lattice_hexr), ...
-                    'center', Lat.R + [x_size / num_frames * (i - 1), 0], 'filter', false);
-            end
+            x_shift = (Live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
+            R_shift = [x_shift', zeros(num_frames, 1)];
+            obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
+                SiteGrid.prepareSite('Hex', "latr", options.lattice_hexr), ...
+                'center', Lat.R + R_shift, 'filter', false);
         end
         
         function plotTransformedLattice(obj, Live, options)
@@ -109,7 +110,7 @@ classdef ImageUpdater < AxesUpdater
             hold(obj.AxesHandle, "on")
             obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
             obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
-                Lattice.prepareSite("hex", "latr", options.lattice_hexr), 'filter', false);
+                SiteGrid.prepareSite('Hex', 'latr', options.lattice_hexr), 'filter', false);
             obj.AddonHandle(3:4) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
         end
         

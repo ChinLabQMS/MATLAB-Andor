@@ -2,24 +2,25 @@
     %LATTICE Class for lattice calibration and conversion
 
     properties (Constant)
+        Standard_R = [0, 0]
         Standard_V1 = [0, 1]
         Standard_V2 = [-1/2*sqrt(3), -1/2]
-        TransformStandard_Scale = 10
-        TransformStandard_XLimSite = [-25, 25]
-        TransformStandard_YLimSite = [-25, 25]
+        TransformStandard_StepDensity = 10
+        TransformStandard_XLim = [-25, 25]
+        TransformStandard_YLim = [-25, 25]
         CalibR_Binarize = true
         CalibR_BinarizeThresPerct = 0.5
         CalibR_MinBinarizeThres = 30
         CalibR_Bootstrapping = false
         CalibR_PlotDiagnostic = false
-        CalibV_RFitFFT = 7
+        CalibV_RFitFFT = 10
         CalibV_CalibR = true
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
-        CalibO_Sites = Lattice.prepareSite("hex", "latr", 3)
+        CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 3)
         CalibO_DistanceMetric = "cosine"
         CalibO_NumScores = 5
         CalibO_WarnThresScoreDev = 5
@@ -30,7 +31,7 @@
 
     properties (SetAccess = immutable)
         PixelSize          % um
-        RealSpacing   % um
+        RealSpacing        % um
     end
 
     properties (SetAccess = protected)
@@ -54,12 +55,13 @@
                 spacing = 0.8815
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
+                options.r = Lattice.Standard_R
             end
             obj@BaseComputer(id)
             obj.PixelSize = pixel_size;
             obj.RealSpacing = spacing;
             if id == "Standard"
-                obj.init([0, 0], [], [options.v1; options.v2], ...
+                obj.init(options.r, [], spacing*[options.v1; options.v2], ...
                     "format", "KV")
             end
         end
@@ -113,6 +115,18 @@
             end
         end
         
+        % Copy the values to a different lattice object
+        function obj2 = copy(obj, options)
+            arguments
+                obj
+                options.v = obj.V
+                options.r = obj.R
+            end
+            obj.checkInitialized()
+            obj2 = Lattice(obj.ID, obj.PixelSize, obj.RealSpacing);
+            obj2.init(options.r, [], options.v, "format", "KV")
+        end
+        
         % Convert lattice space coordinates to real space
         function [coor, sites] = convert2Real(obj, sites, options)
             arguments
@@ -145,15 +159,17 @@
                 sites = sites(~idx, :);
             end
             % Transform coordinates to real space
+            options.center = permute(options.center, [3, 2, 1]);
             coor = sites * obj.V + options.center;
+            
             % Filter lattice sites outside of a rectangular limit area
             if options.filter
-                idx = (coor(:, 1) >= options.x_lim(1)) & ...
-                      (coor(:, 1) <= options.x_lim(2) & ...
-                      (coor(:, 2) >= options.y_lim(1)) & ...
-                      (coor(:, 2) <= options.y_lim(2)));
-                coor = coor(idx, :);
-                sites = sites(idx, :);
+                idx = all(coor(:, 1, :) >= options.x_lim(1), 3) & ...
+                      all(coor(:, 1, :) <= options.x_lim(2), 3) & ...
+                      all(coor(:, 2, :) >= options.y_lim(1), 3) & ...
+                      all(coor(:, 2, :) <= options.y_lim(2), 3);
+                coor = coor(idx, :, :);
+                sites = sites(idx, :, :);
             end
         end
         
@@ -279,13 +295,13 @@
             calibrateCrop(obj, signal, crop_R_site * obj.V_norm, varargin{:})
         end
 
-        % Convert coordinates in obj space to Lat2 space
+        % Convert coordinates coor in obj space to Lat2 space
         function [coor2, sites] = transform(obj, Lat2, coor, options)
             arguments
                 obj
                 Lat2
                 coor = []
-                options.round_output = true
+                options.round_output = false
             end
             [coor2, sites] = Lat2.convert2Real(obj.convert2Lat(coor), 'filter', false);
             if options.round_output
@@ -319,6 +335,18 @@
                 + (coor(idx, 2) - y_range(1)) * size(signal, 1));
         end
         
+        % Cross conversion of one (functional, smooth) image from obj to Lat2
+        % for all pixels within (x_range2, y_range2) in Lat2 space
+        function transformed2 = transformFunctional( ...
+                obj, Lat2, x_range2, y_range2, func)
+            [Y2, X2] = meshgrid(y_range2, x_range2);
+            coor = Lat2.transform(obj, [X2(:), Y2(:)], "round_output", false);
+            val = func(coor(:, 1), coor(:, 2));
+            idx = ~isnan(val);
+            transformed2 = zeros(length(x_range2), length(y_range2));
+            transformed2(idx) = val(idx);
+        end
+        
         % Cross conversion of one image from obj space to a standard Lat2
         function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandard( ...
                 obj, signal, x_range, y_range, options1, options2)
@@ -327,18 +355,17 @@
                 signal 
                 x_range 
                 y_range
-                options1.v1 = Lattice.Standard_V1
-                options1.v2 = Lattice.Standard_V2
-                options2.scale = obj.TransformStandard_Scale
-                options2.x_lim = obj.TransformStandard_XLimSite
-                options2.y_lim = obj.TransformStandard_YLimSite
+                options1.r = obj.Standard_R
+                options1.v1 = obj.Standard_V1
+                options1.v2 = obj.Standard_V2
+                options2.scale = obj.TransformStandard_StepDensity
+                options2.x_lim = obj.TransformStandard_XLim
+                options2.y_lim = obj.TransformStandard_YLim
             end
             args = namedargs2cell(options1);
-            Lat2 = Lattice('Standard', args{:});
-            xlim = options2.x_lim;
-            ylim = options2.y_lim;
-            x_range2 = xlim(1): 1/options2.scale: xlim(2);
-            y_range2 = ylim(1): 1/options2.scale: ylim(2);
+            Lat2 = Lattice('Standard', obj.PixelSize, obj.RealSpacing, args{:});
+            x_range2 = options2.x_lim(1): 1/options2.scale: options2.x_lim(2);
+            y_range2 = options2.y_lim(1): 1/options2.scale: options2.y_lim(2);
             transformed2 = obj.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
         end
 
@@ -349,6 +376,25 @@
 
         function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCropSite(obj, signal, crop_R_site, varargin)
             [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCrop(obj, signal, crop_R_site * obj.V_norm, varargin{:});
+        end
+
+        function [transformed2, x_range2, y_range2, Lat2] = transformFunctionalStandard( ...
+                obj, func, options1, options2)
+            arguments
+                obj
+                func
+                options1.r = obj.Standard_R
+                options1.v1 = obj.Standard_V1
+                options1.v2 = obj.Standard_V2
+                options2.scale = obj.TransformStandard_StepDensity
+                options2.x_lim = obj.TransformStandard_XLim
+                options2.y_lim = obj.TransformStandard_YLim
+            end
+            args = namedargs2cell(options1);
+            Lat2 = Lattice('Standard', obj.PixelSize, obj.RealSpacing, args{:});
+            x_range2 = options2.x_lim(1): 1/options2.scale: options2.x_lim(2);
+            y_range2 = options2.y_lim(1): 1/options2.scale: options2.y_lim(2);
+            transformed2 = obj.transformFunctional(Lat2, x_range2, y_range2, func);
         end
 
         % Calibrate the origin of obj to Lat2 based on signal overlapping
@@ -461,13 +507,13 @@
                 opt1.full_range = false
                 opt2.color = "r"
                 opt2.norm_radius = 0.1
-                opt2.add_origin = true
+                opt2.diff_origin = true
                 opt2.origin_radius = 0.5
                 opt2.line_width = 0.5
             end
             if isempty(varargin)
                 ax = gca();
-                sites = Lattice.prepareSite('hex', 'latr', 20);
+                sites = SiteGrid.prepareSite('Hex', 'latr', 20);
             elseif isscalar(varargin)
                 ax = gca();
                 sites = varargin{1};
@@ -478,13 +524,13 @@
                 obj.error("Unsupported number of input positional arguments.")
             end
             obj.checkInitialized()
-            opt1.remove_origin = opt2.add_origin;
+            opt1.remove_origin = opt2.diff_origin;
             args = namedargs2cell(opt1);
-            corr = obj.convert2Real(sites, args{:});
+            corr = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
             % Use a different radius to display origin
-            if opt2.add_origin
+            if opt2.diff_origin
                 radius = [repmat(opt2.norm_radius * obj.V_norm, size(corr, 1), 1);
-                          opt2.origin_radius * obj.V_norm];
+                          repmat(opt2.origin_radius * obj.V_norm, size(opt1.center, 1), 1)];
                 corr = [corr; opt1.center];
             else
                 radius = opt2.norm_radius * obj.V_norm;
@@ -502,17 +548,23 @@
             arguments
                 obj
                 ax = gca()
-                options.origin = obj.R
+                options.center = obj.R
                 options.scale = 1
                 options.add_legend = true
             end
             obj.checkInitialized()
             c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
             hold(ax,'on');
-            h(1) = quiver(ax, options.origin(2), options.origin(1), options.scale * obj.V(1, 2), options.scale * obj.V(1, 1), 'off', ...
-                'LineWidth', 2, 'DisplayName', sprintf("%s: V1", obj.ID), 'MaxHeadSize', 10, 'Color', 'r');
-            h(2) = quiver(ax, options.origin(2), options.origin(1), options.scale * obj.V(2, 2), options.scale * obj.V(2, 1), 'off', ...
-                'LineWidth', 2, 'DisplayName', sprintf("%s: V2", obj.ID), 'MaxHeadSize', 10, 'Color', 'm');
+            h(1) = quiver(ax, options.center(:, 2), options.center(:, 1), ...
+                repmat(options.scale * obj.V(1, 2), size(options.center, 1), 1), ...
+                repmat(options.scale * obj.V(1, 1), size(options.center, 1), 1), ...
+                'off', 'LineWidth', 2, 'DisplayName', sprintf("%s: V1", obj.ID), ...
+                'MaxHeadSize', 10, 'Color', 'r');
+            h(2) = quiver(ax, options.center(:, 2), options.center(:, 1), ...
+                repmat(options.scale * obj.V(2, 2), size(options.center, 1), 1), ...
+                repmat(options.scale * obj.V(2, 1), size(options.center, 1), 1), ...
+                'off', 'LineWidth', 2, 'DisplayName', sprintf("%s: V2", obj.ID), ...
+                'MaxHeadSize', 10, 'Color', 'm');
             if options.add_legend
                 legend(ax, 'Interpreter', 'none')
             end
@@ -588,10 +640,6 @@
                 obj.error("Lattice details are not initialized.")
             end
         end
-
-        function updateResolution(obj)
-            obj.PointSource.config("RayleighResolution", obj.RayleighResolution)
-        end
     end
 
     methods (Static)
@@ -605,27 +653,6 @@
             obj.init(s.R, s.K, s.V, 'format', "KV")
             if options.verbose
                 obj.info("Object loaded from structure.")
-            end
-        end
-
-        function sites = prepareSite(format, options)
-            arguments
-                format (1, 1) string = "hex"
-                options.latx_range = -10:10
-                options.laty_range = -10:10
-                options.latr = 10
-            end    
-            switch format
-                case 'rect'
-                    [Y, X] = meshgrid(options.laty_range, options.latx_range);
-                    sites = [X(:), Y(:)];
-                case 'hex'
-                    r = options.latr;
-                    [Y, X] = meshgrid(-r:r, -r:r);
-                    idx = (Y(:) <= X(:) + r) & (Y(:) >= X(:) - r);
-                    sites = [X(idx), Y(idx)];
-                otherwise
-                    error("Not implemented")
             end
         end
 

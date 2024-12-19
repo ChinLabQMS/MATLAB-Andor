@@ -1,15 +1,17 @@
 classdef SiteCounter < BaseComputer
-    
+
     properties (SetAccess = immutable)
-        Lattice
+        SiteGrid
         PointSource
+        Lattice
     end
     
     methods
-        function obj = SiteCounter(id, lat, ps)
+        function obj = SiteCounter(id, lat, ps, sites)
             obj@BaseComputer(id)
             obj.Lattice = lat;
             obj.PointSource = ps;
+            obj.SiteGrid = sites;
         end
     end
 
