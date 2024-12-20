@@ -441,6 +441,7 @@ classdef PointSource < BaseComputer
                 obj
                 ax = gca()
                 options.scale = 1
+                options.add_legend = true
             end
             c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
             v1 = options.scale * obj.GaussGOF.eigen_widths(1) * obj.GaussGOF.eigen_vectors(:, 1);
@@ -452,7 +453,9 @@ classdef PointSource < BaseComputer
             h(2) = quiver(ax, 0, 0, v2(2), v2(1), ...
                 'LineWidth', 2, 'Color', 'm', 'MaxHeadSize', 10, ...
                 'DisplayName', sprintf("minor width: %.3g", obj.GaussGOF.eigen_widths(2)));
-            legend(ax, 'Interpreter', 'none')
+            if options.add_legend
+                h(3) = legend(ax, 'Interpreter', 'none');
+            end
             if nargout == 1
                 varargout{1} = h;
             end
