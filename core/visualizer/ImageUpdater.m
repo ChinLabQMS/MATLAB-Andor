@@ -127,7 +127,7 @@ classdef ImageUpdater < AxesUpdater
                 hold(obj.AxesHandle, "on")
                 obj.AddonHandle(1) = viscircles(obj.AxesHandle, centers, radius, 'LineWidth', 0.5);
                 obj.AddonHandle(2) = PS.plot(obj.AxesHandle);
-                obj.AddonHandle(3:4) = PS.plotV(obj.AxesHandle, "scale", options.scale_V);
+                obj.AddonHandle(3:5) = PS.plotV(obj.AxesHandle, 'scale', options.scale_V, 'add_legend', true);
             catch
                 obj.warn2("[%s %s] Can not find last PSF fitting data. Please check if 'fitPSF' exists in SequenceTable.", obj.CameraName, obj.ImageLabel)
             end
