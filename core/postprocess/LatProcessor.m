@@ -28,7 +28,7 @@ classdef (Abstract) LatProcessor < BaseProcessor
         end
 
         function init(obj)
-            obj.assert(~isempty(obj.LatCalibFilePath), 'PSFCalibFilePath is unset!')
+            obj.assert(~isempty(obj.LatCalibFilePath), 'LatCalibFilePath is unset!')
         end
     end
 

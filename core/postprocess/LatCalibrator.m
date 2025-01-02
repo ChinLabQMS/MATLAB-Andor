@@ -341,10 +341,9 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                     if isfield(obj.Signal, camera)
                         pixel_size = obj.Signal.(camera).Config.PixelSize;
                     else
-                        obj.error('Unable to find pixel size for camera %s.', camera)
+                        obj.error('Unable to find pixel size for camera %s, please check data config.', camera)
                     end
-                    obj.LatCalib.(camera) = Lattice(camera, pixel_size);
-                    obj.info('Empty Lattice object created for %s.', camera)
+                    obj.LatCalib.(camera) = Lattice(camera, pixel_size, 'verbose', true);
                 else
                     obj.info('Found calibration for %s in loaded LatCalib file.', camera)
                 end

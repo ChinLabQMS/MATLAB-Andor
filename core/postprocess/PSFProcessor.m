@@ -10,13 +10,18 @@ classdef (Abstract) PSFProcessor < BaseProcessor
 
     methods
         function set.PSFCalibFilePath(obj, path)
-            obj.loadPSFCalib(path)
+            obj.loadPSFCalibFile(path)
             obj.PSFCalibFilePath = path;
         end
     end
 
     methods (Access = protected, Hidden)
-        function loadPSFCalib(obj, path)
+        function loadPSFCalibFile(obj, path)
+           if isempty(path)
+                obj.PSFCalib = [];
+                obj.info("PSF calibration is reset to empty structure.")
+                return
+           end
            obj.checkFilePath(path, 'PSFCalibFilePath')
            obj.PSFCalib = load(path);
            obj.info("PSFCalib is loaded from '%s'", path)

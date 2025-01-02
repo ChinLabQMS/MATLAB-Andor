@@ -2,6 +2,7 @@
 data/
 calibration/
 resources/
+mex/
 .ipynb_checkpoints/
 *.mat
 *.asv

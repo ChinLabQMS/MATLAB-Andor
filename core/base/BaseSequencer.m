@@ -147,7 +147,9 @@ classdef (Abstract) BaseSequencer < BaseObject
         end
         
         function analyze(obj, ~, ~, varargin)
-            obj.Analyzer.analyze(obj.Live, varargin{:});
+            if (~obj.Live.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
+                obj.Analyzer.analyze(obj.Live, varargin{:});
+            end
         end
         
         function project(obj, camera, label, varargin)

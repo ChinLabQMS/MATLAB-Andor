@@ -1,4 +1,4 @@
-classdef (Abstract) Projector < BaseProcessor & BaseConfig
+classdef (Abstract) Projector < BaseConfig
 
     properties (SetAccess = immutable)
         ID
@@ -15,12 +15,18 @@ classdef (Abstract) Projector < BaseProcessor & BaseConfig
     end
 
     properties (Abstract, SetAccess = immutable)
+        MexHandle
         PixelSize
-        PatternSizeX
-        PatternSizeY
-        XPixels
-        YPixels
+        PatternSizeX  % BMP size (screen size)
+        PatternSizeY  % BMP size
         DefaultStaticPatternPath
+
+        XPixels % Real space pattern size, with dummy pixels
+        YPixels % Real space pattern size, with dummy pixels
+    end
+
+    properties (Dependent)
+        IsWindowCreated
     end
 
     methods
@@ -28,7 +34,6 @@ classdef (Abstract) Projector < BaseProcessor & BaseConfig
             arguments
                 id = "Test"
             end
-            obj@BaseProcessor('reset_fields', false, 'init', false)
             obj.ID = id;
             obj.StaticPatternPath = obj.DefaultStaticPatternPath;
         end
@@ -39,7 +44,13 @@ classdef (Abstract) Projector < BaseProcessor & BaseConfig
             obj.updateStaticPatternReal()
         end
 
+        function open(obj)
+            obj.MexHandle("open")
+            obj.StaticPatternPath = obj.StaticPatternPath;
+        end
+
         function close(obj)
+            obj.MexHandle("close")
         end
 
         function plot(obj)
@@ -54,17 +65,31 @@ classdef (Abstract) Projector < BaseProcessor & BaseConfig
 
         function delete(obj)
             obj.close()
-            delete@BaseProcessor(obj)
+        end
+
+        function val = get.IsWindowCreated(obj)
+            val = obj.MexHandle("isWindowCreated");
         end
     end
 
     methods (Access = protected)
+        function label = getStatusLabel(obj)
+            label = getStatusLabel@BaseConfig(obj) + sprintf("(IsWindowCreated: %d)", obj.IsWindowCreated);
+        end
+
         function loadPattern(obj, path)
             obj.checkFilePath(path, 'StaticPatternPath')
             pattern = imread(path);
             obj.assert(isequal(size(pattern, 1:2), [obj.PatternSizeX, obj.PatternSizeY]), ...
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
                     size(pattern, 1), size(pattern, 2), obj.PatternSizeX, obj.PatternSizeY)
+            if obj.IsWindowCreated
+                [status, info] = fileattrib(path);
+                if status
+                    path = info.Name;
+                end
+                obj.MexHandle("projectFromFile", string(path))
+            end
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
         end
@@ -72,6 +97,12 @@ classdef (Abstract) Projector < BaseProcessor & BaseConfig
 
     methods (Abstract, Access = protected)
         updateStaticPatternReal(obj)
+    end
+
+    methods (Static)
+        function info = getDisplayInformation()
+            info = struct2table(PatternWindowMex("getDisplayModes"));
+        end
     end
 
 end

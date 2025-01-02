@@ -1,6 +1,7 @@
 classdef TestScreen < Projector
 
     properties (SetAccess = immutable)
+        MexHandle = @PatternWindowMexTest
         PixelSize = 7.637
         PatternSizeX = 1920
         PatternSizeY = 1080

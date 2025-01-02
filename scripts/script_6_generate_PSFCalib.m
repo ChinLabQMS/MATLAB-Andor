@@ -4,6 +4,7 @@
 %% Create a PSFCalibrator object
 % Configurable settings:
 % - LatCalibFilePath: path to lattice calibration file to use
+% - PSFCalibFilePath: path to a pre-loaded PSF calibration file
 % - DataPath: path to .mat data file for this calibration. PSF calibration 
 %             should work in sparse settings
 % - PSFCameraList: list of camera names for calibrating PSF
@@ -25,6 +26,7 @@ p.plotSignal()
 %  - resolution_ratio, ratio of resolution to the ideal Rayleigh resolution,
 %    when using a value larger than 1, it assumes a worse than ideal 
 %    resolution when doing fit and filtering
+%  - optional name-value pairs
 
 close all
 p.fit('Andor19330', 1, 1.3, 'plot_diagnostic', 1)

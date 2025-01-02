@@ -1,12 +1,7 @@
-classdef Analyzer < LatProcessor & PSFProcessor
+classdef Analyzer < CombinedProcessor
     %ANALYZER Live analyzer
     
     methods
-        function obj = Analyzer(varargin)
-            obj@LatProcessor('reset_fields', false, 'init', false)
-            obj@PSFProcessor(varargin{:}, 'reset_fields', true, 'init', true)
-        end
-
         function analyze(obj, live, info, options)
             arguments
                 obj

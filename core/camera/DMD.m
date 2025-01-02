@@ -1,6 +1,7 @@
 classdef DMD < Projector
     
     properties (SetAccess = immutable)
+        MexHandle = @PatternWindowMex
         PixelSize = 7.637
         PatternSizeX = 1140
         PatternSizeY = 912

@@ -56,6 +56,7 @@
                 options.v1 = Lattice.Standard_V1
                 options.v2 = Lattice.Standard_V2
                 options.r = Lattice.Standard_R
+                options.verbose = false
             end
             obj@BaseComputer(id)
             obj.PixelSize = pixel_size;
@@ -63,6 +64,9 @@
             if id == "Standard"
                 obj.init(options.r, [], spacing*[options.v1; options.v2], ...
                     "format", "KV")
+            end
+            if options.verbose
+                obj.info('Empty object created, pixel_size = %.3g um, physical lattice spacing = %.3g um.', pixel_size, spacing)
             end
         end
         

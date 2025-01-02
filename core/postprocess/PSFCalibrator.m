@@ -1,4 +1,4 @@
-classdef PSFCalibrator < DataProcessor & LatProcessor
+classdef PSFCalibrator < DataProcessor & CombinedProcessor
     %FRAMECALIBRATOR Calibrator for
     % 1. Getting PSF calibration
     % 2. Analyze calibration drifts over time
@@ -15,14 +15,13 @@ classdef PSFCalibrator < DataProcessor & LatProcessor
     end
 
     properties (SetAccess = protected)
-        PSFCalib
         Stat
     end
 
     methods
         function obj = PSFCalibrator(varargin)
             obj@DataProcessor('reset_fields', false, 'init', false)
-            obj@LatProcessor(varargin{:}, 'reset_fields', true, 'init', true)
+            obj@CombinedProcessor(varargin{:}, 'reset_fields', true, 'init', true)
         end
 
         function fit(obj, camera, idx_range, ratio, varargin)
@@ -141,11 +140,20 @@ classdef PSFCalibrator < DataProcessor & LatProcessor
                     wavelength = "852";
                 end
                 obj.Stat.(camera) = obj.Signal.(camera).(label);
-                obj.PSFCalib.(camera) = PointSource( ...
-                    camera, obj.Signal.(camera).Config.PixelSize, ...
-                    double(wavelength) / 1000, ...
-                    obj.LatCalib.(camera).Magnification);
-                obj.info('Empty PointSource object created for camera %s.', camera)
+                if ~isfield(obj.PSFCalib, camera)
+                    if isfield(obj.LatCalib, camera)
+                        obj.PSFCalib.(camera) = PointSource( ...
+                            camera, obj.Signal.(camera).Config.PixelSize, ...
+                            double(wavelength) / 1000, ...
+                            obj.LatCalib.(camera).Magnification, 'verbose', true);
+                    else
+                        obj.PSFCalib.(camera) = PointSource( ...
+                            camera, obj.Signal.(camera).Config.PixelSize, ...
+                            double(wavelength) / 1000, 'verbose', true);
+                    end
+                else
+                    obj.info('Found calibration for %s in loaded PSFCalib file.', camera)
+                end
             end
         end
     end

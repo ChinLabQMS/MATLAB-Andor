@@ -25,7 +25,7 @@ classdef PointSource < BaseComputer
         MergePeaks_CropRadius = 3 % Multiply by RayleighResolution 
         Update_WarnThreshold = 0.1
         Update_NormalizeMethod = "Gaussian" 
-        Update_GaussFitCropRadius = 2 % Multiply by RayleighResolution 
+        Update_GaussFitCropRadius = 2 % Multiply by RayleighResolution
         Update_GaussFitSubSample = 70 % Divided by RayleighResolution
         Update_UpdateResolutionRatio = false
         Plot_ShowGaussSurface = true
@@ -75,13 +75,14 @@ classdef PointSource < BaseComputer
     end
 
     methods
-        function obj = PointSource(id, pixel_size, wavelength, magnification, na)
+        function obj = PointSource(id, pixel_size, wavelength, magnification, na, options)
             arguments
                 id = "Test"
                 pixel_size = 13
                 wavelength = 0.852
                 magnification = 89
                 na = 0.8
+                options.verbose = false
             end
             obj@BaseComputer(id)
             obj.NA = na;
@@ -89,6 +90,11 @@ classdef PointSource < BaseComputer
             obj.ImagingWavelength = wavelength;
             obj.Magnification = magnification;
             obj.init()
+            if options.verbose
+                obj.info(['Empty object created, pixel_size = %.3g um, ' ...
+                    'imaging wavelength = %.3g um, magnification = %.3g, NA = %.2g.'], ...
+                    pixel_size, wavelength, magnification, na)
+            end
         end
 
         function stats_all = fitPeaksAroundPos(obj, img_all, positions, options)

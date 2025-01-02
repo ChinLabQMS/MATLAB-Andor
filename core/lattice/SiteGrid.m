@@ -9,7 +9,6 @@ classdef SiteGrid < BaseProcessor
 
     properties (SetAccess = protected)
         Sites
-        SiteIndex
         NumSites
     end
 
@@ -20,7 +19,6 @@ classdef SiteGrid < BaseProcessor
                 "latx_range", -obj.RectRadiusX: obj.RectRadiusX, ...
                 "laty_range", -obj.RectRadiusY: obj.RectRadiusY);
             obj.NumSites = size(obj.Sites);
-            obj.SiteIndex = 1: obj.NumSites;
         end
     end
 
