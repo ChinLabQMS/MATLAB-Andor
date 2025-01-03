@@ -74,7 +74,7 @@ classdef (Abstract) Projector < BaseConfig
 
     methods (Access = protected)
         function label = getStatusLabel(obj)
-            label = getStatusLabel@BaseConfig(obj) + sprintf("(IsWindowCreated: %d)", obj.IsWindowCreated);
+            label = getStatusLabel@BaseConfig(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
         end
 
         function loadPattern(obj, path)
@@ -84,11 +84,8 @@ classdef (Abstract) Projector < BaseConfig
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
                     size(pattern, 1), size(pattern, 2), obj.PatternSizeX, obj.PatternSizeY)
             if obj.IsWindowCreated
-                [status, info] = fileattrib(path);
-                if status
-                    path = info.Name;
-                end
-                obj.MexHandle("projectFromFile", string(path))
+                abspath = resolvePath(path);
+                obj.MexHandle("projectFromFile", string(abspath))
             end
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
@@ -100,8 +97,25 @@ classdef (Abstract) Projector < BaseConfig
     end
 
     methods (Static)
-        function info = getDisplayInformation()
-            info = struct2table(PatternWindowMex("getDisplayModes"));
+        function info = getDisplayInformation(format)
+            arguments
+                format = "table"
+            end
+            info = PatternWindowMex("getDisplayModes");
+            switch format
+                case "struct"
+                case "table"
+                    info = struct2table(info);
+                case "string"
+                    strarr = strings(3, 1);
+                    for i = 1: length(info)
+                        strarr(i) = sprintf("Display#%d: %d x %d, %.1f Hz", ...
+                            i, info(i).Width, info(i).Height, info(i).RefreshRate);
+                    end
+                    info = strarr;
+                otherwise
+                    error('Unknown format for display information!')
+            end
         end
     end
 
