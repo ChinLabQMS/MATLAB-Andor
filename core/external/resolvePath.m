@@ -9,5 +9,6 @@ function fullpath = resolvePath(filename)
   if file.exists()
       return
   else
-      error('resolvePath:CannotResolve', 'Does not exist or failed to resolve absolute path for %s.', filename);
+      error('resolvePath:CannotResolve', ...
+          'Does not exist or failed to resolve absolute path for %s.', filename);
   end

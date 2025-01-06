@@ -5,7 +5,6 @@ classdef (Abstract) Projector < BaseConfig
     end
 
     properties (SetAccess = {?BaseObject})
-        OperationMode = "static"
         StaticPatternPath
     end
 
@@ -16,9 +15,9 @@ classdef (Abstract) Projector < BaseConfig
 
     properties (Abstract, SetAccess = immutable)
         MexHandle
-        PixelSize
-        PatternSizeX  % BMP size (screen size)
-        PatternSizeY  % BMP size
+        PixelSize % In um
+        BMPSizeX  % BMP size
+        BMPSizeY  % BMP size
         DefaultStaticPatternPath
 
         XPixels % Real space pattern size, with dummy pixels
@@ -34,6 +33,7 @@ classdef (Abstract) Projector < BaseConfig
             arguments
                 id = "Test"
             end
+            obj.MexHandle("lock")
             obj.ID = id;
             obj.StaticPatternPath = obj.DefaultStaticPatternPath;
         end
@@ -44,8 +44,13 @@ classdef (Abstract) Projector < BaseConfig
             obj.updateStaticPatternReal()
         end
 
-        function open(obj)
-            obj.MexHandle("open")
+        function open(obj, idx, verbose)
+            arguments
+                obj
+                idx = -1
+                verbose = false
+            end
+            obj.MexHandle("open", idx, verbose)
             obj.StaticPatternPath = obj.StaticPatternPath;
         end
 
@@ -65,6 +70,7 @@ classdef (Abstract) Projector < BaseConfig
 
         function delete(obj)
             obj.close()
+            obj.MexHandle("unlock")
         end
 
         function val = get.IsWindowCreated(obj)
@@ -80,13 +86,9 @@ classdef (Abstract) Projector < BaseConfig
         function loadPattern(obj, path)
             obj.checkFilePath(path, 'StaticPatternPath')
             pattern = imread(path);
-            obj.assert(isequal(size(pattern, 1:2), [obj.PatternSizeX, obj.PatternSizeY]), ...
+            obj.assert(isequal(size(pattern, 1:2), [obj.BMPSizeX, obj.BMPSizeY]), ...
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
-                    size(pattern, 1), size(pattern, 2), obj.PatternSizeX, obj.PatternSizeY)
-            if obj.IsWindowCreated
-                abspath = resolvePath(path);
-                obj.MexHandle("projectFromFile", string(abspath))
-            end
+                    size(pattern, 1), size(pattern, 2), obj.BMPSizeX, obj.BMPSizeY)
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
         end
