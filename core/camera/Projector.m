@@ -2,6 +2,7 @@ classdef (Abstract) Projector < BaseConfig
 
     properties (SetAccess = immutable)
         ID
+        MexHandle
     end
 
     properties (SetAccess = {?BaseObject})
@@ -14,7 +15,7 @@ classdef (Abstract) Projector < BaseConfig
     end
 
     properties (Abstract, SetAccess = immutable)
-        MexHandle
+        MexFunctionName
         PixelSize % In um
         BMPSizeX  % BMP size
         BMPSizeY  % BMP size
@@ -33,6 +34,8 @@ classdef (Abstract) Projector < BaseConfig
             arguments
                 id = "Test"
             end
+            clear(obj.MexFunctionName)
+            obj.MexHandle = str2func(obj.MexFunctionName);
             obj.MexHandle("lock")
             obj.ID = id;
             obj.StaticPatternPath = obj.DefaultStaticPatternPath;
@@ -44,18 +47,21 @@ classdef (Abstract) Projector < BaseConfig
             obj.updateStaticPatternReal()
         end
 
-        function open(obj, idx, verbose)
+        function open(obj, verbose)
             arguments
                 obj
-                idx = -1
                 verbose = false
             end
-            obj.MexHandle("open", idx, verbose)
+            obj.MexHandle("open", verbose)
             obj.StaticPatternPath = obj.StaticPatternPath;
         end
 
-        function close(obj)
-            obj.MexHandle("close")
+        function close(obj, verbose)
+            arguments
+                obj 
+                verbose = false
+            end
+            obj.MexHandle("close", verbose)
         end
 
         function plot(obj)
@@ -88,7 +94,11 @@ classdef (Abstract) Projector < BaseConfig
             pattern = imread(path);
             obj.assert(isequal(size(pattern, 1:2), [obj.BMPSizeX, obj.BMPSizeY]), ...
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
-                    size(pattern, 1), size(pattern, 2), obj.BMPSizeX, obj.BMPSizeY)
+                size(pattern, 1), size(pattern, 2), obj.BMPSizeX, obj.BMPSizeY)
+            % [resolved_path] = resolvePath(path);
+            % disp(path)
+            % disp(resolved_path)
+            % obj.MexHandle("setStaticPatternPath", string(resolved_path))
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
         end
