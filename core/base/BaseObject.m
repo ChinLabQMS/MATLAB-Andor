@@ -114,17 +114,22 @@ classdef BaseObject < handle
         end
         
         % Check if a path to a file exists
-        function checkFilePath(obj, path, varname)
+        function varargout = checkFilePath(obj, path, varname, options)
             arguments
                 obj
                 path
                 varname = 'File'
+                options.format = "double"
             end
             if isempty(path)
                 obj.error('%s is not set!', varname)
             elseif exist(path, 'file') ~= 2
                 obj.error("%s '%s' does not exist!", varname, path)
             end
+            if nargout == 0
+                return
+            end
+            varargout{1} = getFullPath(path, "check_exist", true, "format", options.format);
         end
 
         function str = sinfo(obj, info, varargin)

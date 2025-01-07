@@ -42,8 +42,9 @@ classdef (Abstract) Projector < BaseConfig
         end
 
         function set.StaticPatternPath(obj, path)
-            obj.loadPattern(path)
-            obj.StaticPatternPath = path;
+            fullpath = obj.checkFilePath(path, 'StaticPatternPath');
+            obj.loadPattern(fullpath)
+            obj.StaticPatternPath = fullpath;
             obj.updateStaticPatternReal()
         end
 
@@ -77,6 +78,7 @@ classdef (Abstract) Projector < BaseConfig
         function delete(obj)
             obj.close()
             obj.MexHandle("unlock")
+            clear(obj.MexFunctionName)
         end
 
         function val = get.IsWindowCreated(obj)
@@ -90,15 +92,11 @@ classdef (Abstract) Projector < BaseConfig
         end
 
         function loadPattern(obj, path)
-            obj.checkFilePath(path, 'StaticPatternPath')
             pattern = imread(path);
             obj.assert(isequal(size(pattern, 1:2), [obj.BMPSizeX, obj.BMPSizeY]), ...
                 "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
                 size(pattern, 1), size(pattern, 2), obj.BMPSizeX, obj.BMPSizeY)
-            % [resolved_path] = resolvePath(path);
-            % disp(path)
-            % disp(resolved_path)
-            % obj.MexHandle("setStaticPatternPath", string(resolved_path))
+            obj.MexHandle("setStaticPatternPath", path, false)
             obj.StaticPattern = pattern;
             obj.info("Static pattern loaded from '%s'.", path)
         end
