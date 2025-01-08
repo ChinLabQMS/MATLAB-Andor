@@ -38,7 +38,7 @@ classdef CameraManager < BaseManager
                 cameras = obj.VisibleProp
             end
             for camera = cameras
-                if isa(obj.(camera), "Camera")
+                if isa(camera, "Camera")
                     obj.(camera).init()
                 end
             end

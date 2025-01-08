@@ -119,7 +119,7 @@ classdef BaseObject < handle
                 obj
                 path
                 varname = 'File'
-                options.format = "double"
+                options.format = "no_backslash"
             end
             if isempty(path)
                 obj.error('%s is not set!', varname)

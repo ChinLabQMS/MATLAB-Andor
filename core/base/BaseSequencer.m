@@ -77,7 +77,9 @@ classdef (Abstract) BaseSequencer < BaseObject
                 obj.info2("Sequence completed in %.3f s.", toc(timer))
             end
         end
-        
+    end
+
+    methods (Access = protected, Hidden)
         % Perform input arguments parsing at the beginning
         function initSequence(obj)
             obj.StatStorage.init()
@@ -125,9 +127,7 @@ classdef (Abstract) BaseSequencer < BaseObject
             end
             obj.SequenceStep = steps;
         end
-    end
 
-    methods (Access = protected, Hidden)
         function start(obj, camera, ~, varargin)
             obj.CameraManager.(camera).startAcquisition(varargin{:});
         end

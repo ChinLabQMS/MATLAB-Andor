@@ -1,24 +1,23 @@
 function fullpath = getFullPath(path, options)
 arguments
     path
-    options.check_exist = false
-    options.format = "normal"
+    options.check_exist = true
+    options.format = "no_back_slash"
 end
-    cur_dir = pwd;
-    fullpath = string(fullfile(cur_dir, path));
+    fullpath = string(fullfile(pwd, path));
     if options.check_exist
-       if exist(fullpath, 'file') ~= 2
+        if exist(fullpath, 'file') ~= 2
            fullpath = string(path);
            if exist(fullpath, 'file') ~= 2
                error('File does not exist! File path: %s', path)
            end
-       end
+        end
     end
     switch options.format
         case "normal"            
-        case "no_backslash"
-            fullpath = strrep(fullpath, "\", "\\");
         case "double"
+            fullpath = strrep(fullpath, "\", "\\");
+        case "no_backslash"
             fullpath = strrep(fullpath, "\", "/");
     end
 end

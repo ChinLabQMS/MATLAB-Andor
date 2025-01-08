@@ -1,12 +1,8 @@
-classdef (Abstract) Projector < BaseConfig
+classdef (Abstract) Projector < BaseProcessor
 
     properties (SetAccess = immutable)
         ID
         MexHandle
-    end
-
-    properties (SetAccess = {?BaseObject})
-        StaticPatternPath
     end
 
     properties (SetAccess = protected)
@@ -27,6 +23,8 @@ classdef (Abstract) Projector < BaseConfig
 
     properties (Dependent)
         IsWindowCreated
+        IsWindowMinimized
+        StaticPatternPath
     end
 
     methods
@@ -34,17 +32,18 @@ classdef (Abstract) Projector < BaseConfig
             arguments
                 id = "Test"
             end
-            clear(obj.MexFunctionName)
+            obj@BaseProcessor()
             obj.MexHandle = str2func(obj.MexFunctionName);
             obj.MexHandle("lock")
             obj.ID = id;
-            obj.StaticPatternPath = obj.DefaultStaticPatternPath;
+            obj.setStaticPatternPath(obj.DefaultStaticPatternPath)
         end
-
-        function set.StaticPatternPath(obj, path)
+        
+        function setStaticPatternPath(obj, path)
             fullpath = obj.checkFilePath(path, 'StaticPatternPath');
-            obj.loadPattern(fullpath)
-            obj.StaticPatternPath = fullpath;
+            obj.MexHandle("setStaticPatternPath", fullpath, false)
+            obj.info("Static pattern loaded from '%s'.", fullpath)
+            obj.StaticPattern = imread(fullpath);
             obj.updateStaticPatternReal()
         end
 
@@ -54,7 +53,6 @@ classdef (Abstract) Projector < BaseConfig
                 verbose = false
             end
             obj.MexHandle("open", verbose)
-            obj.StaticPatternPath = obj.StaticPatternPath;
         end
 
         function close(obj, verbose)
@@ -63,6 +61,22 @@ classdef (Abstract) Projector < BaseConfig
                 verbose = false
             end
             obj.MexHandle("close", verbose)
+        end
+
+        function setDisplayIndex(obj, index, verbose)
+            arguments
+                obj
+                index = -1
+                verbose = false
+            end
+            obj.MexHandle("setDisplayIndex", index, verbose)
+        end
+
+        function selectPatternFromFile(obj)
+            [file, location] = uigetfile('*.bmp', 'Select a BMP pattern to display');
+            if file ~= 0
+                obj.setStaticPatternPath(fullfile(location, file));
+            end
         end
 
         function plot(obj)
@@ -84,21 +98,23 @@ classdef (Abstract) Projector < BaseConfig
         function val = get.IsWindowCreated(obj)
             val = obj.MexHandle("isWindowCreated");
         end
+
+        function val = get.IsWindowMinimized(obj)
+            val = obj.MexHandle("isWindowMinimized");
+        end
+
+        function val = get.StaticPatternPath(obj)
+            val = string(obj.MexHandle("getStaticPatternPath"));
+        end
     end
 
     methods (Access = protected)
-        function label = getStatusLabel(obj)
-            label = getStatusLabel@BaseConfig(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
+        function init(obj)
+            clear(obj.MexFunctionName)
         end
 
-        function loadPattern(obj, path)
-            pattern = imread(path);
-            obj.assert(isequal(size(pattern, 1:2), [obj.BMPSizeX, obj.BMPSizeY]), ...
-                "Unable to set pattern, dimension (%d, %d) does not match target (%d, %d).", ...
-                size(pattern, 1), size(pattern, 2), obj.BMPSizeX, obj.BMPSizeY)
-            obj.MexHandle("setStaticPatternPath", path, false)
-            obj.StaticPattern = pattern;
-            obj.info("Static pattern loaded from '%s'.", path)
+        function label = getStatusLabel(obj)
+            label = getStatusLabel@BaseProcessor(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
         end
     end
 
