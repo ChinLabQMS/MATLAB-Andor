@@ -6,7 +6,6 @@ classdef (Abstract) Projector < BaseProcessor
     end
 
     properties (SetAccess = protected)
-        StaticPattern
         StaticPatternReal
     end
 
@@ -25,6 +24,7 @@ classdef (Abstract) Projector < BaseProcessor
         IsWindowCreated
         IsWindowMinimized
         StaticPatternPath
+        StaticPatternRaw
     end
 
     methods
@@ -40,11 +40,9 @@ classdef (Abstract) Projector < BaseProcessor
         end
         
         function setStaticPatternPath(obj, path)
-            fullpath = obj.checkFilePath(path, 'StaticPatternPath');
-            obj.MexHandle("setStaticPatternPath", fullpath, false)
-            obj.info("Static pattern loaded from '%s'.", fullpath)
-            obj.StaticPattern = imread(fullpath);
-            obj.updateStaticPatternReal()
+            obj.checkFilePath(path, 'StaticPatternPath');
+            obj.MexHandle("setStaticPatternPath", path, false)
+            obj.info("Static pattern loaded from '%s'.", path)
         end
 
         function open(obj, verbose)
@@ -105,6 +103,14 @@ classdef (Abstract) Projector < BaseProcessor
 
         function val = get.StaticPatternPath(obj)
             val = string(obj.MexHandle("getStaticPatternPath"));
+        end
+
+        function val = get.StaticPatternRaw(obj)
+            try
+                val = obj.MexHandle("getStaticPattern");
+            catch
+                val = [];
+            end
         end
     end
 
