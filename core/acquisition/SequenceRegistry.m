@@ -39,6 +39,7 @@ classdef SequenceRegistry < BaseObject
         function active_cameras = getActiveCameras(sequence)
             active_cameras = SequenceRegistry.getActiveDevices(sequence);
             active_cameras = active_cameras(~active_cameras.startsWith("DMD"));
+            active_cameras = active_cameras(~active_cameras.startsWith("Picomotor"));
         end
 
         function active_projectors = getActiveProjectors(sequence)
@@ -81,10 +82,10 @@ function sequence = makeSequence(cameras, labels, types, notes, empty_rows)
     end
     num_command = length(cameras) + empty_rows;
     default_device = "--inactive--";
-    all_devices = ["Andor19330", "Andor19331", "Zelux", "DMD", "--inactive--"];
+    all_devices = ["Andor19330", "Andor19331", "Zelux", "DMD", "Picomotor", "--inactive--"];
     default_label = "";
     default_type = "Analysis";
-    all_type = ["Start+Acquire", "Start", "Acquire", "Analysis", "Project"];
+    all_type = ["Start+Acquire", "Start", "Acquire", "Analysis", "Project", "SetTargetPos"];
     default_note = "";
     Order = (1: num_command)';
     Camera = [cameras, repmat(default_device, 1, empty_rows)]';

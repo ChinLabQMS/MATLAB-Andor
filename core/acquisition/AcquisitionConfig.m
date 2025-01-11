@@ -125,7 +125,7 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
             continue
         end
         switch operation
-            case {"Start", "Project"}
+            case {"Start", "Project", "SetTargetPos"}
                 Params{i} = parseString2Args(obj, note);
             case "Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
@@ -255,12 +255,21 @@ function mustBeValidSequence(obj, sequence)
             if label == "Config"
                 newerror("'Config' is reserved and can not be used as label")
             end
+            % For DMD and Projection related commands
             if operation == "Project" && device.startsWith("DMD")
                 continue
             elseif operation == "Project"
                 newerror("'Project' is only available for DMD")
             elseif device.startsWith("DMD")
                 newerror("DMD can only use 'Project'")
+            end
+            % For Picomotor related piezo command
+            if operation == "SetTargetPos" && device.startsWith("Picomotor")
+                continue
+            elseif operation == "SetTargetPos"
+                newerror("'SetTargetPos' is only available for Picomotor")
+            elseif device.startsWith("Picomotor")
+                newerror("Picomotor can only use 'SetTargetPos'")
             end
             if operation == "Start" || operation == "Start+Acquire"
                 started = [started, label]; %#ok<AGROW>

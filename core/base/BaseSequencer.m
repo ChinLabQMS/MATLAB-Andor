@@ -120,8 +120,11 @@ classdef (Abstract) BaseSequencer < BaseObject
                         new_steps = [{func}; {args}];
                     case "Projection"
                         func = @(varargin) obj.project(camera, label, varargin{:});
-                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
+                        args = [{"projector", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
                         new_steps = [{func}; {args}];
+                    case "SetTargetPos"
+                        func = @(varargin) obj.setTargetPos(camera, label, varargin{:});
+                        new_steps = [{func}; {params}];
                 end
                 steps = [steps, new_steps]; %#ok<AGROW>
             end
@@ -154,6 +157,10 @@ classdef (Abstract) BaseSequencer < BaseObject
         
         function project(obj, camera, label, varargin)
             obj.warn2("[%s %s] Projection method is not implemented.", camera, label)
+        end
+
+        function setTargetPos(obj, camera, ~, varargin)
+            obj.CameraManager.(camera).setTargetPosition(varargin{:})
         end
 
         function addData(obj)

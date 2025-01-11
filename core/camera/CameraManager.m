@@ -6,6 +6,7 @@ classdef CameraManager < BaseManager
         Andor19331
         Zelux
         DMD
+        Picomotor
     end
 
     methods
@@ -29,6 +30,7 @@ classdef CameraManager < BaseManager
                 obj.Zelux = ZeluxCamera(0, options.Zelux);
                 obj.DMD = DMD("DMD");
             end
+            obj.Picomotor = PicomotorDriver();
         end
         
         % Initialize selected cameras
@@ -47,7 +49,7 @@ classdef CameraManager < BaseManager
         % Configure cameras with a structure (similar to Data)
         function config(obj, data)
             for camera = obj.VisibleProp
-                if isa(obj.(camera), "Projector")
+                if ~isa(obj.(camera), "Camera")
                     continue
                 end
                 if (isfield(data, camera) || isprop(data, camera)) && ...
@@ -72,16 +74,14 @@ classdef CameraManager < BaseManager
             end
         end
         
-        % Close selected cameras
+        % Close selected devices
         function close(obj, cameras)
             arguments
                 obj
                 cameras = obj.VisibleProp
             end
             for camera = cameras
-                if isa(obj.(camera), "Camera")
-                    obj.(camera).close()
-                end
+                obj.(camera).close()
             end
         end
     end
