@@ -24,7 +24,7 @@ classdef (Abstract) Projector < BaseProcessor
         IsWindowCreated
         IsWindowMinimized
         StaticPatternPath
-        StaticPatternRaw
+        StaticPattern
     end
 
     methods
@@ -105,9 +105,9 @@ classdef (Abstract) Projector < BaseProcessor
             val = string(obj.MexHandle("getStaticPatternPath"));
         end
 
-        function val = get.StaticPatternRaw(obj)
+        function val = get.StaticPattern(obj)
             try
-                val = obj.MexHandle("getStaticPattern");
+                val = uint32ToRGB(obj.MexHandle("getStaticPattern"));
             catch
                 val = [];
             end
@@ -151,4 +151,11 @@ classdef (Abstract) Projector < BaseProcessor
         end
     end
 
+end
+
+function rgb = uint32ToRGB(raw)
+    r = uint8(bitshift(bitand(raw, 0b111111110000000000000000), -16));
+    g = uint8(bitshift(bitand(raw, 0b000000001111111100000000), -8));
+    b = uint8(bitand(raw, 0b000000000000000011111111));
+    rgb = cat(3, r, g, b);
 end

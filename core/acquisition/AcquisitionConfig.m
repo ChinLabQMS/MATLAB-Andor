@@ -132,7 +132,7 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
             case "Start+Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Start", "Acquire", "Preprocess"], "full_struct", true);
             case "Analysis"
-                [Params{i}, new_vars, new_data] = parseString2AnalyzeProcesses(obj, note);
+                [Params{i}, new_vars, new_data] = parseString2AnalysisProcesses(obj, note);
                 if isfield(out_vars, camera) && isfield(out_vars.(camera), label)
                     out_vars.(camera).(label) = [out_vars.(camera).(label), new_vars];
                     out_data.(camera).(label) = [out_data.(camera).(label), new_data];
@@ -145,7 +145,7 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
     params = table(Params);
 end
 
-function [args, out_vars, out_data] = parseString2AnalyzeProcesses(obj, note)
+function [args, out_vars, out_data] = parseString2AnalysisProcesses(obj, note)
     [~, analysis_list] = enumeration('AnalysisRegistry');
     [processes, overall] = parseString2Processes(obj, note, analysis_list, "include_overall", true);
     process_name = string(fields(processes))';
@@ -216,12 +216,18 @@ function args = parseString2Args(obj, note)
             vals = split(p, "=");
             if length(vals) == 2
                 args{2*i-1} = vals(1);
-                arg_val = double(string(vals(2)));
-                if isnan(arg_val) && ~ismember(vals(2), ["Nan", "NaN", "nan"])
-                    args{2*i} = vals(2);
-                else
-                    args{2*i} = arg_val;
+                % Try parsing as a valid MATLAB expression first
+                try
+                    arg_val = eval(vals(2));
+                catch me
+                    % If failed, use pure string value
+                    if (strcmp(me.identifier, 'MATLAB:UndefinedFunction'))
+                        arg_val = vals(2);
+                    else
+                        rethrow(me)
+                    end
                 end
+                args{2*i} = arg_val;
             else
                 obj.error("Multiple '=' appears in the partitioned string '%s'.", p)
             end

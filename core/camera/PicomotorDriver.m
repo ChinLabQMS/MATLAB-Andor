@@ -34,7 +34,7 @@ classdef PicomotorDriver < BaseObject
                 obj.NPUSBHandle.Query(obj.USBAddress, '*IDN?', querydata);
                 dev_info = char(ToString(querydata));
                 if isempty(dev_info)
-                    obj.error('Unable to connect, please check if the connection is released by other applications!')
+                    obj.error('Unable to connect, please check if the connection is used by other applications!')
                 else
                     obj.info('Device attached is %s', dev_info); %display device ID to make sure it's recognized OK
                 end
@@ -43,6 +43,7 @@ classdef PicomotorDriver < BaseObject
         end
 
         function close(obj)
+            clear setTargetPosition
             if obj.Initialized
                 obj.NPUSBHandle.CloseDevices();
                 obj.Initialized = false;
@@ -55,9 +56,13 @@ classdef PicomotorDriver < BaseObject
                 obj
                 options.channels = [1, 2, 3, 4]
             end
+            if ~obj.Initialized
+                obj.warn2('Driver is not initialized!')
+                return
+            end
             for i = 1: length(options.channels)
                 c = options.channels(i);
-                obj.NPUSBHandle.Write(obj.USBAddress, sprintf('%d DH', c, t));
+                obj.NPUSBHandle.Write(obj.USBAddress, sprintf('%d DH', c));
             end
         end
 
@@ -65,6 +70,14 @@ classdef PicomotorDriver < BaseObject
             arguments
                 obj
                 options.channels = [1, 2, 3, 4]
+                options.verbose = true
+            end
+            if ~obj.Initialized
+                if options.verbose
+                    obj.warn2('Driver is not initialized!')
+                end
+                val = nan(size(options.channels));
+                return
             end
             val = zeros(1, length(options.channels));
             for i = 1: length(options.channels)
@@ -85,6 +98,10 @@ classdef PicomotorDriver < BaseObject
                 options.scan_begin = -10
                 options.scan_num_step = 10
                 options.scan_step_size = 1
+            end
+            if ~obj.Initialized
+                obj.warn2('Driver is not initialized!')
+                return
             end
             persistent curr_pos
             persistent num_step
