@@ -84,7 +84,7 @@ classdef PicomotorDriver < BaseObject
                 c = options.channels(i);
                 querydata = System.Text.StringBuilder(64);
                 obj.NPUSBHandle.Query(obj.USBAddress, sprintf('%d PA?', c), querydata);
-                val(i) = double(char(ToString(querydata)));
+                val(i) = double(string(ToString(querydata)));
             end
         end
 
@@ -92,7 +92,7 @@ classdef PicomotorDriver < BaseObject
             arguments
                 obj
                 options.channels = 1
-                options.target = 0
+                options.targets = 0
                 options.scan_init = false
                 options.scan = false
                 options.scan_begin = -10
@@ -116,9 +116,9 @@ classdef PicomotorDriver < BaseObject
                     curr_pos = options.scan_begin;
                     num_step = 1;
                 end
-                options.target = curr_pos;
+                options.targets = curr_pos;
             end
-            mustBeValidPosition(options.target, options.channels)
+            mustBeValidPosition(options.targets, options.channels)
             for i = 1: length(options.channels)
                 c = options.channels(i);
                 t = options.targets(i);

@@ -41,7 +41,7 @@ classdef (Abstract) Projector < BaseProcessor
         
         function setStaticPatternPath(obj, path)
             obj.checkFilePath(path, 'StaticPatternPath');
-            obj.MexHandle("setStaticPatternPath", path, false)
+            obj.MexHandle("setStaticPatternPath", string(path), false)
             obj.info("Static pattern loaded from '%s'.", path)
         end
 
