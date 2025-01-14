@@ -24,6 +24,7 @@ classdef (Abstract) Projector < BaseProcessor
         IsWindowCreated
         IsWindowMinimized
         StaticPatternPath
+        StaticPatternRGB
         StaticPattern
     end
 
@@ -40,9 +41,26 @@ classdef (Abstract) Projector < BaseProcessor
         end
         
         function setStaticPatternPath(obj, path)
+            path = string(path);
             obj.checkFilePath(path, 'StaticPatternPath');
-            obj.MexHandle("setStaticPatternPath", string(path), false)
+            obj.MexHandle("setStaticPatternPath", path, false)
             obj.info("Static pattern loaded from '%s'.", path)
+        end
+
+        function setDynamicPattern(obj, pattern)
+            if size(pattern, 3) ~= 1
+                obj.error('Pattern should be 2D matrix!')
+            end
+            pattern = bitor(uint32(pattern), 0b11111111000000000000000000000000);
+            obj.MexHandle("setDynamicPattern", pattern, false)
+        end
+
+        function setDynamicPatternRGB(obj, rgb)
+            if size(rgb, 3) ~= 3
+                obj.error('Pattern should be M x N x 3 array!')
+            end
+            pattern = permute(RGB2Pattern(rgb), [2, 1, 3]);
+            obj.MexHandle("setDynamicPattern", pattern, false)
         end
 
         function open(obj, verbose)
@@ -80,7 +98,7 @@ classdef (Abstract) Projector < BaseProcessor
         function plot(obj)
             figure
             subplot(1, 2, 1)
-            imagesc(obj.StaticPattern)
+            imagesc(obj.StaticPatternRGB)
             axis image
             subplot(1, 2, 2)
             imagesc(obj.StaticPatternReal)
@@ -107,10 +125,16 @@ classdef (Abstract) Projector < BaseProcessor
 
         function val = get.StaticPattern(obj)
             try
-                val = uint32ToRGB(obj.MexHandle("getStaticPattern"));
-            catch
-                val = [];
+                val = obj.MexHandle("getStaticPattern");
+            catch me
+                obj.warn2(me.message)
+                val = uint32.empty;
+                return
             end
+        end
+
+        function val = get.StaticPatternRGB(obj)
+            val = permute(Pattern2RGB(obj.StaticPattern), [2, 1, 3]);
         end
     end
 
@@ -153,9 +177,16 @@ classdef (Abstract) Projector < BaseProcessor
 
 end
 
-function rgb = uint32ToRGB(raw)
-    r = uint8(bitshift(bitand(raw, 0b111111110000000000000000), -16));
-    g = uint8(bitshift(bitand(raw, 0b000000001111111100000000), -8));
-    b = uint8(bitand(raw, 0b000000000000000011111111));
+function rgb = Pattern2RGB(pattern)
+    r = uint8(bitshift(bitand(pattern, 0b111111110000000000000000), -16));
+    g = uint8(bitshift(bitand(pattern, 0b000000001111111100000000), -8));
+    b = uint8(bitand(pattern, 0b000000000000000011111111));
     rgb = cat(3, r, g, b);
+end
+
+function pattern = RGB2Pattern(rgb)
+    r = bitshift(uint32(rgb(:, :, 1)), 16);
+    g = bitshift(uint32(rgb(:, :, 2)), 8);
+    b = uint32(rgb(:, :, 3));
+    pattern = r + g + b + 0b11111111000000000000000000000000;
 end
