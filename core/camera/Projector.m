@@ -5,10 +5,6 @@ classdef (Abstract) Projector < BaseProcessor
         MexHandle
     end
 
-    properties (SetAccess = protected)
-        StaticPatternReal
-    end
-
     properties (Abstract, SetAccess = immutable)
         MexFunctionName
         PixelSize % In um
@@ -26,6 +22,7 @@ classdef (Abstract) Projector < BaseProcessor
         StaticPatternPath
         StaticPatternRGB
         StaticPattern
+        StaticPatternRGBReal
     end
 
     methods
@@ -95,14 +92,23 @@ classdef (Abstract) Projector < BaseProcessor
             end
         end
 
-        function plot(obj)
-            figure
-            subplot(1, 2, 1)
-            imagesc(obj.StaticPatternRGB)
-            axis image
-            subplot(1, 2, 2)
-            imagesc(obj.StaticPatternReal)
-            axis image
+        function plot(obj, ax1, ax2)
+            arguments
+                obj
+                ax1 = []
+                ax2 = []
+            end
+            if isempty(ax1) && isempty(ax2)
+                figure
+                ax1 = subplot(1, 2, 1);
+                ax2 = subplot(1, 2, 2);
+            end
+            imagesc(ax1, obj.StaticPatternRGB)
+            title(ax1, 'Static Pattern')
+            axis(ax1, "image")
+            imagesc(ax2, obj.StaticPatternRGBReal)
+            title(ax2, 'Static Pattern (real space)')
+            axis(ax2, "image")
         end
 
         function delete(obj)
@@ -136,6 +142,10 @@ classdef (Abstract) Projector < BaseProcessor
         function val = get.StaticPatternRGB(obj)
             val = permute(Pattern2RGB(obj.StaticPattern), [2, 1, 3]);
         end
+
+        function val = get.StaticPatternRGBReal(obj)
+            val = obj.StaticPatternRGB;
+        end
     end
 
     methods (Access = protected)
@@ -146,10 +156,6 @@ classdef (Abstract) Projector < BaseProcessor
         function label = getStatusLabel(obj)
             label = getStatusLabel@BaseProcessor(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
         end
-    end
-
-    methods (Abstract, Access = protected)
-        updateStaticPatternReal(obj)
     end
 
     methods (Static)
@@ -163,7 +169,8 @@ classdef (Abstract) Projector < BaseProcessor
                 case "table"
                     info = struct2table(info);
                 case "string"
-                    strarr = strings(3, 1);
+                    num_display = length(info);
+                    strarr = strings(num_display, 1);
                     for i = 1: length(info)
                         strarr(i) = sprintf("Display#%d: %d x %d, %.1f Hz", ...
                             i, info(i).Width, info(i).Height, info(i).RefreshRate);

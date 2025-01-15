@@ -10,10 +10,4 @@ classdef DMD < Projector
         DefaultStaticPatternPath = "resources/solid/white.bmp"
     end
 
-    methods (Access = protected, Hidden)
-        function updateStaticPatternReal(obj)
-            obj.StaticPatternReal = obj.StaticPattern;
-        end
-    end
-
 end

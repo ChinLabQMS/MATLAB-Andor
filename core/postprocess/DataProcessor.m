@@ -1,5 +1,5 @@
 classdef (Abstract) DataProcessor < BaseProcessor
-    %BASEANALYZER Base class for single dataset analyzer.
+    %DATAPROCESSOR Base class for single dataset analyzer.
     % The default behavior is to reload and preprocess the dataset if new 
     % DataPath is set. The processed data is stored in Signal property.
     
