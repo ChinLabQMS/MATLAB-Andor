@@ -23,6 +23,9 @@ classdef (Abstract) DataProcessor < BaseProcessor
 
     methods (Access = protected, Hidden)
         function loadData(obj, path)
+            if isempty(path)
+                return
+            end
             obj.checkFilePath(path, 'DataPath')
             obj.Raw = load(path, "Data").Data;
             obj.info("Dataset loaded from '%s'", path)

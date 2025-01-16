@@ -125,7 +125,7 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
             continue
         end
         switch operation
-            case {"Start", "Project", "SetTargetPos"}
+            case {"Start", "Project", "Move"}
                 Params{i} = parseString2Args(obj, note);
             case "Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
@@ -205,8 +205,8 @@ end
 
 % Parse the note to a cell array of name-value pairs
 function args = parseString2Args(obj, note)
-    % Erase white-space and split the string by ","
-    pieces = split(erase(note, " "), ",")';
+    % Erase white-space and split the string by ";"
+    pieces = split(erase(note, " "), ";")';
     pieces = pieces(pieces ~= "");
     % For each string piece, try to parse as name=value
     args = cell(1, 2 * length(pieces));
@@ -270,12 +270,12 @@ function mustBeValidSequence(obj, sequence)
                 newerror("DMD can only use 'Project'")
             end
             % For Picomotor related piezo command
-            if operation == "SetTargetPos" && device.startsWith("Picomotor")
+            if operation == "Move" && device.startsWith("Picomotor")
                 continue
-            elseif operation == "SetTargetPos"
-                newerror("'SetTargetPos' is only available for Picomotor")
+            elseif operation == "Move"
+                newerror("'Move' is only available for Picomotor")
             elseif device.startsWith("Picomotor")
-                newerror("Picomotor can only use 'SetTargetPos'")
+                newerror("Picomotor can only use 'Move'")
             end
             if operation == "Start" || operation == "Start+Acquire"
                 started = [started, label]; %#ok<AGROW>

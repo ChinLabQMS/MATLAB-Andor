@@ -15,7 +15,7 @@ classdef (Abstract) BaseSequencer < BaseObject
     % Live data
     properties (SetAccess = protected)
         Timer
-        Live
+        Live (1, 1) LiveData
         SequenceStep
     end
 
@@ -122,8 +122,8 @@ classdef (Abstract) BaseSequencer < BaseObject
                         func = @(varargin) obj.project(camera, label, varargin{:});
                         args = [{"projector", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
                         new_steps = [{func}; {args}];
-                    case "SetTargetPos"
-                        func = @(varargin) obj.setTargetPos(camera, label, varargin{:});
+                    case "Move"
+                        func = @(varargin) obj.move(camera, label, varargin{:});
                         new_steps = [{func}; {params}];
                 end
                 steps = [steps, new_steps]; %#ok<AGROW>
@@ -159,7 +159,7 @@ classdef (Abstract) BaseSequencer < BaseObject
             obj.warn2("[%s %s] Projection method is not implemented.", camera, label)
         end
 
-        function setTargetPos(obj, camera, ~, varargin)
+        function move(obj, camera, ~, varargin)
             obj.CameraManager.(camera).setTargetPosition(varargin{:})
         end
 
