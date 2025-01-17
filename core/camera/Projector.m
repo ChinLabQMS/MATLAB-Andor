@@ -23,6 +23,7 @@ classdef (Abstract) Projector < BaseProcessor
         StaticPatternRGB
         StaticPattern
         StaticPatternRGBReal
+        DynamicPattern
     end
 
     methods
@@ -130,13 +131,7 @@ classdef (Abstract) Projector < BaseProcessor
         end
 
         function val = get.StaticPattern(obj)
-            try
-                val = obj.MexHandle("getStaticPattern");
-            catch me
-                obj.warn2(me.message)
-                val = uint32.empty;
-                return
-            end
+            val = uint32(obj.MexHandle("getStaticPattern"));
         end
 
         function val = get.StaticPatternRGB(obj)
@@ -145,6 +140,10 @@ classdef (Abstract) Projector < BaseProcessor
 
         function val = get.StaticPatternRGBReal(obj)
             val = obj.StaticPatternRGB;
+        end
+
+        function val = get.DynamicPattern(obj)
+            val = uint32(obj.MexHandle("getDynamicPattern"));
         end
     end
 
