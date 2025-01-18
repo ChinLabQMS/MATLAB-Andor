@@ -1,14 +1,16 @@
-classdef PicomotorDriver < BaseObject
+classdef PicomotorDriver < BaseManager
     
     properties (Constant)
         DLL_Address = [pwd, '/dlls/picomotor/UsbDllWrap.dll']
-        Range_Min = -500
-        Range_Max = 500
     end
 
     properties (SetAccess = immutable)
         USBAddress
         NPUSBHandle
+        Picomotor1
+        Picomotor2
+        Picomotor3
+        Picomotor4
     end
 
     properties (SetAccess = protected)
@@ -22,12 +24,17 @@ classdef PicomotorDriver < BaseObject
             end
             obj.USBAddress = usb_address;
             NPasm = NET.addAssembly(obj.DLL_Address);
-            NPASMtype = NPasm.AssemblyHandle.GetType('Newport.USBComm.USB'); %Get a handle on the USB class
-            obj.NPUSBHandle = System.Activator.CreateInstance(NPASMtype); %launch the class USB, it constructs and allows to use functions in USB.h
+            % Get a handle on the USB class
+            NPASMtype = NPasm.AssemblyHandle.GetType('Newport.USBComm.USB');
+            % Launch the class USB, it constructs and allows to use functions in USB.h
+            obj.NPUSBHandle = System.Activator.CreateInstance(NPASMtype);
+            obj.Picomotor1 = Picomotor(1, obj.NPUSBHandle, obj.USBAddress);
+            obj.Picomotor2 = Picomotor(2, obj.NPUSBHandle, obj.USBAddress);
+            obj.Picomotor3 = Picomotor(3, obj.NPUSBHandle, obj.USBAddress);
+            obj.Picomotor4 = Picomotor(4, obj.NPUSBHandle, obj.USBAddress);
         end
 
         function init(obj)
-            clear setTargetPosition
             if ~obj.Initialized
                 obj.NPUSBHandle.OpenDevices();
                 querydata = System.Text.StringBuilder(64);
@@ -43,7 +50,6 @@ classdef PicomotorDriver < BaseObject
         end
 
         function close(obj)
-            clear setTargetPosition
             if obj.Initialized
                 obj.NPUSBHandle.CloseDevices();
                 obj.Initialized = false;
@@ -61,8 +67,7 @@ classdef PicomotorDriver < BaseObject
                 return
             end
             for i = 1: length(options.channels)
-                c = options.channels(i);
-                obj.NPUSBHandle.Write(obj.USBAddress, sprintf('%d DH', c));
+                obj.("Picomotor" + string(i)).setCurrentHome();
             end
         end
 
@@ -81,13 +86,10 @@ classdef PicomotorDriver < BaseObject
             end
             val = zeros(1, length(options.channels));
             for i = 1: length(options.channels)
-                c = options.channels(i);
-                querydata = System.Text.StringBuilder(64);
-                obj.NPUSBHandle.Query(obj.USBAddress, sprintf('%d PA?', c), querydata);
-                val(i) = double(string(ToString(querydata)));
+                val(i) = obj.("Picomotor" + string(i)).TargetPosition;
             end
         end
-
+        
         function setTargetPosition(obj, options)
             arguments
                 obj
@@ -130,12 +132,4 @@ classdef PicomotorDriver < BaseObject
             obj.close()
         end
     end
-end
-
-function mustBeValidPosition(position, channels)
-    if length(position) ~= length(channels)
-        error('Position input must have the same length and the channel inputs.')
-    end
-    mustBeGreaterThanOrEqual(position, PicomotorDriver.Range_Min)
-    mustBeLessThanOrEqual(position, PicomotorDriver.Range_Max)
 end
