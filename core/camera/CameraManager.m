@@ -30,18 +30,27 @@ classdef CameraManager < BaseManager
                 obj.Zelux = ZeluxCamera(0, options.Zelux);
                 obj.DMD = DMD("DMD");
             end
-            obj.Picomotor = PicomotorDriver();
+            obj.Picomotor = PicomotorDriver(options.test_mode, 1);
         end
         
         % Initialize selected cameras
-        function init(obj, cameras)
+        function init(obj, devices)
             arguments
                 obj
-                cameras = obj.VisibleProp
+                devices = obj.VisibleProp
             end
-            for camera = cameras
-                if isa(camera, "Camera")
-                    obj.(camera).init()
+            for device_name = devices
+                device = obj.(device_name);
+                if isa(device, "Camera") || isa(device, "PicomotorDriver")
+                    % For BaseManager/BaseRunner class, initialize connection
+                    device.init()
+                elseif isa(device, "Projector")
+                    % For BaseProcessor class, check the window state
+                    % if window is not created, create it; if window is
+                    % minimized by the user, issue an error
+                    device.checkWindowState()
+                else
+                    obj.error('Unrecongnized object type for device %s: %s.', device_name, class(device))
                 end
             end
         end

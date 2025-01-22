@@ -58,10 +58,12 @@ classdef (Abstract) BaseSequencer < BaseObject
                 c_obj = onCleanup(@obj.abortAtEnd);
             end
             obj.Live.init()
+            % Run the steps defined in SequenceTable with parsed parameters
             for step = obj.SequenceStep
                 [func, args] = step{:};
                 func(args{:})
             end
+
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(obj.Live)
             end
@@ -118,13 +120,14 @@ classdef (Abstract) BaseSequencer < BaseObject
                         func = @(varargin) obj.analyze(camera, label, varargin{:});
                         args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
                         new_steps = [{func}; {args}];
-                    case "Projection"
+                    case "Project"
                         func = @(varargin) obj.project(camera, label, varargin{:});
-                        args = [{"projector", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
-                        new_steps = [{func}; {args}];
+                        new_steps = [{func}; {params}];
                     case "Move"
                         func = @(varargin) obj.move(camera, label, varargin{:});
                         new_steps = [{func}; {params}];
+                    otherwise
+                        obj.error('Unrecongnized operation: %s!', operation)
                 end
                 steps = [steps, new_steps]; %#ok<AGROW>
             end
@@ -155,12 +158,14 @@ classdef (Abstract) BaseSequencer < BaseObject
             end
         end
         
-        function project(obj, camera, label, varargin)
-            obj.warn2("[%s %s] Projection method is not implemented.", camera, label)
+        function project(obj, projector, label, varargin)
+            obj.CameraManager.(projector).project(varargin{:})
+            %% TODO: add recording stat to live data
         end
 
-        function move(obj, camera, ~, varargin)
-            obj.CameraManager.(camera).setTargetPosition(varargin{:})
+        function move(obj, driver, label, varargin)
+            obj.CameraManager.(driver).move(varargin{:})
+            %% TODO: add recording stat to live data
         end
 
         function addData(obj)

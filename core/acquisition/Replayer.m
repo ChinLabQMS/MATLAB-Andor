@@ -16,6 +16,7 @@ classdef Replayer < BaseSequencer & DataProcessor
     end
 
     methods (Access = protected, Hidden)
+        % Override the load data command in DataProcessor
         function loadData(obj, path)
             loadData@DataProcessor(obj, path)
             obj.AcquisitionConfig.config(obj.Raw.AcquisitionConfig)
@@ -24,17 +25,25 @@ classdef Replayer < BaseSequencer & DataProcessor
             obj.initSequence()
             obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
         end
-
+        
+        % Override the start acquisition command, do not operate cameras
         function start(~, ~, ~, varargin)
         end
         
+        % Override the acquire image command, do not operate cameras
         function acquire(obj, camera, label, varargin)
             obj.Live.Raw.(camera).(label) = obj.DataStorage.(camera).(label)(:, :, obj.CurrentIndex);
         end
-
+        
+        % Override the move command, do not operate the picomotors
+        function move(~, ~, ~, varargin)
+        end
+        
+        % Override the add data to storage command
         function addData(~, ~)
         end
-
+        
+        % Override the abort camera at the end command
         function abortAtEnd(~)
         end
     end

@@ -1,4 +1,6 @@
 classdef (Abstract) Projector < BaseProcessor
+    % PROJECTOR Base class for controlling window content to display
+    % patterns on a projector, wrapped around C++ mex function
 
     properties (SetAccess = immutable)
         ID
@@ -37,6 +39,19 @@ classdef (Abstract) Projector < BaseProcessor
             obj.ID = id;
             obj.setStaticPatternPath(obj.DefaultStaticPatternPath)
         end
+
+        % Main function to interface with the app
+        function project(obj, options)
+            arguments
+                obj
+                options.mode = "Static"
+                options.static_pattern_path = obj.DefaultStaticPatternPath
+            end
+            switch options.mode
+                case "Static"
+                    obj.setStaticPatternPath(options.static_pattern_path)
+            end
+        end
         
         function setStaticPatternPath(obj, path)
             path = string(path);
@@ -67,6 +82,7 @@ classdef (Abstract) Projector < BaseProcessor
                 verbose = false
             end
             obj.MexHandle("open", verbose)
+            obj.info('Window created.')
         end
 
         function close(obj, verbose)
@@ -75,6 +91,7 @@ classdef (Abstract) Projector < BaseProcessor
                 verbose = false
             end
             obj.MexHandle("close", verbose)
+            obj.info('Window closed.')
         end
 
         function setDisplayIndex(obj, index, verbose)
@@ -116,6 +133,18 @@ classdef (Abstract) Projector < BaseProcessor
             obj.close()
             obj.MexHandle("unlock")
             clear(obj.MexFunctionName)
+        end
+
+        function checkWindowState(obj)
+            if ~obj.IsWindowCreated
+                obj.open()
+            elseif obj.IsWindowMinimized
+                obj.error('Window is minimized!')
+            end
+        end
+
+        function val = struct(obj)
+            val = struct@BaseProcessor(obj, obj.VisibleProp);
         end
 
         function val = get.IsWindowCreated(obj)

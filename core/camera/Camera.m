@@ -108,9 +108,12 @@ classdef Camera < BaseRunner
         end
         
         function abortAcquisition(obj)
-            obj.checkInitialized()
-            obj.abortAcquisitionCamera()
-            obj.NumExpectedFrames = 0;
+            if obj.Initialized
+                obj.abortAcquisitionCamera()
+                obj.NumExpectedFrames = 0;
+            else
+                obj.warn2('Camera is not initialized, can not abort acquisition.')
+            end
         end
 
         function [image, is_good] = acquire(obj, info, options)

@@ -3,7 +3,7 @@ classdef Acquisitor < BaseSequencer
     methods
         % Initialize acquisition
         function init(obj)
-            obj.CameraManager.init(obj.AcquisitionConfig.ActiveCameras)
+            obj.CameraManager.init(obj.AcquisitionConfig.ActiveDevices)
             obj.DataStorage.init()
             obj.initSequence()
             obj.info2("Sequence initialized.")

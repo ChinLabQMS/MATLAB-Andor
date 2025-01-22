@@ -9,11 +9,11 @@ classdef AcquisitionConfig < BaseProcessor
         SampleInterval = 1
         DropBadFrames = true
         AbortAtEnd = true
-        Projectors = "DMD"
     end
     
     % Properties that updates with SequenceTable
     properties (SetAccess = protected)
+        Projectors
         ActiveDevices
         ActiveCameras
         ActiveProjectors
@@ -56,6 +56,7 @@ classdef AcquisitionConfig < BaseProcessor
         function updateProp(obj)
             [params, obj.AnalysisOutVars, obj.AnalysisOutData] = parseParams(obj, obj.SequenceTable);
             sequence = [obj.SequenceTable, params];
+            obj.Projectors = SequenceRegistry.All_Projectors;
             obj.ActiveDevices = SequenceRegistry.getActiveDevices(sequence);
             obj.ActiveCameras = SequenceRegistry.getActiveCameras(sequence);
             obj.ActiveProjectors = SequenceRegistry.getActiveProjectors(sequence);
@@ -125,7 +126,11 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
             continue
         end
         switch operation
-            case {"Start", "Project", "Move"}
+            case "Start"
+                Params{i} = parseString2Args(obj, note);
+            case "Project"
+                Params{i} = parseString2Args(obj, note);
+            case "Move"
                 Params{i} = parseString2Args(obj, note);
             case "Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);

@@ -10,6 +10,7 @@ classdef (Abstract) BaseStorage < BaseObject
         Andor19331
         Zelux
         DMD
+        Picomotor
     end
     
     % Handles to track acquisition settings
@@ -99,34 +100,36 @@ classdef (Abstract) BaseStorage < BaseObject
         function init(obj)
             obj.CurrentIndex = 0;
             obj.initMaxIndex();
-            for camera = obj.ConfigurableProp
-                obj.(camera) = [];
+            for device = obj.ConfigurableProp
+                obj.(device) = [];
             end
-            for camera = obj.AcquisitionConfig.ActiveCameras
-                % Record camera config
-                obj.(camera).Config = obj.CameraManager.(camera).Config.struct();
-                % Record some additional information to the camera config
-                obj.(camera).Config.CameraName = camera;
-                obj.(camera).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(camera);
-                obj.(camera).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
-                labels = string(fields(obj.(camera).Config.AcquisitionNote))';
-                obj.initAcquisitionStorage(camera, labels)
-                if isfield(obj.AcquisitionConfig.AnalysisNote, camera)
-                    obj.(camera).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(camera);
-                    analysis_labels = string(fields(obj.(camera).Config.AnalysisNote))';
-                    obj.initAnalysisStorage(camera, analysis_labels)
-                end
-            end
-            for projector = obj.AcquisitionConfig.Projectors
-                obj.(projector).Config = obj.CameraManager.(projector).struct();
-                obj.(projector).Config.ProjectorName = projector;
-                if ismember(projector, obj.AcquisitionConfig.ActiveProjectors)
-                    obj.(projector).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
+            for device = obj.AcquisitionConfig.ActiveDevices
+                controller = obj.CameraManager.(device);
+                if isa(controller, "Camera")
+                    % Record camera config
+                    obj.(device).Config = obj.CameraManager.(device).Config.struct();
+                    % Record some additional information to the camera config
+                    obj.(device).Config.CameraName = device;
+                    obj.(device).Config.AcquisitionNote = obj.AcquisitionConfig.AcquisitionNote.(device);
+                    obj.(device).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
+                    labels = string(fields(obj.(device).Config.AcquisitionNote))';
+                    obj.initAcquisitionStorage(device, labels)
+                    if isfield(obj.AcquisitionConfig.AnalysisNote, device)
+                        obj.(device).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(device);
+                        analysis_labels = string(fields(obj.(device).Config.AnalysisNote))';
+                        obj.initAnalysisStorage(device, analysis_labels)
+                    end
+                elseif isa(controller, "Projector")
+                    obj.(projector).Config = obj.CameraManager.(projector).struct();
+                    obj.(projector).Config.ProjectorName = projector;
+                elseif isa(controller, "PicomotorDriver")
+                    obj.(device).Config.DriverName = device;
+                else
+                    obj.error('Unrecongnized device type for %s: %s!', device, class(controller))
                 end
             end
             obj.info("Storage initialized for %d devices, total memory is %g MB.", ...
                      length(obj.AcquisitionConfig.ActiveDevices), obj.MemoryUsage)
-            
         end
 
         % Add new acquired image data to the storage
