@@ -33,6 +33,18 @@ classdef LiveData < BaseObject
             obj.PSFCalib = psf_calib;
         end
 
+        function reset(obj)
+            obj.LastData = [];
+            obj.RunNumber = 0;
+            obj.BadFrameDetected = false;
+            obj.Raw = [];
+            obj.Signal = [];
+            obj.Background = [];
+            obj.Noise = [];
+            obj.Analysis = [];
+            obj.Temporary = [];
+        end
+
         function init(obj)
             obj.LastData = obj.struct();
             obj.RunNumber = obj.RunNumber + 1;

@@ -82,6 +82,7 @@ classdef PicomotorDriver < BaseManager
                 options.scan_start = 0
                 options.scan_num_step = 10
                 options.scan_step_size = 1
+                options.verbose = true
             end
             label = "Picomotor" + string(options.channel);
             picomotor = obj.(label);
@@ -96,14 +97,15 @@ classdef PicomotorDriver < BaseManager
                                      'ScanNumStep', options.scan_num_step, ...
                                      'ScanStepSize', options.scan_step_size)
                 end
-                % Move the piezo and update the scan position
-                picomotor.scan()
+                % Move the piezo to the next scan position and update the 
+                % next scan position
+                picomotor.scan('verbose', options.verbose)
             else
                 % If it is previously configured as scan mode, clear it
                 if ~isempty(picomotor.ScanPosition)
                     picomotor.config('ScanStart', [], 'ScanNumStep', [], 'ScanStepSize', [])
                 end
-                picomotor.setTargetPosition(options.target)
+                picomotor.setTargetPosition(options.target, 'verbose', options.verbose)
             end
         end
         

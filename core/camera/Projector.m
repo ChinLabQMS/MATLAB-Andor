@@ -34,6 +34,7 @@ classdef (Abstract) Projector < BaseProcessor
                 id = "Test"
             end
             obj@BaseProcessor()
+            clear(obj.MexFunctionName)
             obj.MexHandle = str2func(obj.MexFunctionName);
             obj.MexHandle("lock")
             obj.ID = id;
@@ -177,10 +178,6 @@ classdef (Abstract) Projector < BaseProcessor
     end
 
     methods (Access = protected)
-        function init(obj)
-            clear(obj.MexFunctionName)
-        end
-
         function label = getStatusLabel(obj)
             label = getStatusLabel@BaseProcessor(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
         end

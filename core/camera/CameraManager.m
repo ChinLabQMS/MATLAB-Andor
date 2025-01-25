@@ -78,7 +78,11 @@ classdef CameraManager < BaseManager
             end
             for camera = cameras
                 if isa(obj.(camera), "Camera")
-                    obj.(camera).abortAcquisition()
+                    try
+                        obj.(camera).abortAcquisition()
+                    catch me
+                        obj.warn2("Error occurs during aborting acquisition: %s.", me.message)
+                    end
                 end
             end
         end

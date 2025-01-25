@@ -36,7 +36,12 @@ classdef Picomotor < BaseProcessor
             obj.DriverHandle = handle;
         end
 
-        function setTargetPosition(obj, pos)
+        function setTargetPosition(obj, pos, options)
+            arguments
+                obj
+                pos
+                options.verbose = true
+            end
             obj.assert((pos >= obj.Min_Position) && (pos <= obj.Max_Position), ...
                 'Position out of range! Max: %d, Min: %d, Pos: %d', ...
                 obj.Max_Position, obj.Min_Position, pos)
@@ -45,6 +50,9 @@ classdef Picomotor < BaseProcessor
                     obj.DriverHandle.NPUSBHandle.Write(obj.USBAddress, sprintf('%d PA %d', obj.Channel, pos));
                 end
                 obj.TargetPosition = pos;
+                if options.verbose
+                    obj.info('Picomotor set to new position: %d.', pos)
+                end
             else
                 obj.warn2('Driver is not initialized, unable to set target position!')
             end
@@ -75,11 +83,11 @@ classdef Picomotor < BaseProcessor
             end
         end
 
-        function scan(obj)
+        function scan(obj, varargin)
             if isempty(obj.ScanPosition)
                 obj.error('Scan is not configured!')
             end
-            obj.setTargetPosition(obj.ScanPosition)
+            obj.setTargetPosition(obj.ScanPosition, varargin{:})
             if obj.ScanPosition - obj.ScanStart <= (obj.ScanNumStep - 1) * obj.ScanStepSize
                 obj.ScanPosition = obj.ScanPosition + obj.ScanStepSize;
             else
