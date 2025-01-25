@@ -1,7 +1,7 @@
 # Matlab-Andor
 
 ## Introduction
-Image acquisition and analysis framework for site-resolved atom imaging and manipulation. Developed with object-oriented programming (OOP) in MATLAB.
+Image acquisition and analysis framework for site-resolved atom imaging and manipulation in MATLAB with Object-Oriented design.
 
 ### Main modules
 - Camera control and image acquisition
