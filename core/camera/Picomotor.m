@@ -42,6 +42,9 @@ classdef Picomotor < BaseProcessor
                 pos
                 options.verbose = true
             end
+            if isempty(pos)
+                return
+            end
             obj.assert((pos >= obj.Min_Position) && (pos <= obj.Max_Position), ...
                 'Position out of range! Max: %d, Min: %d, Pos: %d', ...
                 obj.Max_Position, obj.Min_Position, pos)

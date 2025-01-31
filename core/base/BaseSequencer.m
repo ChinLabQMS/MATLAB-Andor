@@ -119,7 +119,14 @@ classdef (Abstract) BaseSequencer < BaseObject
                         new_steps = [{func1}, {func2}, {func3}; {args1}, {args2}, {args3}];
                     case "Analysis"
                         func = @(varargin) obj.analyze(camera, label, varargin{:});
-                        args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
+                        controller = obj.CameraManager.(camera);
+                        if isa(controller, "Camera")
+                            args = [{"camera", camera, "label", label, "config", obj.CameraManager.(camera).Config}, params];
+                        elseif isa(controller, "PicomotorDriver") || isa(controller, "Projector")
+                            args = [{"camera", camera, "label", label, "config", []}, params];
+                        else
+                            obj.error("Unkown device type for initializing analysis step: %s.", class(controller))
+                        end
                         new_steps = [{func}; {args}];
                     case "Project"
                         func = @(varargin) obj.project(camera, label, varargin{:});
@@ -159,14 +166,12 @@ classdef (Abstract) BaseSequencer < BaseObject
             end
         end
         
-        function project(obj, projector, label, varargin)
+        function project(obj, projector, ~, varargin)
             obj.CameraManager.(projector).project(varargin{:})
-            %% TODO: add recording stat to live data
         end
 
-        function move(obj, driver, label, varargin)
+        function move(obj, driver, ~, varargin)
             obj.CameraManager.(driver).move(varargin{:})
-            %% TODO: add recording stat to live data
         end
 
         function addData(obj)

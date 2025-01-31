@@ -24,17 +24,19 @@ classdef AnalysisRegistry < BaseObject
     end
 
     enumeration
-        FitCenter      (@fitCenter, ...
-                       ["XCenter", "YCenter", "XWidth", "YWidth"])
-        FitGauss       (@fitGaussXY_new, ...
-                       ["GaussXC", "GaussYC", "GaussXW", "GaussYW"], ...
-                       ["SumX", "SumY"])
-        CalibLatR      (@calibLatR, ...
-                       ["LatX", "LatY"])
-        CalibLatO      (@calibLatO, ...
-                       ["LatX", "LatY"])
-        FitPSF         (@fitPSF, ...
-                       ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
+        FitCenter          (@fitCenter, ...
+                           ["XCenter", "YCenter", "XWidth", "YWidth"])
+        FitGauss           (@fitGaussXY_new, ...
+                           ["GaussXC", "GaussYC", "GaussXW", "GaussYW"], ...
+                           ["SumX", "SumY"])
+        CalibLatR          (@calibLatR, ...
+                           ["LatX", "LatY"])
+        CalibLatO          (@calibLatO, ...
+                           ["LatX", "LatY"])
+        FitPSF             (@fitPSF, ...
+                           ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
+        RecordMotorStatus  (@recordMotor, ...
+                           ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
     end
 
 end
@@ -172,6 +174,23 @@ function fitPSF(live, info, varargin, options)
     end
     if options.verbose
         live.info("[%s %s] Fitting PSF takes %5.3f s.", info.camera, info.label, toc(timer))
+    end
+end
+
+function recordMotor(live, info, options)
+    arguments
+       live
+       info
+       options.verbose = false
+    end
+    timer = tic;
+    controller = live.CameraManager.(info.camera);
+    for i = 1: 4
+        motor_name = "Picomotor" + string(i);
+        live.Analysis.(info.camera).(info.label).(motor_name) = controller.(motor_name).TargetPosition;
+    end
+    if options.verbose
+        live.info("[%s %s] Recording Picomotor status takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 

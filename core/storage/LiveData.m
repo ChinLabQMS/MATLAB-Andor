@@ -7,8 +7,8 @@ classdef LiveData < BaseObject
         Noise
         Analysis
         Temporary
-        RunNumber = 0
-        BadFrameDetected = false
+        RunNumber
+        BadFrameDetected
     end
 
     properties (SetAccess = protected)
@@ -31,6 +31,7 @@ classdef LiveData < BaseObject
             obj.CameraManager = cameras;
             obj.LatCalib = lat_calib;
             obj.PSFCalib = psf_calib;
+            obj.reset()
         end
 
         function reset(obj)
@@ -58,7 +59,7 @@ classdef LiveData < BaseObject
         end
 
         function s = struct(obj)
-            s = struct@BaseObject(obj);
+            s = struct@BaseObject(obj, obj.VisibleProp);
             s.CameraManager = obj.CameraManager;
             s.LatCalib = obj.LatCalib;
             s.PSFCalib = obj.PSFCalib;

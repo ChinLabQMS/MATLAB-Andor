@@ -84,28 +84,29 @@ classdef PicomotorDriver < BaseManager
                 options.scan_step_size = 1
                 options.verbose = true
             end
-            label = "Picomotor" + string(options.channel);
-            picomotor = obj.(label);
-            if options.scan
-                % If scan is not configured or different from before
-                % initialize the scan
-                if isempty(picomotor.ScanPosition) || ...
-                        ~((picomotor.ScanStart == options.scan_start) && ...
-                          (picomotor.ScanNumStep == options.scan_num_step) && ...
-                          (picomotor.ScanStepSize == options.scan_step_size))
-                    picomotor.config('ScanStart', options.scan_start, ...
-                                     'ScanNumStep', options.scan_num_step, ...
-                                     'ScanStepSize', options.scan_step_size)
+            for channel = options.channel
+                picomotor = obj.("Picomotor" + string(channel));
+                if options.scan
+                    % If scan is not configured or different from before
+                    % initialize the scan
+                    if isempty(picomotor.ScanPosition) || ...
+                            ~((picomotor.ScanStart == options.scan_start) && ...
+                              (picomotor.ScanNumStep == options.scan_num_step) && ...
+                              (picomotor.ScanStepSize == options.scan_step_size))
+                        picomotor.config('ScanStart', options.scan_start, ...
+                                         'ScanNumStep', options.scan_num_step, ...
+                                         'ScanStepSize', options.scan_step_size)
+                    end
+                    % Move the piezo to the next scan position and update the 
+                    % next scan position
+                    picomotor.scan('verbose', options.verbose)
+                else
+                    % If it is previously configured as in scan mode, clear it
+                    if ~isempty(picomotor.ScanPosition)
+                        picomotor.config('ScanStart', [], 'ScanNumStep', [], 'ScanStepSize', [])
+                    end
+                    picomotor.setTargetPosition(options.target, 'verbose', options.verbose)
                 end
-                % Move the piezo to the next scan position and update the 
-                % next scan position
-                picomotor.scan('verbose', options.verbose)
-            else
-                % If it is previously configured as scan mode, clear it
-                if ~isempty(picomotor.ScanPosition)
-                    picomotor.config('ScanStart', [], 'ScanNumStep', [], 'ScanStepSize', [])
-                end
-                picomotor.setTargetPosition(options.target, 'verbose', options.verbose)
             end
         end
         

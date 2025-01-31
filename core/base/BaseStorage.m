@@ -114,18 +114,23 @@ classdef (Abstract) BaseStorage < BaseObject
                     obj.(device).Config.DataTimestamp = NaT(obj.MaxIndex, 1);
                     labels = string(fields(obj.(device).Config.AcquisitionNote))';
                     obj.initAcquisitionStorage(device, labels)
-                    if isfield(obj.AcquisitionConfig.AnalysisNote, device)
-                        obj.(device).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(device);
-                        analysis_labels = string(fields(obj.(device).Config.AnalysisNote))';
-                        obj.initAnalysisStorage(device, analysis_labels)
-                    end
                 elseif isa(controller, "Projector")
                     obj.(projector).Config = obj.CameraManager.(projector).struct();
                     obj.(projector).Config.ProjectorName = projector;
+                    obj.(projector).Config.ProjectionNote = obj.AcquisitionConfig.ProjectionNote.(device);
                 elseif isa(controller, "PicomotorDriver")
                     obj.(device).Config.DriverName = device;
+                    for ii = 1: 4
+                        obj.(device).Config.("Picomotor" + string(ii)) = controller.("Picomotor" + string(ii)).TargetPosition;
+                    end
+                    obj.(device).Config.MotionNote = obj.AcquisitionConfig.MotionNote.(device);
                 else
                     obj.error('Unrecongnized device type for %s: %s!', device, class(controller))
+                end
+                if isfield(obj.AcquisitionConfig.AnalysisNote, device)
+                    obj.(device).Config.AnalysisNote = obj.AcquisitionConfig.AnalysisNote.(device);
+                    analysis_labels = string(fields(obj.(device).Config.AnalysisNote))';
+                    obj.initAnalysisStorage(device, analysis_labels)
                 end
             end
             obj.info("Storage initialized for %d devices, total memory is %g MB.", ...

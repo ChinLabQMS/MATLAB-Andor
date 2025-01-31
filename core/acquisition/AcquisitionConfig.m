@@ -13,7 +13,6 @@ classdef AcquisitionConfig < BaseProcessor
     
     % Properties that updates with SequenceTable
     properties (SetAccess = protected)
-        Projectors
         ActiveDevices
         ActiveCameras
         ActiveProjectors
@@ -21,11 +20,14 @@ classdef AcquisitionConfig < BaseProcessor
         ActiveAcquisition
         ActiveAnalysis
         ActiveProjection
+        ActiveMotion
         ImageList
         AcquisitionNote
         AnalysisNote
         AnalysisOutVars
         AnalysisOutData
+        ProjectionNote
+        MotionNote
     end
 
     methods
@@ -56,7 +58,6 @@ classdef AcquisitionConfig < BaseProcessor
         function updateProp(obj)
             [params, obj.AnalysisOutVars, obj.AnalysisOutData] = parseParams(obj, obj.SequenceTable);
             sequence = [obj.SequenceTable, params];
-            obj.Projectors = SequenceRegistry.All_Projectors;
             obj.ActiveDevices = SequenceRegistry.getActiveDevices(sequence);
             obj.ActiveCameras = SequenceRegistry.getActiveCameras(sequence);
             obj.ActiveProjectors = SequenceRegistry.getActiveProjectors(sequence);
@@ -64,9 +65,12 @@ classdef AcquisitionConfig < BaseProcessor
             obj.ActiveAcquisition = SequenceRegistry.getActiveAcquisition(sequence);
             obj.ActiveAnalysis = SequenceRegistry.getActiveAnalysis(sequence);
             obj.ActiveProjection = SequenceRegistry.getActiveProjection(sequence);
+            obj.ActiveMotion = SequenceRegistry.getActiveMotion(sequence);
             obj.ImageList = getImageList(obj.ActiveAcquisition);
             obj.AcquisitionNote = getAcquisitionNote(obj.ActiveAcquisition);
             obj.AnalysisNote = getAnalysisNote(obj.ActiveAnalysis);
+            obj.ProjectionNote = getProjectionNote(obj.ActiveProjection);
+            obj.MotionNote = getMotionNote(obj.ActiveMotion);
         end
     end
     
@@ -105,6 +109,7 @@ function res = getAnalysisNote(active_analysis)
         camera = string(active_analysis.Camera(i));
         label = active_analysis.Label(i);
         note = active_analysis.Note(i);
+        % Analysis may appear multiple times for the same device and label
         if isfield(res, camera) && isfield(res.(camera), label)
             res.(camera).(label) = res.(camera).(label) + ", " +  note;
         else
@@ -113,10 +118,30 @@ function res = getAnalysisNote(active_analysis)
     end
 end
 
-function [params, out_vars, out_data] = parseParams(obj, sequence)
+function res = getProjectionNote(active_projection)
+    res = struct();
+    for i = 1: height(active_projection)
+        projector = string(active_projection.Camera(i));
+        label = active_projection.Label(i);
+        note = active_projection.Note(i);
+        res.(projector).(label) = note;
+    end
+end
+
+function res = getMotionNote(active_motion)
+    res = struct();
+    for i = 1: height(active_motion)
+        driver = string(active_motion.Camera(i));
+        label = active_motion.Label(i);
+        note = active_motion.Note(i);
+        res.(driver).(label) = note;
+    end
+end
+
+function [params, analysis_outvars, analysis_outdata] = parseParams(obj, sequence)
     Params = cell(height(sequence), 1);
-    out_vars = struct();
-    out_data = struct();
+    analysis_outvars = struct();
+    analysis_outdata = struct();
     for i = 1: height(sequence)
         operation = string(sequence.Type(i));
         camera = string(sequence.Camera(i));
@@ -128,23 +153,23 @@ function [params, out_vars, out_data] = parseParams(obj, sequence)
         switch operation
             case "Start"
                 Params{i} = parseString2Args(obj, note);
-            case "Project"
-                Params{i} = parseString2Args(obj, note);
-            case "Move"
-                Params{i} = parseString2Args(obj, note);
             case "Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Acquire", "Preprocess"], "full_struct", true);
             case "Start+Acquire"
                 Params{i} = parseString2Processes(obj, note, ["Start", "Acquire", "Preprocess"], "full_struct", true);
             case "Analysis"
                 [Params{i}, new_vars, new_data] = parseString2AnalysisProcesses(obj, note);
-                if isfield(out_vars, camera) && isfield(out_vars.(camera), label)
-                    out_vars.(camera).(label) = [out_vars.(camera).(label), new_vars];
-                    out_data.(camera).(label) = [out_data.(camera).(label), new_data];
+                if isfield(analysis_outvars, camera) && isfield(analysis_outvars.(camera), label)
+                    analysis_outvars.(camera).(label) = [analysis_outvars.(camera).(label), new_vars];
+                    analysis_outdata.(camera).(label) = [analysis_outdata.(camera).(label), new_data];
                 else
-                    out_vars.(camera).(label) = new_vars;
-                    out_data.(camera).(label) = new_data;
+                    analysis_outvars.(camera).(label) = new_vars;
+                    analysis_outdata.(camera).(label) = new_data;
                 end
+            case "Project"
+                Params{i} = parseString2Args(obj, note);
+            case "Move"
+                Params{i} = parseString2Args(obj, note);
         end
     end
     params = table(Params);
@@ -221,7 +246,7 @@ function args = parseString2Args(obj, note)
             vals = split(p, "=");
             if length(vals) == 2
                 args{2*i-1} = vals(1);
-                % Try parsing as a valid MATLAB expression first
+                % Try parsing string as a valid MATLAB expression
                 try
                     arg_val = eval(vals(2));
                 catch me
@@ -243,6 +268,7 @@ function args = parseString2Args(obj, note)
     end
 end
 
+% Argument validation function to check if sequence table is valid
 function mustBeValidSequence(obj, sequence)
     arguments
         obj
@@ -254,11 +280,14 @@ function mustBeValidSequence(obj, sequence)
     end
     for device = active_devices
         device_seq = sequence(sequence.Camera == device, :);
-        started = string.empty;
-        acquired = string.empty;
+        started = string.empty();
+        acquired = string.empty();
+        moved = string.empty();
+        projected = string.empty();
         for i = 1:height(device_seq)
+            index = device_seq.Order(i);
             label = string(device_seq.Label(i));
-            newerror = @(info) obj.error("[%s %s] Invalid sequence, %s.", device, label, info);
+            newerror = @(info) obj.error("[%d %s %s] Invalid sequence, %s.", index, device, label, info);
             operation = string(device_seq.Type(i));
             if label == ""
                 newerror("empty label")
@@ -266,39 +295,51 @@ function mustBeValidSequence(obj, sequence)
             if label == "Config"
                 newerror("'Config' is reserved and can not be used as label")
             end
-            % For DMD and Projection related commands
-            if operation == "Project" && device.startsWith("DMD")
-                continue
-            elseif operation == "Project"
-                newerror("'Project' is only available for DMD")
-            elseif device.startsWith("DMD")
-                newerror("DMD can only use 'Project'")
-            end
-            % For Picomotor related piezo command
-            if operation == "Move" && device.startsWith("Picomotor")
-                continue
-            elseif operation == "Move"
-                newerror("'Move' is only available for Picomotor")
-            elseif device.startsWith("Picomotor")
-                newerror("Picomotor can only use 'Move'")
-            end
-            if operation == "Start" || operation == "Start+Acquire"
-                started = [started, label]; %#ok<AGROW>
-            end
-            if operation == "Acquire" || operation == "Start+Acquire"
-                if ~ismember(label, started)
-                    newerror("acquire command before start command")
-                end
-                if ismember(label, acquired)
-                    newerror("label is acquired more than once")
-                end
-                started(started == label) = [];
-                acquired(end + 1) = label; %#ok<AGROW>
-            end
-            if operation == "Analysis"
-                if ~ismember(label, acquired)
-                    newerror("missing acquire command before analysis")
-                end
+            switch operation
+                case {"Start", "Start+Acquire", "Acquire"}
+                    if device.startsWith("DMD") || device.startsWith("Picomotor")
+                        newerror("operation is only available for cameras")
+                    end
+                    if operation == "Start" || operation == "Start+Acquire"
+                        if ismember(label, started)
+                            newerror("label is started more than once, please use unique label")
+                        end
+                        started(end + 1) = label; %#ok<AGROW>
+                    end
+                    if operation == "Acquire" || operation == "Start+Acquire"
+                        if isempty(started) || started(end) ~= label
+                            newerror("missing 'Start' command before 'Acquire' command")
+                        end
+                        if ismember(label, acquired)
+                            newerror("label is used more than once for 'Acquire', please use unique label")
+                        end
+                        acquired(end + 1) = label; %#ok<AGROW>
+                        started(end) = [];
+                    end
+                case {"Analysis"}
+                    if device.startsWith("DMD")
+                    elseif device.startsWith("Picomotor")
+                    elseif isempty(acquired) || ~ismember(label, acquired)
+                        newerror("missing 'Acquire' command before 'Analysis' command")
+                    end
+                case {"Project"}
+                    if ~device.startsWith("DMD")
+                        newerror("operation 'Project' is only available for device name starting with 'DMD'")
+                    end
+                    if ismember(label, projected)
+                        newerror("label is projected more than once, please use unique label")
+                    end
+                    projected(end + 1) = label; %#ok<AGROW>
+                case {"Move"}
+                    if ~device.startsWith("Picomotor")
+                        newerror("operation 'Move' is only available for device name starting with 'Picomotor'")
+                    end
+                    if ismember(label, moved)
+                        newerror("label is moved more than once, please use unique label")
+                    end
+                    moved(end + 1) = label; %#ok<AGROW>
+                otherwise
+                    newerror("operation not supported")
             end
         end
         if ~isempty(started)

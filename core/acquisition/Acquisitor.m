@@ -3,10 +3,12 @@ classdef Acquisitor < BaseSequencer
     methods
         % Initialize acquisition
         function init(obj)
+            fprintf('-------------------------------Start initialization------------------------------\n')
             obj.CameraManager.init(obj.AcquisitionConfig.ActiveDevices)
             obj.DataStorage.init()
             obj.initSequence()
             obj.info2("Sequence initialized.")
+            fprintf('-------------------------------Finish initialization------------------------------\n\n')
         end
         
         % Configure the acquisition to a data
