@@ -12,7 +12,7 @@ res = p.trackCalib();
 %% Track drift in lattice frame over time
 
 names = ["Andor19331", "Andor19330", "Zelux"];
-shiftv = [0, -1, -2];
+shiftv = [0, -1, -2];  % offset on the line plots
 
 ref_index = 10;
 

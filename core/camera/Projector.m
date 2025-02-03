@@ -9,23 +9,24 @@ classdef (Abstract) Projector < BaseProcessor
 
     properties (Abstract, SetAccess = immutable)
         MexFunctionName
-        PixelSize % In um
-        BMPSizeX  % BMP size
-        BMPSizeY  % BMP size
         DefaultStaticPatternPath
-
-        XPixels % Real space pattern size, with dummy pixels
-        YPixels % Real space pattern size, with dummy pixels
+        PixelArrangement
     end
 
     properties (Dependent)
         IsWindowCreated
         IsWindowMinimized
+        WindowHeight
+        WindowWidth
         StaticPatternPath
-        StaticPatternRGB
-        StaticPattern
-        StaticPatternRGBReal
         DynamicPattern
+    end
+
+    properties (SetAccess = protected)
+        StaticPattern           % Static pattern in uint32 format
+        StaticPatternRGB        % Static pattern (h x w x 3) uint8 format
+        StaticPatternReal
+        StaticPatternRealRGB
     end
 
     methods
@@ -58,15 +59,15 @@ classdef (Abstract) Projector < BaseProcessor
             path = string(path);
             obj.checkFilePath(path, 'StaticPatternPath');
             obj.MexHandle("setStaticPatternPath", path, false)
+            obj.updateStaticPatternProp()
             obj.info("Static pattern loaded from '%s'.", path)
         end
 
         function setDynamicPattern(obj, pattern)
-            if size(pattern, 3) ~= 1
-                obj.error('Pattern should be 2D matrix!')
-            end
             pattern = bitor(uint32(pattern), 0b11111111000000000000000000000000);
-            obj.MexHandle("setDynamicPattern", pattern, false)
+            for i = 1: size(pattern, 3)
+                obj.MexHandle("setDynamicPattern", pattern(:, :, i), false)
+            end
         end
 
         function setDynamicPatternRGB(obj, rgb)
@@ -82,8 +83,11 @@ classdef (Abstract) Projector < BaseProcessor
                 obj
                 verbose = false
             end
-            obj.MexHandle("open", verbose)
-            obj.info('Window created.')
+            if ~obj.IsWindowCreated
+                obj.MexHandle("open", verbose)
+                obj.updateStaticPatternProp()
+                obj.info('Window created.')
+            end
         end
 
         function close(obj, verbose)
@@ -91,8 +95,10 @@ classdef (Abstract) Projector < BaseProcessor
                 obj 
                 verbose = false
             end
-            obj.MexHandle("close", verbose)
-            obj.info('Window closed.')
+            if obj.IsWindowCreated
+                obj.MexHandle("close", verbose)
+                obj.info('Window closed.')
+            end
         end
 
         function setDisplayIndex(obj, index, verbose)
@@ -125,7 +131,7 @@ classdef (Abstract) Projector < BaseProcessor
             imagesc(ax1, obj.StaticPatternRGB)
             title(ax1, 'Static Pattern')
             axis(ax1, "image")
-            imagesc(ax2, obj.StaticPatternRGBReal)
+            imagesc(ax2, obj.StaticPatternRealRGB)
             title(ax2, 'Static Pattern (real space)')
             axis(ax2, "image")
         end
@@ -156,20 +162,16 @@ classdef (Abstract) Projector < BaseProcessor
             val = obj.MexHandle("isWindowMinimized");
         end
 
+        function val = get.WindowHeight(obj)
+            val = obj.MexHandle("getWindowHeight");
+        end
+
+        function val = get.WindowWidth(obj)
+            val = obj.MexHandle("getWindowWidth");
+        end
+
         function val = get.StaticPatternPath(obj)
             val = string(obj.MexHandle("getStaticPatternPath"));
-        end
-
-        function val = get.StaticPattern(obj)
-            val = uint32(obj.MexHandle("getStaticPattern"));
-        end
-
-        function val = get.StaticPatternRGB(obj)
-            val = permute(Pattern2RGB(obj.StaticPattern), [2, 1, 3]);
-        end
-
-        function val = get.StaticPatternRGBReal(obj)
-            val = obj.StaticPatternRGB;
         end
 
         function val = get.DynamicPattern(obj)
@@ -178,6 +180,32 @@ classdef (Abstract) Projector < BaseProcessor
     end
 
     methods (Access = protected)
+        function updateStaticPatternProp(obj)
+            obj.StaticPattern = permute(uint32(obj.MexHandle("getStaticPattern")), [2, 1, 3]);
+            obj.StaticPatternRGB = Pattern2RGB(obj.StaticPattern);
+            obj.StaticPatternReal = obj.convert2Real(obj.StaticPattern);
+            obj.StaticPatternRealRGB = Pattern2RGB(obj.StaticPatternReal);
+        end
+
+        % Covert pattern space (uint32 format) image to real space
+        function val = convert2Real(obj, pattern)
+            switch obj.PixelArrangement
+                case "Square"
+                    val = pattern;
+                case "Diamond"
+                    [nrows, ncols] = size(pattern, [1, 2]);
+                    real_nrows = max(0, ceil((nrows - 1) / 2) + ncols);
+                    real_ncols = max(0, ncols + floor((nrows - 1) / 2));
+                    val = zeros(real_nrows, real_ncols, 'uint32');
+                    [Y, X] = meshgrid(1: ncols, 1: nrows);
+                    RealX = ceil((nrows - X) / 2) + Y;
+                    RealY = floor((nrows - X) / 2) + ncols - Y + 1;
+                    real_idx = sub2ind([real_nrows, real_ncols], RealX(:), RealY(:));
+                    idx = sub2ind([nrows, ncols], X(:), Y(:));
+                    val(real_idx) = pattern(idx);
+            end
+        end
+
         function label = getStatusLabel(obj)
             label = getStatusLabel@BaseProcessor(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
         end
