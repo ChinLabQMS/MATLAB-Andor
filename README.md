@@ -12,6 +12,7 @@ Image acquisition and analysis framework for site-resolved atom imaging and mani
 - External libraries
     - Andor SDK3
     - Thorlabs Camera SDK
+    - C++ mex function compiled from [DMD-SDL](https://github.com/ChinLabQMS/DMD-SDL) for real-time DMD pattern control
 - MATLAB toolboxes
     - Curve Fitting Toolbox
     - Image Processing Toolbox

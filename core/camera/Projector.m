@@ -11,6 +11,7 @@ classdef (Abstract) Projector < BaseProcessor
         MexFunctionName
         DefaultStaticPatternPath
         PixelArrangement
+        RealPixelIndexLookup
     end
 
     properties (Dependent)
@@ -43,15 +44,18 @@ classdef (Abstract) Projector < BaseProcessor
         end
 
         % Main function to interface with the app
-        function project(obj, options)
+        function project(obj, live, options)
             arguments
                 obj
+                live = []  % Live data from acquisitor
                 options.mode = "Static"
                 options.static_pattern_path = obj.DefaultStaticPatternPath
             end
             switch options.mode
                 case "Static"
                     obj.setStaticPatternPath(options.static_pattern_path)
+                case "Dynamic"
+                    obj.warn2("Not implemented yet!")
             end
         end
         
@@ -64,6 +68,7 @@ classdef (Abstract) Projector < BaseProcessor
         end
 
         function setDynamicPattern(obj, pattern)
+            % Add 8-bit of 1 in the beginning for transparency (opaque)
             pattern = bitor(uint32(pattern), 0b11111111000000000000000000000000);
             for i = 1: size(pattern, 3)
                 obj.MexHandle("setDynamicPattern", pattern(:, :, i), false)

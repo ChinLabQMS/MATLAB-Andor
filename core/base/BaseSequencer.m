@@ -167,7 +167,7 @@ classdef (Abstract) BaseSequencer < BaseObject
         end
         
         function project(obj, projector, ~, varargin)
-            obj.CameraManager.(projector).project(varargin{:})
+            obj.CameraManager.(projector).project(obj.Live, varargin{:})
         end
 
         function move(obj, driver, ~, varargin)
