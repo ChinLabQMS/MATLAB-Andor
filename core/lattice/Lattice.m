@@ -3,7 +3,7 @@
 
     properties (Constant)
         Standard_R = [0, 0]
-        Standard_V1 = [0, 1]
+        Standard_V1 = [0, 1]  % Unit length lattice vector for a "standard" image
         Standard_V2 = [-1/2*sqrt(3), -1/2]
         TransformStandard_StepDensity = 10
         TransformStandard_XLim = [-25, 25]

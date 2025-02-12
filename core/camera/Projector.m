@@ -11,7 +11,7 @@ classdef (Abstract) Projector < BaseProcessor
         MexFunctionName
         DefaultStaticPatternPath
         PixelArrangement
-        RealPixelIndexLookup
+        % RealPixelIndexLookup
     end
 
     properties (Dependent)

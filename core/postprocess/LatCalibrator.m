@@ -88,26 +88,36 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         end
     
         % Plot an example of single shot signal
-        function plotSignal(obj, index)
-            if nargin == 1
-                index = 1;
+        function plotSignal(obj, options)
+            arguments
+                obj
+                options.index = 1
+                options.transformed = false
             end
             num_cameras = length(obj.LatCameraList);
             figure
-            sgtitle(sprintf('Image index: %d', index))
+            sgtitle(sprintf('Image index: %d', options.index))
             for i = 1: num_cameras
                 camera = obj.LatCameraList(i);
                 lat = obj.LatCalib.(camera);
                 s = obj.Stat.(camera);
-                signal = s.Image(:, :, index);
-                subplot(1, num_cameras, i)
-                imagesc2(signal, 'title', camera)
-                if ~isempty(obj.LatCalib.(camera).K)
-                    lat.calibrateR(s.FFTImageAll(:, :, index), s.FFTX, s.FFTY)
-                    lat.plot()
+                signal = s.Image(:, :, options.index);
+                ax = subplot(1, num_cameras, i);
+                if options.transformed
+                else
                 end
-                viscircles(s.Center([2, 1]), mean(s.Width), ...
-                    'Color', 'w', 'LineWidth', 0.5, 'LineStyle','--', 'EnhanceVisibility', 0);
+                imagesc2(ax, signal, 'title', camera)
+                % Plot a circle around fitted gaussian
+                h1 = viscircles(s.Center([2, 1]), mean(s.Width), ...
+                                'Color', 'g', 'LineWidth', 1, 'LineStyle','--', 'EnhanceVisibility', 0);
+                % Plot the lattice grid
+                if ~isempty(obj.LatCalib.(camera).K)
+                    lat.calibrateR(s.FFTImageAll(:, :, options.index), s.FFTX, s.FFTY)
+                    h2 = lat.plot();
+                    legend([h1, h2], ["fitted gaussian", "loaded calibration"])
+                else
+                    legend(h1, "fitted gaussian")
+                end
             end
         end
 
