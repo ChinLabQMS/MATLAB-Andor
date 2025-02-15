@@ -12,9 +12,9 @@
 
 clear; clc; close all
 p = PSFCalibrator( ...
-    "DataPath", "data/2024/12 December/20241217/white_array_on_black_full_spacing=100_r=2.mat", ...
-    "PSFCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
-    "PSFImageLabel", ["Image", "Image", "Pattern_532"]);
+    "DataPath", "data/2025/02 Feburary/20250213/sparse_14.mat", ...
+    "PSFCameraList", ["Andor19330", "Andor19331"], ...
+    "PSFImageLabel", ["Image", "Image"]);
 
 %% Check signals, should be sparse
 p.plotSignal()
@@ -35,7 +35,7 @@ p.PSFCalib.Andor19330
 
 %% Andor19331
 close all
-p.fit('Andor19331', 1, 1.5, 'plot_diagnostic', 1)
+p.fit('Andor19331', 1, 1.3, 'plot_diagnostic', 1)
 % p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
@@ -45,16 +45,16 @@ p.fit('Zelux', 1, 4, 'plot_diagnostic', 1)
 % p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux
 
-%% Process all data for each camera
+%% Process all data for Andor19330
 close all
-p.fit('Andor19330', [], 1.2, 'verbose', 1)
+p.fit('Andor19330', [], 1.3, 'verbose', 1)
 p.PSFCalib.Andor19330.plotWidthDist()
 p.PSFCalib.Andor19330.plotPSF()
 p.PSFCalib.Andor19330
 
 %% Andor19331
 close all
-p.fit('Andor19331', [], 2, 'verbose', 1)
+p.fit('Andor19331', [], 1.3, 'verbose', 1)
 p.PSFCalib.Andor19331.plotWidthDist()
 p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331

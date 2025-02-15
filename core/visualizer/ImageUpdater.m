@@ -40,10 +40,10 @@ classdef ImageUpdater < AxesUpdater
             obj.resetAddon()
             switch obj.FuncName
                 case "None"
-                case "Lattice"
-                    obj.plotLattice(Live, varargin{:})
                 case "Lattice All"
                     obj.plotLatticeAll(Live, varargin{:})
+                case "Transformed"
+                    obj.plotTransformed(Live, varargin{:})
                 case "Transformed with Lattice"
                     obj.plotTransformedLattice(Live, varargin{:})
                 case "PSF"
@@ -66,18 +66,6 @@ classdef ImageUpdater < AxesUpdater
             end
         end
         
-        function plotLattice(obj, Live, options)
-            arguments
-                obj
-                Live
-                options.lattice_hexr = obj.PlotLattice_HexR
-            end
-            Lat = getLatCalib(obj, Live);
-            obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
-                SiteGrid.prepareSite('Hex', 'latr', options.lattice_hexr), ...
-                'filter', false);
-        end
-        
         function plotLatticeAll(obj, Live, options)
             arguments
                 obj
@@ -91,6 +79,9 @@ classdef ImageUpdater < AxesUpdater
             obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
                 SiteGrid.prepareSite('Hex', "latr", options.lattice_hexr), ...
                 'center', Lat.R + R_shift, 'filter', false);
+        end
+
+        function plotTransformed(obj, Live, options)
         end
         
         function plotTransformedLattice(obj, Live, options)
