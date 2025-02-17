@@ -92,7 +92,6 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             arguments
                 obj
                 options.index = 1
-                options.transformed = false
             end
             num_cameras = length(obj.LatCameraList);
             figure
@@ -103,9 +102,6 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 s = obj.Stat.(camera);
                 signal = s.Image(:, :, options.index);
                 ax = subplot(1, num_cameras, i);
-                if options.transformed
-                else
-                end
                 imagesc2(ax, signal, 'title', camera)
                 % Plot a circle around fitted gaussian
                 h1 = viscircles(s.Center([2, 1]), mean(s.Width), ...
@@ -118,6 +114,36 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 else
                     legend(h1, "fitted gaussian")
                 end
+            end
+        end
+        
+        % Plot an example of transformed single shot signal
+        function plotTransformed(obj, varargin, options)
+            arguments
+                obj
+            end
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                options.index = 1
+            end
+            num_cameras = length(obj.LatCameraList);
+            figure
+            sgtitle(sprintf('Image index: %d', options.index))
+            for i = 1: num_cameras
+                camera = obj.LatCameraList(i);
+                lat = obj.LatCalib.(camera);
+                s = obj.Stat.(camera);
+                signal = s.Image(:, :, options.index);
+                x_range = 1: size(signal, 1);
+                y_range = 1: size(signal, 2);
+                ax = subplot(1, num_cameras, i);
+                [transformed, x_range2, y_range2, lat_std] = lat.transformSignalStandard(signal, x_range, y_range, varargin{:});
+                imagesc2(ax, y_range2, x_range2, transformed, 'title', camera + "(transformed)")
+                lat_std.plot();
+                xlabel('X (um)')
+                ylabel('Y (um)')
             end
         end
 

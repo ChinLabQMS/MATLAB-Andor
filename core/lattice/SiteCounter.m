@@ -5,6 +5,10 @@ classdef SiteCounter < BaseComputer
         PointSource
         Lattice
     end
+
+    properties (SetAccess = protected)
+        CountMethod
+    end
     
     methods
         function obj = SiteCounter(id, lat, ps, sites)
@@ -12,6 +16,15 @@ classdef SiteCounter < BaseComputer
             obj.Lattice = lat;
             obj.PointSource = ps;
             obj.SiteGrid = sites;
+        end
+
+        function stat = count(obj, signal, x_range, y_range)
+            arguments
+                obj
+                signal
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
+            end
         end
     end
 

@@ -505,7 +505,7 @@
             end
             arguments
                 opt1.center = obj.R
-                opt1.filter = true
+                opt1.filter = false
                 opt1.x_lim = [1, 1440]
                 opt1.y_lim = [1, 1440]
                 opt1.full_range = false

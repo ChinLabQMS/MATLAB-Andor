@@ -141,18 +141,21 @@ classdef (Abstract) BaseSequencer < BaseObject
             end
             obj.SequenceStep = steps;
         end
-
+        
+        % Prepare camera to be ready for trigger
         function start(obj, camera, ~, varargin)
             obj.CameraManager.(camera).startAcquisition(varargin{:});
         end
-
+        
+        % Acquire images from cameras
         function acquire(obj, camera, label, varargin)
             [obj.Live.Raw.(camera).(label), is_good] = obj.CameraManager.(camera).acquire(varargin{:});
             if ~is_good
                 obj.Live.BadFrameDetected = true;
             end
         end
-
+        
+        % Preprocess the image to remove background
         function preprocess(obj, camera, label, varargin)
             [signal, background, noise] = obj.Preprocessor.process(obj.Live.Raw.(camera).(label), varargin{:});
             obj.Live.Signal.(camera).(label) = signal;
@@ -160,28 +163,33 @@ classdef (Abstract) BaseSequencer < BaseObject
             obj.Live.Noise.(camera).(label) = noise;
         end
         
+        % Analyze the images if there is no bad shot
         function analyze(obj, ~, ~, varargin)
             if (~obj.Live.BadFrameDetected || ~obj.AcquisitionConfig.DropBadFrames)
                 obj.Analyzer.analyze(obj.Live, varargin{:});
             end
         end
         
+        % Project patterns
         function project(obj, projector, ~, varargin)
             obj.CameraManager.(projector).project(obj.Live, varargin{:})
         end
 
+        % Move picomotor piezo actuators
         function move(obj, driver, ~, varargin)
             obj.CameraManager.(driver).move(varargin{:})
         end
-
+        
+        % Add raw data to storage
         function addData(obj)
             obj.DataStorage.add(obj.Live.Raw);
         end
-
+        
+        % Add live analysis to storage
         function addStat(obj)
             obj.StatStorage.add(obj.Live.Analysis);
         end
-
+        
         function abortAtEnd(obj)
             obj.CameraManager.abortAcquisition(obj.AcquisitionConfig.ActiveCameras);
         end

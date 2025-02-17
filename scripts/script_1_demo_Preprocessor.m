@@ -20,7 +20,7 @@ p = Preprocessor();
 disp(p)
 
 %% Load a dataset from file and plot raw images
-Data = load("calibration/example_data/20241217_white_array_on_black_full_spacing=100_r=2.mat").Data;
+Data = load("data/2025/02 Feburary/20250213/end_of_day.mat").Data;
 
 idx = 1;
 % cam = "Andor19330";
@@ -58,3 +58,7 @@ title(sprintf('[%s] Averaged image', cam))
 subplot(1, 2, 2)
 imagesc2(Signal.(cam).(label)(:, :, idx))
 title(sprintf('[%s] Index: %d', cam, idx))
+
+%% Save the leakage (remaining offset after subtracting camera background) to file
+% This will be used for background subtraction when fast mode is on
+p.saveLeakage()
