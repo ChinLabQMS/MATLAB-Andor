@@ -24,7 +24,7 @@ classdef (Abstract) PSFProcessor < BaseProcessor
            end
            obj.checkFilePath(path, 'PSFCalibFilePath')
            obj.PSFCalib = load(path);
-           obj.info("PSFCalib is loaded from '%s'", path)
+           obj.info("PSFCalib loaded from '%s'", path)
         end
 
         function init(obj)

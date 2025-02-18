@@ -19,12 +19,12 @@ classdef (Abstract) LatProcessor < BaseProcessor
         function loadLatCalibFile(obj, path)
             if isempty(path)
                 obj.LatCalib = [];
-                obj.info("Pre-calibration is reset to empty structure.")
+                obj.info("LatCalib is reset to empty structure.")
                 return
             end
             obj.checkFilePath(path)
             obj.LatCalib = load(path);
-            obj.info("Pre-calibration loaded from: '%s'.", path)
+            obj.info("LatCalib loaded from: '%s'.", path)
         end
 
         function init(obj)

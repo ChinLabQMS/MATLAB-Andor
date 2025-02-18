@@ -35,7 +35,8 @@ classdef ImageUpdater < AxesUpdater
             arguments (Repeating)
                 varargin
             end
-            c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle)); % Preserve original hold state
+            % Preserve original hold state upon exit
+            c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle));
             plotData(obj, Live)
             obj.resetAddon()
             switch obj.FuncName
@@ -82,6 +83,21 @@ classdef ImageUpdater < AxesUpdater
         end
 
         function plotTransformed(obj, Live, options)
+            arguments
+                obj
+                Live
+                options.lattice_hexr = obj.PlotLattice_HexR
+                options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
+                options.transform_scaleV = obj.PlotLattice_TransformScaleV
+            end
+            data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
+            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+            signal = getSignalSum(data, num_frames, 'first_only', true);
+            Lat = getLatCalib(obj, Live);
+            [transformed, x_range, y_range] = ...
+                Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
+            hold(obj.AxesHandle, "on")
+            obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
         end
         
         function plotTransformedLattice(obj, Live, options)
