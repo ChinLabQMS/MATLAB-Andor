@@ -86,16 +86,9 @@ classdef ImageUpdater < AxesUpdater
             arguments
                 obj
                 Live
-                options.lattice_hexr = obj.PlotLattice_HexR
                 options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
-                options.transform_scaleV = obj.PlotLattice_TransformScaleV
             end
-            data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
-            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
-            signal = getSignalSum(data, num_frames, 'first_only', true);
-            Lat = getLatCalib(obj, Live);
-            [transformed, x_range, y_range] = ...
-                Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
+            [transformed, x_range, y_range] = getTransformed(obj, Live, options.transform_cropRsite);
             hold(obj.AxesHandle, "on")
             obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
         end
@@ -108,12 +101,7 @@ classdef ImageUpdater < AxesUpdater
                 options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
                 options.transform_scaleV = obj.PlotLattice_TransformScaleV
             end
-            data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
-            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
-            signal = getSignalSum(data, num_frames, 'first_only', true);
-            Lat = getLatCalib(obj, Live);
-            [transformed, x_range, y_range, Lat2] = ...
-                Lat.transformSignalStandardCropSite(signal, options.transform_cropRsite);
+            [transformed, x_range, y_range, Lat2] = getTransformed(obj, Live, options.transform_cropRsite);
             hold(obj.AxesHandle, "on")
             obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
             obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
@@ -145,6 +133,15 @@ classdef ImageUpdater < AxesUpdater
 end
 
 %% Other utilities functions
+
+function [transformed, x_range, y_range, Lat2] = getTransformed(obj, Live, cropRsite)
+    data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
+    num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+    signal = getSignalSum(data, num_frames, 'first_only', true);
+    Lat = getLatCalib(obj, Live);
+    [transformed, x_range, y_range, Lat2] = ...
+        Lat.transformSignalStandardCropSite(signal, cropRsite);
+end
 
 function Lat = getLatCalib(obj, Live)
     Lat = Live.LatCalib.(obj.CameraName);

@@ -71,7 +71,7 @@ p.calibrate("Andor19331", [167, 271; 123, 207], 'plot_diagnosticR', 1, 'plot_dia
 close all
 p.plotFFT("Zelux")
 
-%% Zelux: Input the peaks positions
+%% Zelux: Input the FFT peaks positions
 % Input in the orientation similar to Andor19330 to align lattice vectors
 % Set 'binarize' to 0 to disable binarization in the calibration
 
@@ -79,11 +79,20 @@ close all
 p.calibrate("Zelux", [658, 565; 714, 595], 'binarize', 0, 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
 
 %% Cross-calibrate Andor19331 to Andor19330
+% Matching the origin of the lattice between the two Andors
 close all
 p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnosticO', 1)
 
-%% (optional) Calibrate to a different signal index by searching a smaller region
+%% (optional) cross-calibrate to a different signal index by searching a smaller region
+% Matching the origin of the lattice between the two Andors
 p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnosticO', 0)
+
+%% Cross-calibrate DMD frame to Zelux pattern
+% First to look at the image of pattern and the pattern
+
+
+%% Plot an example of transformed signal to look at the overall calibration
+p.plotTransformed()
 
 %% Save lattice calibration of all three cameras
 % Default is "calibration/LatCalib_<today's date>.mat" for a record

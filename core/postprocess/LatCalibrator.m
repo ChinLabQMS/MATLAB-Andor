@@ -30,10 +30,11 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_Debug = false
+        CalibDMD_Camera = "Zelux"
+        CalibDMD_Label = "Pattern_532"
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
-        Save_CopyBeforeSave = true
         TrackCalib_CropRSite = 20
         TrackCalib_CalibOFirst = true
         TrackCalib_CalibOEnd = true
@@ -232,6 +233,20 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             Lat = obj.LatCalib.(opt3.camera);
             Lat2 = obj.LatCalib.(opt3.camera2);
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
+        end
+        
+        % 
+        function plotPattern(obj)
+        end
+
+        % Cross-calibrate the lattice vector of DMD frame based on Zelux
+        % pattern image
+        function calibrateDMD(obj, opt)
+            arguments
+                obj
+                opt.camera = obj.CalibDMD_Camera
+                opt.label = obj.CalibDMD_Label
+            end
         end
         
         % Re-calibrate the lattice vectors and centers to mean image
