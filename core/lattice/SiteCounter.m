@@ -1,30 +1,52 @@
 classdef SiteCounter < BaseComputer
-
+    
     properties (SetAccess = immutable)
         SiteGrid
         PointSource
         Lattice
     end
 
+    properties (Constant)
+        Count_DefaultMethod = "linear_inverse"
+    end
+
     properties (SetAccess = protected)
-        CountMethod
+        DeconvPattern
     end
     
     methods
-        function obj = SiteCounter(id, lat, ps, sites)
+        function obj = SiteCounter(id, lat, ps, grid)
             obj@BaseComputer(id)
             obj.Lattice = lat;
             obj.PointSource = ps;
-            obj.SiteGrid = sites;
+            obj.SiteGrid = grid;
         end
 
-        function stat = count(obj, signal, x_range, y_range)
+        function stat = count(obj, signal, x_range, y_range, options)
             arguments
                 obj
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
+                options.count_method = obj.Count_DefaultMethod
             end
+            switch options.count_method
+                case "max_signal"
+                case "linear_inverse"
+            end
+        end
+
+        function updateDeconvPattern(obj)
+        end
+    end
+
+    methods (Access = protected)
+        function count = getCount_MaxSignal(obj, signal, x_range, y_range)
+            
+        end
+        
+        function count = getCount_LinearInverse(obj, signal, x_range, y_range)
+        
         end
     end
 

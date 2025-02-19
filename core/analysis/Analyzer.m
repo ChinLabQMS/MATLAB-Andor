@@ -1,5 +1,10 @@
 classdef Analyzer < CombinedProcessor
     %ANALYZER Live analyzer
+
+    properties (SetAccess = immutable)
+        CounterAndor19330
+        CounterAndor19331
+    end
     
     methods
         function analyze(obj, live, info, options)
@@ -14,8 +19,8 @@ classdef Analyzer < CombinedProcessor
             end
             timer = tic;
             for p = options.processes
-                func = p{1};
-                args = p{2};
+                func = p{1}; % Analysis function to invoke
+                args = p{2}; % Parameters to send to the function
                 func(live, info, args{:})
             end
             if options.verbose
@@ -26,8 +31,7 @@ classdef Analyzer < CombinedProcessor
 
     methods (Access = protected, Hidden)
         function init(obj)
-            init@LatProcessor(obj)
-            init@PSFProcessor(obj)
+            init@CombinedProcessor()
         end
 
         function analysis = analyzeSingleLabel(obj, signal, info, options)

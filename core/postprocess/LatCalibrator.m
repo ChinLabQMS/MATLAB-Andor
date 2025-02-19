@@ -235,8 +235,9 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
         
-        % 
+        % Plot pattern of images for calibrating specific projector
         function plotPattern(obj)
+            
         end
 
         % Cross-calibrate the lattice vector of DMD frame based on Zelux
