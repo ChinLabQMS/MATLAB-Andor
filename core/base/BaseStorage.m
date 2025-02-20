@@ -115,9 +115,9 @@ classdef (Abstract) BaseStorage < BaseObject
                     labels = string(fields(obj.(device).Config.AcquisitionNote))';
                     obj.initAcquisitionStorage(device, labels)
                 elseif isa(controller, "Projector")
-                    obj.(projector).Config = obj.CameraManager.(projector).struct();
-                    obj.(projector).Config.ProjectorName = projector;
-                    obj.(projector).Config.ProjectionNote = obj.AcquisitionConfig.ProjectionNote.(device);
+                    obj.(device).Config = obj.CameraManager.(device).struct();
+                    obj.(device).Config.ProjectorName = device;
+                    obj.(device).Config.ProjectionNote = obj.AcquisitionConfig.ProjectionNote.(device);
                 elseif isa(controller, "PicomotorDriver")
                     obj.(device).Config.DriverName = device;
                     for ii = 1: 4

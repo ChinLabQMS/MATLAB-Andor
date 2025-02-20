@@ -31,7 +31,7 @@ classdef Analyzer < CombinedProcessor
 
     methods (Access = protected, Hidden)
         function init(obj)
-            init@CombinedProcessor()
+            init@CombinedProcessor(obj)
         end
 
         function analysis = analyzeSingleLabel(obj, signal, info, options)

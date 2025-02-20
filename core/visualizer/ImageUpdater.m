@@ -134,6 +134,10 @@ end
 
 %% Other utilities functions
 
+function Lat = getLatCalib(obj, Live)
+    Lat = Live.LatCalib.(obj.CameraName);
+end
+
 function [transformed, x_range, y_range, Lat2] = getTransformed(obj, Live, cropRsite)
     data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
     num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
@@ -141,8 +145,4 @@ function [transformed, x_range, y_range, Lat2] = getTransformed(obj, Live, cropR
     Lat = getLatCalib(obj, Live);
     [transformed, x_range, y_range, Lat2] = ...
         Lat.transformSignalStandardCropSite(signal, cropRsite);
-end
-
-function Lat = getLatCalib(obj, Live)
-    Lat = Live.LatCalib.(obj.CameraName);
 end

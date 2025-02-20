@@ -210,11 +210,11 @@
                 figure('Name', 'Lattice R calibration diagnostics')
                 subplot(1, 2, 1)
                 imagesc2(y_range, x_range, signal, "title", sprintf("%s: Signal", obj.ID))
-                obj.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                obj.plot('filter', true, 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 obj.plotV()
                 subplot(1, 2, 2)
                 imagesc2(y_range, x_range, signal_new, "title", sprintf("%s: Signal (discrete)", obj.ID))
-                obj.plot('full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                obj.plot('filter', true, 'full_range', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
                 obj.plotV()
             end
         end
@@ -832,10 +832,14 @@ function plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed
     figure('Name', 'Cross-calibrated transformed images')
     subplot(1, 3, 1)
     imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
+    xlabel('X (\mum)')
+    ylabel('Y (\mum)')
     Lat2.plot()
     Lat2.plotV()
     subplot(1, 3, 2)
     imagesc2(y_range, x_range, signal, "title", sprintf("%s: calibrated", obj.ID))
+    xlabel('X (\mum)')
+    ylabel('Y (\mum)')
     obj.plot()
     obj.plotV()
     viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...

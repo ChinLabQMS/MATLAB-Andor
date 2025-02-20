@@ -1,7 +1,7 @@
 classdef Replayer < BaseSequencer & DataProcessor
     
     properties (Constant)
-        DefaultDataPath = "data/2024/12 December/20241220/DMD=1.0in_spot_r=2_spacing=100.mat"
+        DefaultDataPath = "data/2025/02 February/20250218/end_of_day_sparse_r=3.mat"
     end
 
     properties (SetAccess = {?BaseObject})
