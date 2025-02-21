@@ -23,6 +23,11 @@ classdef (Abstract) Projector < BaseProcessor
     end
 
     properties (SetAccess = protected)
+        RealNumRows             % Number of rows in real space
+        RealNumCols             % Number of cols in real space
+        PixelIndex              % Full range of pixel index in projector space
+        RealPixelIndex          % Active pixel index in real space
+        RealBackgroundIndex     % Background pixel index in real space
         StaticPattern           % Static pattern in uint32 format
         StaticPatternRGB        % Static pattern (h x w x 3) uint8 format
         StaticPatternReal
@@ -80,6 +85,10 @@ classdef (Abstract) Projector < BaseProcessor
             end
             pattern = permute(RGB2Pattern(rgb), [2, 1, 3]);
             obj.MexHandle("setDynamicPattern", pattern, false)
+        end
+
+        function displayColor(obj, r, g, b)
+            obj.MexHandle("displayColor", [r, g, b])
         end
 
         function open(obj, verbose)
@@ -167,11 +176,11 @@ classdef (Abstract) Projector < BaseProcessor
         end
 
         function val = get.WindowHeight(obj)
-            val = obj.MexHandle("getWindowHeight");
+            val = double(obj.MexHandle("getWindowHeight"));
         end
 
         function val = get.WindowWidth(obj)
-            val = obj.MexHandle("getWindowWidth");
+            val = double(obj.MexHandle("getWindowWidth"));
         end
 
         function val = get.StaticPatternPath(obj)
@@ -185,28 +194,40 @@ classdef (Abstract) Projector < BaseProcessor
 
     methods (Access = protected)
         function updateStaticPatternProp(obj)
+            obj.updateRealSpaceMap()
             obj.StaticPattern = permute(uint32(obj.MexHandle("getStaticPattern")), [2, 1, 3]);
             obj.StaticPatternRGB = Pattern2RGB(obj.StaticPattern);
-            obj.StaticPatternReal = obj.convert2Real(obj.StaticPattern);
+            obj.StaticPatternReal = zeros(obj.RealNumRows, obj.RealNumCols, 'uint32');
+            obj.StaticPatternReal(obj.RealPixelIndex) = obj.StaticPattern(obj.PixelIndex);
+            obj.StaticPatternReal(obj.RealBackgroundIndex) = 0b111111110000000000000000;
             obj.StaticPatternRealRGB = Pattern2RGB(obj.StaticPatternReal);
         end
 
-        % Covert pattern space (uint32 format) image to real space
-        function val = convert2Real(obj, pattern)
+        % Update the real-space pixel index and projector space index
+        % correspondence
+        function updateRealSpaceMap(obj)
+            % Projector space index
+            nrows = obj.WindowHeight;
+            ncols = obj.WindowWidth;
+            [Y, X] = meshgrid(1: ncols, 1: nrows);
+            obj.PixelIndex = sub2ind([nrows, ncols], X(:), Y(:));
+            % Real space index
             switch obj.PixelArrangement
                 case "Square"
-                    val = pattern;
+                    obj.RealNumRows = nrows;
+                    obj.RealNumCols = ncols;
+                    obj.RealPixelIndex = obj.PixelIndex;
+                    obj.RealBackgroundIndex = [];
                 case "Diamond"
-                    [nrows, ncols] = size(pattern, [1, 2]);
-                    real_nrows = max(0, ceil((nrows - 1) / 2) + ncols);
-                    real_ncols = max(0, ncols + floor((nrows - 1) / 2));
-                    val = zeros(real_nrows, real_ncols, 'uint32');
-                    [Y, X] = meshgrid(1: ncols, 1: nrows);
+                    obj.RealNumRows = max(0, ceil((nrows - 1) / 2) + ncols);
+                    obj.RealNumCols = max(0, ncols + floor((nrows - 1) / 2));
                     RealX = ceil((nrows - X) / 2) + Y;
                     RealY = floor((nrows - X) / 2) + ncols - Y + 1;
-                    real_idx = sub2ind([real_nrows, real_ncols], RealX(:), RealY(:));
-                    idx = sub2ind([nrows, ncols], X(:), Y(:));
-                    val(real_idx) = pattern(idx);
+                    obj.RealPixelIndex = sub2ind([obj.RealNumRows, obj.RealNumCols], RealX(:), RealY(:));
+                    real_idx = true(obj.RealNumCols * obj.RealNumRows, 1);
+                    real_idx(obj.RealPixelIndex) = false;
+                    real_idx_full = 1: obj.RealNumCols * obj.RealNumRows;
+                    obj.RealBackgroundIndex = real_idx_full(real_idx);
             end
         end
 

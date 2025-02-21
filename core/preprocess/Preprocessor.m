@@ -28,11 +28,13 @@ classdef Preprocessor < BaseProcessor
     end
 
     methods
+        % Load a file that contains the camera offset counts calibration
         function set.BackgroundFilePath(obj, path)
             obj.loadBackgroundFile(path)
             obj.BackgroundFilePath = path;
         end
-
+        
+        % Load a file that contains leakage counts on CCD from a recent dataset
         function set.BackgroundLeakageFilePath(obj, path)
             obj.loadBackgroundLeakageFile(path)
             obj.BackgroundLeakageFilePath = path;
