@@ -69,3 +69,17 @@ distdmd = distcam.*[140/dist140xdmd,140/dist140ydmd];
 distxdmdpix = ((distdmd(1)-distdmd(2)))/sqrt(2);
 distydmdpix=((distdmd(1)+distdmd(2)))/sqrt(2);
 centerdmdpix = [distxdmdpix,distydmdpix];
+
+%%
+dmdvec = [666, 874] - [621, 276];
+dmdvec = dmdvec(:, 2:-1:1);
+latvec = Zelux.V(1, :);
+
+acosd((dmdvec * latvec') / norm(dmdvec) / norm(latvec)) - 180
+
+%%
+dmdvec2 = [915, 796] - [194, 437];
+dmdvec2 = dmdvec2(:, 2:-1:1);
+latvec2 = Zelux.V(2, :);
+
+acosd((dmdvec2 * latvec2') / norm(dmdvec2) / norm(latvec2))

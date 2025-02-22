@@ -54,10 +54,15 @@ classdef (Abstract) Projector < BaseProcessor
                 live = []  % Live data from acquisitor
                 options.mode = "Static"
                 options.static_pattern_path = obj.DefaultStaticPatternPath
+                options.red = 0
+                options.green = 0
+                options.blue = 0
             end
             switch options.mode
                 case "Static"
                     obj.setStaticPatternPath(options.static_pattern_path)
+                case "SolidColor"
+                    obj.displayColor(options.red, options.green, options.blue)
                 case "Dynamic"
                     obj.warn2("Not implemented yet!")
             end
