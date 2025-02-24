@@ -1,13 +1,13 @@
 classdef SiteCounter < BaseComputer
-    
+
+    properties (Constant)
+        Count_DefaultMethod = "linear_inverse"
+    end
+
     properties (SetAccess = immutable)
         SiteGrid
         PointSource
         Lattice
-    end
-
-    properties (Constant)
-        Count_DefaultMethod = "linear_inverse"
     end
 
     properties (SetAccess = protected)

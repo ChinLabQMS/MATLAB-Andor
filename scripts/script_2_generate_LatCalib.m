@@ -80,6 +80,7 @@ p.calibrate("Zelux", [658, 565; 714, 595], 'binarize', 0, 'plot_diagnosticR', 1,
 
 %% Cross-calibrate Andor19331 to Andor19330
 % Matching the origin of the lattice between the two Andors
+
 close all
 p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnosticO', 1)
 
@@ -87,8 +88,8 @@ p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnost
 % Matching the origin of the lattice between the two Andors
 p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnosticO', 0)
 
-%% Cross-calibrate DMD frame to Zelux pattern
-% First to look at the image of pattern and the pattern
+%% Additional calibration: Cross-calibrate DMD frame to Zelux pattern
+% First to look at the image of pattern on Zelux and the actual pattern
 
 
 %% Plot an example of transformed signal to look at the overall calibration

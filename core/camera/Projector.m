@@ -1,6 +1,11 @@
 classdef (Abstract) Projector < BaseProcessor
     % PROJECTOR Base class for controlling window content to display
     % patterns on a projector, wrapped around C++ mex function
+    % The compiled C++ mex function is assumed to be on MATLAB search path
+    
+    properties (Constant)
+        Background_Color = 0b111111110000000000000000
+    end
 
     properties (SetAccess = immutable)
         ID
@@ -20,6 +25,7 @@ classdef (Abstract) Projector < BaseProcessor
         WindowWidth
         StaticPatternPath
         DynamicPattern
+        NumDynamicPatternInMemory
     end
 
     properties (SetAccess = protected)
@@ -32,6 +38,8 @@ classdef (Abstract) Projector < BaseProcessor
         StaticPatternRGB        % Static pattern (h x w x 3) uint8 format
         StaticPatternReal
         StaticPatternRealRGB
+        PatternMemory
+        PatternCanvas
     end
 
     methods
@@ -57,45 +65,49 @@ classdef (Abstract) Projector < BaseProcessor
                 options.red = 0
                 options.green = 0
                 options.blue = 0
+                options.range = []
             end
             switch options.mode
                 case "Static"
                     obj.setStaticPatternPath(options.static_pattern_path)
                 case "SolidColor"
                     obj.displayColor(options.red, options.green, options.blue)
+                case "DynamicPreloaded"
+                    if isempty(options.range)
+                        obj.setDynamicPattern(obj.PatternMemory)
+                    else
+                        obj.setDynamicPattern(obj.PatternMemory(:,:,options.range))
+                    end
                 case "Dynamic"
                     obj.warn2("Not implemented yet!")
             end
         end
         
+        % Project a static pattern (external BMP) on projector
         function setStaticPatternPath(obj, path)
             path = string(path);
             obj.checkFilePath(path, 'StaticPatternPath');
             obj.MexHandle("setStaticPatternPath", path, false)
-            obj.updateStaticPatternProp()
+            if obj.IsWindowCreated
+                obj.updateStaticPatternProp()
+            end
             obj.info("Static pattern loaded from '%s'.", path)
         end
-
+        
+        % Project a series of uint32 pattern(s) on projector
         function setDynamicPattern(obj, pattern)
+            if isempty(pattern)
+                obj.warn2('Dynamic pattern to set is empty!')
+                return
+            end
             % Add 8-bit of 1 in the beginning for transparency (opaque)
-            pattern = bitor(uint32(pattern), 0b11111111000000000000000000000000);
+            pattern = permute(bitor(uint32(pattern), 0b11111111000000000000000000000000), [2, 1, 3]);
             for i = 1: size(pattern, 3)
                 obj.MexHandle("setDynamicPattern", pattern(:, :, i), false)
             end
         end
 
-        function setDynamicPatternRGB(obj, rgb)
-            if size(rgb, 3) ~= 3
-                obj.error('Pattern should be M x N x 3 array!')
-            end
-            pattern = permute(RGB2Pattern(rgb), [2, 1, 3]);
-            obj.MexHandle("setDynamicPattern", pattern, false)
-        end
-
-        function displayColor(obj, r, g, b)
-            obj.MexHandle("displayColor", [r, g, b])
-        end
-
+        % Open pattern window
         function open(obj, verbose)
             arguments
                 obj
@@ -103,11 +115,13 @@ classdef (Abstract) Projector < BaseProcessor
             end
             if ~obj.IsWindowCreated
                 obj.MexHandle("open", verbose)
+                obj.updateRealSpaceMap()
                 obj.updateStaticPatternProp()
                 obj.info('Window created.')
             end
         end
-
+        
+        % Close pattern window
         function close(obj, verbose)
             arguments
                 obj 
@@ -118,7 +132,13 @@ classdef (Abstract) Projector < BaseProcessor
                 obj.info('Window closed.')
             end
         end
+    
+        % Display a solid color
+        function displayColor(obj, r, g, b)
+            obj.MexHandle("displayColor", [r, g, b])
+        end
 
+        % Set the index of the display to position window
         function setDisplayIndex(obj, index, verbose)
             arguments
                 obj
@@ -127,11 +147,27 @@ classdef (Abstract) Projector < BaseProcessor
             end
             obj.MexHandle("setDisplayIndex", index, verbose)
         end
+        
 
         function selectPatternFromFile(obj)
             [file, location] = uigetfile('*.bmp', 'Select a BMP pattern to display');
-            if file ~= 0
+            if ~isequal(file, 0)
                 obj.setStaticPatternPath(fullfile(location, file));
+            end
+        end
+
+        function loadPatternMemoryFromFile(obj)
+            [file, location] = uigetfile('*.bmp', ...
+                'Select BMP pattern(s) to load into memory', ...
+                'MultiSelect', 'on');
+            if ~isequal(file, 0)
+                if iscell(file)
+                    for i = 1: length(file)
+                        pattern = obj.RGB2Pattern(imread(fullfile(location, file{i})));
+                    end
+                else
+                    pattern = obj.RGB2Pattern(imread(fullfile(location, file)));
+                end                
             end
         end
 
@@ -154,18 +190,28 @@ classdef (Abstract) Projector < BaseProcessor
             axis(ax2, "image")
         end
 
-        function delete(obj)
-            obj.close()
-            obj.MexHandle("unlock")
-            clear(obj.MexFunctionName)
-        end
-
         function checkWindowState(obj)
             if ~obj.IsWindowCreated
                 obj.open()
             elseif obj.IsWindowMinimized
                 obj.error('Window is minimized!')
             end
+        end
+
+        % Convert the projector space pattern to real space pattern
+        function val = convertPattern2Real(obj, pattern)
+            val = zeros(obj.RealNumRows, obj.RealNumCols, 'uint32');
+            val(obj.RealPixelIndex) = pattern(obj.PixelIndex);
+            val(obj.RealBackgroundIndex) = obj.Background_Color;
+        end
+
+        function val = convertReal2Pattern(obj, pattern)
+        end
+
+        function delete(obj)
+            obj.close()
+            obj.MexHandle("unlock")
+            clear(obj.MexFunctionName)
         end
 
         function val = struct(obj)
@@ -195,21 +241,27 @@ classdef (Abstract) Projector < BaseProcessor
         function val = get.DynamicPattern(obj)
             val = uint32(obj.MexHandle("getDynamicPattern"));
         end
+
+        function val = get.NumDynamicPatternInMemory(obj)
+            if isempty(obj.PatternMemory)
+                val = 0;
+            else
+                val = size(obj.PatternMemory, 3);
+            end
+        end
     end
 
     methods (Access = protected)
         function updateStaticPatternProp(obj)
-            obj.updateRealSpaceMap()
             obj.StaticPattern = permute(uint32(obj.MexHandle("getStaticPattern")), [2, 1, 3]);
-            obj.StaticPatternRGB = Pattern2RGB(obj.StaticPattern);
-            obj.StaticPatternReal = zeros(obj.RealNumRows, obj.RealNumCols, 'uint32');
+            obj.StaticPatternRGB = obj.Pattern2RGB(obj.StaticPattern);
             obj.StaticPatternReal(obj.RealPixelIndex) = obj.StaticPattern(obj.PixelIndex);
-            obj.StaticPatternReal(obj.RealBackgroundIndex) = 0b111111110000000000000000;
-            obj.StaticPatternRealRGB = Pattern2RGB(obj.StaticPatternReal);
+            obj.StaticPatternReal(obj.RealBackgroundIndex) = obj.Background_Color;
+            obj.StaticPatternRealRGB = obj.Pattern2RGB(obj.StaticPatternReal);
         end
 
         % Update the real-space pixel index and projector space index
-        % correspondence
+        % mapping
         function updateRealSpaceMap(obj)
             % Projector space index
             nrows = obj.WindowHeight;
@@ -234,6 +286,7 @@ classdef (Abstract) Projector < BaseProcessor
                     real_idx_full = 1: obj.RealNumCols * obj.RealNumRows;
                     obj.RealBackgroundIndex = real_idx_full(real_idx);
             end
+            obj.StaticPatternReal = zeros(obj.RealNumRows, obj.RealNumCols, 'uint32');
         end
 
         function label = getStatusLabel(obj)
@@ -263,20 +316,20 @@ classdef (Abstract) Projector < BaseProcessor
                     error('Unknown format for display information!')
             end
         end
+    
+        function rgb = Pattern2RGB(pattern)
+            r = uint8(bitshift(bitand(pattern, 0b111111110000000000000000), -16));
+            g = uint8(bitshift(bitand(pattern, 0b000000001111111100000000), -8));
+            b = uint8(bitand(pattern, 0b000000000000000011111111));
+            rgb = cat(3, r, g, b);
+        end
+
+        function pattern = RGB2Pattern(rgb)
+            r = bitshift(uint32(rgb(:, :, 1)), 16);
+            g = bitshift(uint32(rgb(:, :, 2)), 8);
+            b = uint32(rgb(:, :, 3));
+            pattern = r + g + b + 0b11111111000000000000000000000000;
+        end
     end
-
-end
-
-function rgb = Pattern2RGB(pattern)
-    r = uint8(bitshift(bitand(pattern, 0b111111110000000000000000), -16));
-    g = uint8(bitshift(bitand(pattern, 0b000000001111111100000000), -8));
-    b = uint8(bitand(pattern, 0b000000000000000011111111));
-    rgb = cat(3, r, g, b);
-end
-
-function pattern = RGB2Pattern(rgb)
-    r = bitshift(uint32(rgb(:, :, 1)), 16);
-    g = bitshift(uint32(rgb(:, :, 2)), 8);
-    b = uint32(rgb(:, :, 3));
-    pattern = r + g + b + 0b11111111000000000000000000000000;
+    
 end
