@@ -1,10 +1,13 @@
 %% Loading the raw dataset
+% edits on 2/26/2025
 clear; clc;
 DataPath = 'data/2024/10 October/20241004/anchor=64_array64_spacing=70_centered_r=20_r=10.mat';
+DataPath = 'data/2025/02 February/20250225/gray_calibration_square_width=5_spacing=150.mat';
 Data = load(DataPath, "Data").Data;
 
 %% Preprocess the data
-Signal = Preprocessor().processData(Data);
+%Signal = Preprocessor().processData(Data);
+Signal = Preprocessor().process(Data);
 
 %% Load a lattice pre-calibration
 LatCalib = load('calibration/LatCalib_20241002.mat');

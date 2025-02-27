@@ -30,8 +30,10 @@ classdef SiteCounter < BaseComputer
                 y_range = 1: size(signal, 2)
                 options.count_method = obj.Count_DefaultMethod
             end
+            stat = obj.SiteGrid.struct();
             switch options.count_method
                 case "max_signal"
+
                 case "linear_inverse"
             end
         end

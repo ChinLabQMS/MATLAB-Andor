@@ -44,3 +44,19 @@ hold on
 yline(gray1/gray2, '--', 'LineWidth', 2)
 legend('counts ratio', 'modulation with gray pattern (1.44kHz)')
 xlabel('modulation frequency (kHz)')
+
+%%
+x_range = 150:300;
+y_range = 400:550;
+mean_image = mean(Signal.Andor19330.Image, 3);
+figure
+subplot(1, 2, 1)
+imagesc2(y_range, x_range, mean_image(x_range, y_range))
+Andor19330.plot()
+ylim([x_range(1), x_range(end)])
+xlim([y_range(1), y_range(end)])
+subplot(1, 2, 2)
+imagesc2(y_range, x_range, mean_image(x_range + 512, y_range))
+Andor19330.plot()
+ylim([x_range(1), x_range(end)])
+xlim([y_range(1), y_range(end)])
