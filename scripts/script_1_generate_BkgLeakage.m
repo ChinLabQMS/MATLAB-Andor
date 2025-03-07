@@ -1,11 +1,11 @@
 %% Introduction
 % Goal: Demonstrate an example use of Preprocessor to get signal images
-% from raw images.
+% from raw images and generate the leakage file for fast mode preprocessing
 % Internally the Preprocessor does the following:
 % 1. Subtract a pre-recorded background that are taken with the same
 %    acquisition settings
 % 2. Remove outliers
-% 3. Use a linear plane to remove residual offset accumulated during
+% 3. Use a fitted linear plane to remove residual offset accumulated during
 %    readout
 
 %% Create a Preprocessor object
@@ -20,7 +20,7 @@ p = Preprocessor();
 disp(p)
 
 %% Load a dataset from file and plot raw images
-Data = load("data/2025/02 Feburary/20250213/end_of_day.mat").Data;
+Data = load("data/2025/02 February/20250213/end_of_day.mat").Data;
 
 idx = 1;
 % cam = "Andor19330";

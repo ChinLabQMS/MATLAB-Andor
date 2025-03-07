@@ -22,6 +22,8 @@ classdef LineUpdater < AxesUpdater
                     new = mean(data, "all");
                 case "Max"
                     new = max(data, [], "all");
+                case "Sum"
+                    new = sum(data, 'all');
                 case "Variance"
                     new = var(data(:));
                 otherwise
