@@ -19,6 +19,7 @@ classdef (Abstract) Projector < BaseProcessor
         IsWindowMinimized
         WindowHeight
         WindowWidth
+        OperationMode
         StaticPattern
         StaticPatternRGB
         StaticPatternReal
@@ -77,15 +78,20 @@ classdef (Abstract) Projector < BaseProcessor
             arguments
                 obj
                 live = []  % Live data from acquisitor
+                options.mode = "SolidColor"
                 options.red = 0
                 options.green = 0
                 options.blue = 0
+                options.pattern_index = 0
+                options.pattern_delay = 0
             end
             switch options.mode
                 case "SolidColor"
                     obj.displayColor(options.red, options.green, options.blue)
                 case "DynamicPreloaded"
-                    
+                    for i = options.pattern_index
+                        obj.displayPatternMemory(i, "pattern_delay",options.pattern_delay)
+                    end
                 case "Dynamic"
                     obj.warn2("Not implemented yet!")
             end
@@ -102,6 +108,16 @@ classdef (Abstract) Projector < BaseProcessor
         % Display a solid color
         function displayColor(obj, r, g, b)
             obj.MexHandle("displayColor", [r, g, b], false)
+        end
+        
+        % Display a pattern from loaded memory
+        function displayPatternMemory(obj, index, options)
+            arguments
+                obj
+                index
+                options.pattern_delay = 0
+            end
+            obj.MexHandle("displayPatternMemory", index, options.pattern_delay)
         end
 
         % Set the index of the display to position window
@@ -132,6 +148,14 @@ classdef (Abstract) Projector < BaseProcessor
             obj.MexHandle("selectAndLoadPatternMemory", false)
         end
 
+        function val = getPatternMemoryRGB(obj, index)
+            val = obj.MexHandle("getPatternMemoryRGB", index);
+        end
+
+        function val = getPatternMemoryRealRGB(obj, index)
+            val = obj.MexHandle("getPatternMemoryRealRGB", index);
+        end
+
         function plot(obj, ax1, ax2)
             arguments
                 obj
@@ -148,6 +172,31 @@ classdef (Abstract) Projector < BaseProcessor
             axis(ax1, "image")
             imagesc(ax2, obj.StaticPatternRealRGB)
             title(ax2, 'Static Pattern (real space)')
+            axis(ax2, "image")
+        end
+
+        function plot2(obj, index, ax1, ax2)
+            arguments
+                obj
+                index
+                ax1 = []
+                ax2 = []
+            end
+            if isempty(index)
+                return
+            end
+            if isempty(ax1) && isempty(ax2)
+                figure
+                ax1 = subplot(1, 2, 1);
+                ax2 = subplot(1, 2, 2);
+            end
+            pattern1 = obj.getPatternMemoryRGB(index);
+            pattern2 = obj.getPatternMemoryRealRGB(index);
+            imagesc(ax1, pattern1)
+            title(ax1, sprintf('Dynamic pattern: %d', index))
+            axis(ax1, "image")
+            imagesc(ax2, pattern2)
+            title(ax2, sprintf('Dynamic pattern (real space): %d', index))
             axis(ax2, "image")
         end
 
@@ -185,6 +234,10 @@ classdef (Abstract) Projector < BaseProcessor
             val = double(obj.MexHandle("getWindowWidth"));
         end
 
+        function val = get.OperationMode(obj)
+            val = string(obj.MexHandle("getOperationMode"));
+        end
+
         function val = get.StaticPattern(obj)
             val = obj.MexHandle("getStaticPattern");
         end
@@ -218,7 +271,7 @@ classdef (Abstract) Projector < BaseProcessor
         end
 
         function val = get.RealCanvasRGB(obj)
-            val = obj.MexHandle("getRealPatternCanvasRGB");
+            val = obj.MexHandle("getRealCanvasRGB");
         end
 
         function val = get.NumLoadedPatternsInMemory(obj)

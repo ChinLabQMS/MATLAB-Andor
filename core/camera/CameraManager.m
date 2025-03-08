@@ -97,6 +97,12 @@ classdef CameraManager < BaseManager
                 obj.(camera).close()
             end
         end
+
+        function delete(obj)
+            for camera = obj.VisibleProp
+                delete(obj.(camera))
+            end
+        end
     end
 
     methods (Static)
