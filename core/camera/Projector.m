@@ -117,7 +117,7 @@ classdef (Abstract) Projector < BaseProcessor
                 index
                 options.pattern_delay = 0
             end
-            obj.MexHandle("displayPatternMemory", index, options.pattern_delay)
+            obj.MexHandle("displayPatternMemory", index, options.pattern_delay, false)
         end
 
         % Set the index of the display to position window
