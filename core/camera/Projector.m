@@ -1,4 +1,4 @@
-classdef (Abstract) Projector < BaseProcessor
+classdef Projector < BaseRunner
     % PROJECTOR Base class for controlling window content to display
     % patterns on a projector, wrapped around C++ mex function
     % The compiled C++ mex function is assumed to be on MATLAB search path
@@ -6,12 +6,6 @@ classdef (Abstract) Projector < BaseProcessor
     properties (SetAccess = immutable)
         ID
         MexHandle
-    end
-
-    properties (Abstract, SetAccess = immutable)
-        MexFunctionName
-        DefaultStaticPatternPath
-        PixelArrangement
     end
 
     properties (Dependent)
@@ -33,16 +27,17 @@ classdef (Abstract) Projector < BaseProcessor
     end
 
     methods
-        function obj = Projector(id)
+        function obj = Projector(id, config)
             arguments
                 id = "Test"
+                config = DMDConfig()
             end
-            obj@BaseProcessor()
-            clear(obj.MexFunctionName)
-            obj.MexHandle = str2func(obj.MexFunctionName);
+            obj@BaseRunner(config)
+            clear(obj.Config.MexFunctionName)
+            obj.MexHandle = str2func(obj.Config.MexFunctionName);
             obj.MexHandle("lock")
             obj.ID = id;
-            obj.setStaticPatternPath(obj.DefaultStaticPatternPath)
+            obj.setStaticPatternPath(obj.Config.DefaultStaticPatternPath)
         end
 
         % Open pattern window
@@ -52,7 +47,7 @@ classdef (Abstract) Projector < BaseProcessor
                 options.verbose = true
             end
             if ~obj.IsWindowCreated
-                obj.MexHandle("open", obj.PixelArrangement, false)
+                obj.MexHandle("open", obj.Config.PixelArrangement, false)
                 if options.verbose
                     obj.info('Window created.')
                 end
@@ -148,6 +143,10 @@ classdef (Abstract) Projector < BaseProcessor
             obj.MexHandle("selectAndLoadPatternMemory", false)
         end
 
+        function clearPatternMemory(obj)
+            obj.MexHandle("clearPatternMemory")
+        end
+
         function val = getPatternMemoryRGB(obj, index)
             val = obj.MexHandle("getPatternMemoryRGB", index);
         end
@@ -211,11 +210,7 @@ classdef (Abstract) Projector < BaseProcessor
         function delete(obj)
             obj.close()
             obj.MexHandle("unlock")
-            clear(obj.MexFunctionName)
-        end
-
-        function val = struct(obj)
-            val = struct@BaseProcessor(obj, obj.VisibleProp);
+            clear(obj.Config.MexFunctionName)
         end
 
         function val = get.IsWindowCreated(obj)
@@ -281,7 +276,7 @@ classdef (Abstract) Projector < BaseProcessor
 
     methods (Access = protected)
         function label = getStatusLabel(obj)
-            label = getStatusLabel@BaseProcessor(obj) + sprintf("(WindowOpen: %d)", obj.IsWindowCreated);
+            label = getStatusLabel@BaseRunner(obj) + sprintf("(%s)", obj.ID);
         end
     end
 

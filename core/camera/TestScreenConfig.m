@@ -1,9 +1,10 @@
-classdef TestScreen < Projector
+classdef TestScreenConfig < BaseConfig
 
-    properties (SetAccess = immutable)
+    properties (Constant)
         MexFunctionName = "PatternWindowMexTest"
         DefaultStaticPatternPath = "resources/solid/white.bmp"
         PixelArrangement = "Square"
+        PixelSize = 7.6
     end
 
 end

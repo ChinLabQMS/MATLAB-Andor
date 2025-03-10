@@ -1,7 +1,7 @@
 classdef AcquisitionConfig < BaseProcessor
     
     properties (SetAccess = {?BaseObject})
-        SequenceTable = SequenceRegistry.Full4AnalysisPSF
+        SequenceTable = SequenceRegistry.Full4Basic
         NumAcquisitions = 20
         NumStatistics = 1000
         Refresh = 0.01

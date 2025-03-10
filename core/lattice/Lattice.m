@@ -495,7 +495,8 @@
             obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
         end
 
-        % Overlaying the lattice sites
+        % Overlaying the lattice sites, first two arguments (optional) are
+        % axis handle and sites, then name-value pairs
         function varargout = plot(obj, varargin, opt1, opt2)
             arguments
                 obj
@@ -832,14 +833,10 @@ function plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed
     figure('Name', 'Cross-calibrated transformed images')
     subplot(1, 3, 1)
     imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
-    xlabel('X (\mum)')
-    ylabel('Y (\mum)')
     Lat2.plot()
     Lat2.plotV()
     subplot(1, 3, 2)
     imagesc2(y_range, x_range, signal, "title", sprintf("%s: calibrated", obj.ID))
-    xlabel('X (\mum)')
-    ylabel('Y (\mum)')
     obj.plot()
     obj.plotV()
     viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...

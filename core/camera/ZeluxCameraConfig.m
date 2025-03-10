@@ -7,7 +7,7 @@ classdef ZeluxCameraConfig < BaseConfig
         MaxQueuedFrames = 1
     end
 
-    properties (SetAccess = immutable)
+    properties (Constant)
         XPixels = 1440
         YPixels = 1080
         MaxPixelValue = 1022

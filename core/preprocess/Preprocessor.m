@@ -13,7 +13,7 @@ classdef Preprocessor < BaseProcessor
         BackgroundSubtraction_VarName = "SmoothMean"
         OutlierRemoval_NumMaxPixels = 50
         OutlierRemoval_NumMinPixels = 0
-        OutlierRemoval_DiffThres = 100
+        OutlierRemoval_DiffThres = 50
         OutlierRemoval_Warning = true
         OffsetCorrection_RegionWidth = 100
         OffsetCorrection_Warning = true

@@ -5,6 +5,7 @@ classdef PointSource < BaseComputer
         Fit_Reset = true
         Fit_AutoResetWhenReachNumPeaks = 200
         Fit_AutoResetWhenReachRunNum = 5
+        Fit_Timeoutms = 1000
         FitPeaksAroundPos_Verbose = false
         FindPeaks_BinThresholdMin = 20
         FindPeaks_BinThresholdMax = 50
@@ -113,6 +114,7 @@ classdef PointSource < BaseComputer
                 opt.reset = obj.Fit_Reset
                 opt.auto_reset_runnum = obj.Fit_AutoResetWhenReachRunNum
                 opt.auto_reset_preaknum = obj.Fit_AutoResetWhenReachNumPeaks
+                opt.timeout = obj.Fit_Timeoutms
                 opt1.bin_threshold_min = obj.FindPeaks_BinThresholdMin
                 opt1.bin_threshold_max = obj.FindPeaks_BinThresholdMax
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
@@ -137,7 +139,7 @@ classdef PointSource < BaseComputer
                 opt3.normalize_method = obj.Update_NormalizeMethod
                 opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
-            timer = tic;
+            start_time = tic;
             args1 = namedargs2cell(opt1);
             args2 = namedargs2cell(opt2);
             args3 = namedargs2cell(opt3);
@@ -161,7 +163,7 @@ classdef PointSource < BaseComputer
             end
             if opt1.verbose
                 obj.info('PSF fitted from data (NumPeaks: %d), peak_count = %5.1f, sum_count = %7.1f, elapsed time is %5.3f s.', ...
-                    obj.DataNumPeaks, obj.DataPeakCount, obj.DataSumCount, toc(timer))
+                    obj.DataNumPeaks, obj.DataPeakCount, obj.DataSumCount, toc(start_time))
             end
         end
     

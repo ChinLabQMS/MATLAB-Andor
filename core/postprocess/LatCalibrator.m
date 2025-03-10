@@ -5,13 +5,15 @@ classdef LatCalibrator < DataProcessor & LatProcessor
     % 3. Analyze calibration drifts over time
 
     properties (SetAccess = {?BaseObject})
-        InitCameraName = ["Andor19330", "Andor19331", "Zelux", "DMD"]
         LatCameraList = ["Andor19330", "Andor19331", "Zelux"]
         LatImageLabel = ["Image", "Image", "Lattice_935"]
+        ProjectorList = "DMD"
+        TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
     end
 
     properties (Constant)
-        Process_BinThresholdPerct = 0.3
+        Process_BinThresholdMaxK = 10
+        Process_BinThresholdPerct = 0.5
         Process_CropSize = [200; 200; inf]
         Process_SignalLowerCrop = 8
         Calibrate_Binarize = true
@@ -30,8 +32,12 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_Debug = false
-        CalibDMD_Camera = "Zelux"
-        CalibDMD_Label = "Pattern_532"
+        CalibProjector_Projector = "DMD"
+        CalibProjector_Camera = "Zelux"
+        CalibProjector_Label = "Pattern_532"
+        CalibProjector_Camera2 = "Andor19330"
+        CalibProjector_Label2 = "Image"
+        CalibProjector_CropRSite = 20
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
@@ -56,6 +62,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         function process(obj, options)
             arguments
                 obj
+                options.bin_threshold_kmax = obj.Process_BinThresholdMaxK
                 options.bin_threshold_perct = obj.Process_BinThresholdPerct
                 options.crop_size = obj.Process_CropSize
                 options.signal_lower_crop = obj.Process_SignalLowerCrop
@@ -65,7 +72,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 label = obj.LatImageLabel(i);
                 signal = obj.Signal.(camera).(label);
                 signal_bin = signal;
-                thres = options.bin_threshold_perct * max(signal(:));
+                val_maxk = maxk(signal(:), options.bin_threshold_kmax);
+                thres = options.bin_threshold_perct * val_maxk(end);
                 signal_bin(signal < thres) = 0;
                 s.Image = signal;
                 s.MeanImage = getSignalSum(signal, obj.Signal.(camera).Config.NumSubFrames);
@@ -85,23 +93,27 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 s.FFTSize = [length(s.FFTX), length(s.FFTY)];
                 obj.Stat.(camera) = s;
             end
+            for i = 1: length(obj.ProjectorList)
+                projector = obj.ProjectorList(i);
+                obj.Stat.(projector).Template = imread(obj.TemplatePath);
+            end
             obj.info("Finish processing to get averaged images and basic statistics.")
         end
     
         % Plot an example of single shot signal
-        function plotSignal(obj, options)
+        function plotSignal(obj, index)
             arguments
                 obj
-                options.index = 1
+                index = 1
             end
             num_cameras = length(obj.LatCameraList);
             figure
-            sgtitle(sprintf('Image index: %d', options.index))
+            sgtitle(sprintf('Image index: %d', index))
             for i = 1: num_cameras
                 camera = obj.LatCameraList(i);
                 lat = obj.LatCalib.(camera);
                 s = obj.Stat.(camera);
-                signal = s.Image(:, :, options.index);
+                signal = s.Image(:, :, index);
                 ax = subplot(1, num_cameras, i);
                 imagesc2(ax, signal, 'title', camera)
                 % Plot a circle around fitted gaussian
@@ -109,7 +121,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                                 'Color', 'g', 'LineWidth', 1, 'LineStyle','--', 'EnhanceVisibility', 0);
                 % Plot the lattice grid
                 if ~isempty(obj.LatCalib.(camera).K)
-                    lat.calibrateR(s.FFTImageAll(:, :, options.index), s.FFTX, s.FFTY)
+                    lat.calibrateR(s.FFTImageAll(:, :, index), s.FFTX, s.FFTY)
                     h2 = lat.plot();
                     legend([h1, h2], ["fitted gaussian", "loaded calibration"])
                 else
@@ -134,18 +146,61 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             sgtitle(sprintf('Image index: %d', options.index))
             for i = 1: num_cameras
                 camera = obj.LatCameraList(i);
-                lat = obj.LatCalib.(camera);
+                Lat = obj.LatCalib.(camera);
+                if isempty(Lat.K)
+                    obj.error('Please calibrate %s first before doing transformation!', camera)
+                end
                 s = obj.Stat.(camera);
                 signal = s.Image(:, :, options.index);
                 x_range = 1: size(signal, 1);
                 y_range = 1: size(signal, 2);
                 ax = subplot(1, num_cameras, i);
-                [transformed, x_range2, y_range2, lat_std] = lat.transformSignalStandard(signal, x_range, y_range, varargin{:});
+                [transformed, x_range2, y_range2, lat_std] = Lat.transformSignalStandard(signal, x_range, y_range, varargin{:});
                 imagesc2(ax, y_range2, x_range2, transformed, 'title', camera + "(transformed)")
                 lat_std.plot();
                 xlabel('X (um)')
                 ylabel('Y (um)')
             end
+        end
+
+        % Plot the pattern template (real space) image for calibrating
+        % projector and cameras
+        function plotProjection(obj, index, opt)
+            arguments
+                obj
+                index
+                opt.projector = obj.CalibProjector_Projector
+                opt.camera = obj.CalibProjector_Camera
+                opt.label = obj.CalibProjector_Label
+                opt.camera2 = obj.CalibProjector_Camera2
+                opt.label2 = obj.CalibProjector_Label2
+                opt.crop_R_site = obj.CalibProjector_CropRSite
+            end
+            Lat2 = obj.LatCalib.(opt.camera2);
+            if isempty(Lat2.K)
+                obj.error('Please calibrate lattice vector of camera %s first!', opt.camera2)
+            end
+            template = obj.Stat.(opt.projector).Template;
+            signal = obj.Signal.(opt.camera).(opt.label)(:, :, index);
+            signal2 = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
+            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, ...
+                  opt.crop_R_site * Lat2.V_norm);
+            figure
+            subplot(1, 3, 1)
+            imagesc(template)
+            axis("image")
+            title('Projector space')
+            subplot(1, 3, 2)
+            imagesc(signal)
+            colorbar
+            axis("image")
+            title('Camera space')
+            subplot(1, 3, 3)
+            imagesc(y_range2, x_range2, signal2)
+            colorbar
+            Lat2.plot()
+            axis("image")
+            title("Atom image")
         end
 
         % Plot FFT pattern of images for calibrating specific camera
@@ -234,19 +289,16 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             Lat2 = obj.LatCalib.(opt3.camera2);
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
-        
-        % Plot pattern of images for calibrating specific projector
-        function plotPattern(obj)
-            
-        end
 
-        % Cross-calibrate the lattice vector of DMD frame based on Zelux
-        % pattern image
-        function calibrateDMD(obj, opt)
+        % Cross-calibrate the camera and projector
+        function calibrateProjector(obj, index, opt)
             arguments
                 obj
-                opt.camera = obj.CalibDMD_Camera
-                opt.label = obj.CalibDMD_Label
+                index
+                opt.projector = obj.CalibProjector_Projector
+                opt.camera = obj.CalibProjector_Camera
+                opt.label = obj.CalibProjector_Label
+                opt.template_path = obj.CalibProjector_TemplatePath
             end
         end
         
@@ -387,17 +439,31 @@ classdef LatCalibrator < DataProcessor & LatProcessor
     methods (Access = protected, Hidden)
         function init(obj)
             init@DataProcessor(obj)
-            for i = 1: length(obj.InitCameraName)
-                camera = obj.InitCameraName(i);
+            % Create empty (un-calibrated) lattice objects
+            for i = 1: length(obj.LatCameraList)
+                camera = obj.LatCameraList(i);
                 if ~isfield(obj.LatCalib, camera)
                     if isfield(obj.Signal, camera)
                         pixel_size = obj.Signal.(camera).Config.PixelSize;
                     else
-                        obj.error('Unable to find pixel size for camera %s, please check data config.', camera)
+                        obj.error('Unable to find pixel size for device %s, please check data config.', camera)
                     end
                     obj.LatCalib.(camera) = Lattice(camera, pixel_size, 'verbose', true);
                 else
                     obj.info('Found calibration for %s in loaded LatCalib file.', camera)
+                end
+            end
+            for i = 1: length(obj.ProjectorList)
+                projector = string(obj.ProjectorList(i));
+                if ~isfield(obj.LatCalib, projector)
+                    if exist(projector + "Config", 'class') == 8
+                        pixel_size = eval(sprintf('%sConfig.PixelSize', projector));
+                    else
+                        obj.error('Unable to find pixel size for projector %s, please check data config.', projector)
+                    end                        
+                    obj.LatCalib.(projector) = Lattice(projector, pixel_size, 'verbose', true);
+                else
+                    obj.info('Found calibration for %s in loaded LatCalib file.', projector)
                 end
             end
             obj.process()

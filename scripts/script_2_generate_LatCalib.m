@@ -26,19 +26,22 @@
 %                     the first calibration
 % - DataPath: path to .mat data file for this calibration. Lattice
 %             calibration should work in both sparse and dense settings
-% - InitCameraName: calibrations to create upon initialization, named as the
-%                   corresponding device, say, cameras/DMD
 % - LatCameraList: list of camera names for calibrating lattice V and R
 % - LatImageLabel: corresponding list of image labels for lattice
 %                  calibration
+% - TemplatePath: path to template (real-space) pattern for visual check
 
 clear; clc; close all
 p = LatCalibrator( ... 
     "LatCalibFilePath", [], ...
-    "DataPath", "data/2024/12 December/20241217/white_cross_on_black_width=10_angle=0_new.mat", ...
-    "InitCameraName", ["Andor19330", "Andor19331", "Zelux", "DMD"], ...
+    "DataPath", "data/2025/02 February/20250225 modulation frequency scan/gray_calibration_square_width=5_spacing=150.mat", ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
-    "LatImageLabel", ["Image", "Image", "Lattice_935"]);
+    "LatImageLabel", ["Image", "Image", "Lattice_935"], ...
+    "ProjectorList", "DMD", ... 
+    "TemplatePath", "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
+
+%% Plot a single shot image to check
+p.plotSignal(1)
 
 %% Andor19330: Plot FFT of a small box centered at atom cloud
 close all
@@ -48,9 +51,12 @@ p.plotFFT("Andor19330")
 % Select the *first* and *second* peaks to the right, clockwise from 12 o'clock
 % The consistent peak selection is important to align the lattice axis
 % among different frames.
+% The coordinate is Matlab Y then Matlab X
 
 close all
-p.calibrate("Andor19330", [120, 236; 181, 279], 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
+p.calibrate("Andor19330", [130, 237; 195, 283], ...
+            'plot_diagnosticR', 1, ...
+            'plot_diagnosticV', 1)
 
 %% Andor19331: Plot FFT of a small box centered at atom cloud
 close all
@@ -61,7 +67,9 @@ p.plotFFT("Andor19331")
 % This is to align the vectors with the vectors selected for Andor19330
 
 close all
-p.calibrate("Andor19331", [167, 271; 123, 207], 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
+p.calibrate("Andor19331", [163, 270; 121, 206], ...
+            'plot_diagnosticR', 1, ...
+            'plot_diagnosticV', 1)
 
 %% Zelux: Plot FFT of the entire image
 % Note that Zelux image has larger magnification and more noisy.
@@ -76,7 +84,10 @@ p.plotFFT("Zelux")
 % Set 'binarize' to 0 to disable binarization in the calibration
 
 close all
-p.calibrate("Zelux", [658, 565; 714, 595], 'binarize', 0, 'plot_diagnosticR', 1, 'plot_diagnosticV', 1)
+p.calibrate("Zelux", [658, 565; 714, 595], ...
+            'binarize', 0, ...
+            'plot_diagnosticR', 1, ...
+            'plot_diagnosticV', 1)
 
 %% Cross-calibrate Andor19331 to Andor19330
 % Matching the origin of the lattice between the two Andors
@@ -88,12 +99,15 @@ p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnost
 % Matching the origin of the lattice between the two Andors
 p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnosticO', 0)
 
-%% Additional calibration: Cross-calibrate DMD frame to Zelux pattern
-% First to look at the image of pattern on Zelux and the actual pattern
+%% Additional calibration: Cross-calibrate camera and projector
+% First to look at the image of pattern on camera (Zelux) and the actual 
+% pattern (real-space, "template") with atom density
+p.plotProjection(1)
 
+%%
 
 %% Plot an example of transformed signal to look at the overall calibration
-p.plotTransformed()
+p.plotTransformed("x_lim", [-20, 20], "y_lim", [-20, 20], "index", 1)
 
 %% Save lattice calibration of all three cameras
 % Default is "calibration/LatCalib_<today's date>.mat" for a record
