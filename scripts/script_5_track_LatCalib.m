@@ -4,7 +4,8 @@
 %% Create a Calibrator object
 clear; clc; close all
 p = LatCalibrator( ...
-    "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
+    "DataPath", "data/2025/03 March/20250310 debugging/30min_data.mat");
+    % "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
 
 %% Generate drift report table
 res = p.trackCalib();

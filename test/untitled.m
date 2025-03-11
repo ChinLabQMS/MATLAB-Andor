@@ -12,10 +12,10 @@ subplot(1, 3, 1)
 imagesc2(template)
 subplot(1, 3, 2)
 imagesc2(signal)
-hold on
-plot([385, 385 + V1(2)], [667, 667 + V1(1)], 'LineWidth', 2, 'Color', 'r')
-plot([385, 385 + V2(2)], [667, 667 + V2(1)], 'LineWidth', 2, 'Color', 'r')
-scatter(R(2), R(1))
+% hold on
+% plot([385, 385 + V1(2)], [667, 667 + V1(1)], 'LineWidth', 2, 'Color', 'r')
+% plot([385, 385 + V2(2)], [667, 667 + V2(1)], 'LineWidth', 2, 'Color', 'r')
+% scatter(R(2), R(1))
 
 subplot(1, 3, 3)
 imagesc2(signal2)
@@ -48,9 +48,9 @@ colorbar
 [f, xf, bw] = kde(ang, "Weight", zelux_fft(:), "Bandwidth", 1, "NumPoints", 7200);
 
 width = 10;
-peak_pos = [46.83, 134.82];
+peak_ang = [46.83, 134.82];
 for i = 1: 2
-    peak_pos(i) = findMaxPosInRange(xf, f, peak_pos(i), width);
+    peak_ang(i) = findMaxPosInRange(xf, f, peak_ang(i), width);
 end
 
 %%
@@ -58,7 +58,25 @@ figure
 plot(xf, f)
 hold on
 scatter(ang, zelux_fft(:) / sum(zelux_fft, 'all'), 2)
-xline(peak_pos)
+xline(peak_ang)
+
+%%
+V = [-sind(peak_ang)', cosd(peak_ang)'];
+
+
+%%
+a = zeros(100, 100);
+a(:, 20) = 1;
+a(:, 80) = 1;
+for x = 1: 100
+    a( floor(x / 2) + 1, x ) = 1;
+    a( floor(x / 2) + 50, x ) = 1;
+end
+
+subplot(1, 2, 1)
+imagesc2(a)
+subplot(1, 2, 2)
+imagesc2(abs(fftshift(fft2(a))))
 
 %%
 k_idx = 16;
@@ -67,8 +85,8 @@ func = @(x, y) interp2(Y, X, log(zelux_fft), y, x);
 k_range = linspace(0, 0.06, 500);
 k_vals = [0, 0];
 for i = 1: 2
-    x_range = k_range * xy_size(1) * cosd(peak_pos(i)) + xy_center(1);
-    y_range = k_range * xy_size(2) * sind(peak_pos(i)) + xy_center(2);
+    x_range = k_range * xy_size(1) * cosd(peak_ang(i)) + xy_center(1);
+    y_range = k_range * xy_size(2) * sind(peak_ang(i)) + xy_center(2);
     fft_vals = func(x_range, y_range);
     plot(k_range, fft_vals)
     hold on
@@ -78,7 +96,7 @@ end
 
 %%
 
-K = [cosd(peak_pos)', sind(peak_pos)'] .* k_vals' / k_idx;
+K = [cosd(peak_ang)', sind(peak_ang)'] .* k_vals' / k_idx;
 V = inv(K)';
 V1 = V(1, :);
 V2 = V(2, :);

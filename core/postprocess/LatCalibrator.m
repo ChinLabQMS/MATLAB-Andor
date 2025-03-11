@@ -386,6 +386,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                     "plot_diagnosticO", false, "verbose", true, ...
                     "sites", SiteGrid.prepareSite('Hex', 'latr', 20))
             end
+            obj.info('Calibrating each image...')
             for i = 1: num_acq
                 if options.calibO_every
                     obj.calibrateO(i, "calib_R", true, "calib_R_bootstrap", true, ...
