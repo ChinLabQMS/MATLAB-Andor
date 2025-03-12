@@ -1,19 +1,24 @@
 %% Introduction
-% Goal: Track the lattice calibration drifts over time on different cameras
+% Goal: Track the calibration drifts over time on different
+% cameras and projectors
 
 %% Create a Calibrator object
 clear; clc; close all
-p = LatCalibrator( ...
-    "DataPath", "data/2025/03 March/20250310 debugging/30min_data.mat");
+p = CombinedCalibrator( ...
+    "DataPath", "data/2025/03 March/20250311 big dataset to track drift/dense_big.mat");
     % "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
 
 %% Generate drift report table
-res = p.trackCalib();
+% Lattice phase shift
+res = p.trackLat();
+
+%% Zelux PSF shift
+res.ZeluxPSF = p.trackPSF();
 
 %% Track drift in lattice frame over time
 
-names = ["Andor19331", "Andor19330", "Zelux"];
-shiftv = [0, -1, -2];  % offset on the line plots
+names = ["Andor19331", "Andor19330", "Zelux", "ZeluxPSF"];
+shiftv = [0, -1, -2, -3];  % offset on the line plots
 
 ref_index = 10;
 
@@ -44,18 +49,23 @@ ylabel('LatR2')
 
 %% Correlation analysis
 
-x1 = res.Zelux.LatR1;
-x2 = res.Zelux.LatR2;
-y1 = res.Andor19330.LatR1;
-y2 = res.Andor19330.LatR2;
+Var1 = "ZeluxPSF";
+Var2 = "Andor19330";
+
+x1 = res.(Var1).LatR1;
+x2 = res.(Var1).LatR2;
+y1 = res.(Var2).LatR1;
+y2 = res.(Var2).LatR2;
 
 figure
 subplot(1, 2, 1)
 scatter(x1, y1)
-xlabel('Andor19330 LatR1')
-ylabel('Zelux LatR1')
+daspect([1 1 1])
+xlabel(Var1 + " LatR1")
+ylabel(Var2 + " LatR1")
 
 subplot(1, 2, 2)
 scatter(x2, y2)
-xlabel('Andor19330 LatR2')
-ylabel('Zelux LatR2')
+daspect([1 1 1])
+xlabel(Var1 + " LatR2")
+ylabel(Var2 + " LatR2")

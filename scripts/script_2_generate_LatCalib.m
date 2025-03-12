@@ -18,7 +18,7 @@
 
 % Both lattice calibration (V, R) and PSF calibration are necessary to
 % reconstruct counts at a given lattice site. To calibrate PSF, run the
-% script_6.
+% script_5.
 
 %% Create a LatCalibrator object
 % Configurable settings:

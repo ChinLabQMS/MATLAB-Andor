@@ -6,7 +6,6 @@ classdef PointSource < BaseComputer
         Fit_AutoResetWhenReachNumPeaks = 200
         Fit_AutoResetWhenReachRunNum = 5
         Fit_Timeoutms = 1000
-        FitPeaksAroundPos_Verbose = false
         FindPeaks_BinThresholdMin = 20
         FindPeaks_BinThresholdMax = 50
         FindPeaks_BinThresholdPerct = 0.15
@@ -98,19 +97,94 @@ classdef PointSource < BaseComputer
             end
         end
 
-        function stats_all = fitPeaksAroundPos(obj, img_all, positions, options)
+        function result = trackPeaks(obj, img_all, centroids, Lat, opt1)
             arguments
                 obj
                 img_all 
-                positions = []
-                options.verbose = obj.FitPeaksAroundPos_Verbose
+                centroids = []
+                Lat = []
+                opt1.bin_threshold_min = obj.FindPeaks_BinThresholdMin
+                opt1.bin_threshold_max = obj.FindPeaks_BinThresholdMax
+                opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
+                opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
+                opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
+                opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
+                opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
+                opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
+                opt1.filter_box_min = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMin
+                opt1.filter_box_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterBoxSizeMax
+                opt1.refine_method = obj.FindPeaks_RefineMethod
+                opt1.refine_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_RefineCropRadius)
+                opt1.gauss_refine_subsample = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_GaussRefineSubSample)
+                opt1.filter_gausswid_max = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_FilterGaussWidthMax
+                opt1.plot_diagnostic = obj.FindPeaks_PlotDiagnostic
             end
+            % If no initial peak position is provided, find all peaks in
+            % the first image
+            args1 = namedargs2cell(opt1);
+            if isempty(centroids)
+                first_img = img_all(:, :, 1);
+                stats = obj.findPeaks(first_img, args1{:});
+                centroids = stats.RefinedCentroid;
+            end
+            num_acq = size(img_all, 3);
+            num_peaks = height(centroids);
+            result = table('Size', [num_acq, 0], ...
+                           'VariableTypes', []);
+            result.R1 = nan(num_acq, 1);
+            result.R2 = nan(num_acq, 1);
+            result.R1_Std = nan(num_acq, 1);
+            result.R2_Std = nan(num_acq, 1);
+            result.R1_Peak = nan(num_acq, num_peaks);
+            result.R2_Peak = nan(num_acq, num_peaks);
+            result.R1_Drift = nan(num_acq, num_peaks);
+            result.R2_Drift = nan(num_acq, num_peaks);
+            result.LatR1 = nan(num_acq, 1);
+            result.LatR2 = nan(num_acq, 1);
+            result.LatR1_Drift = nan(num_acq, num_peaks);
+            result.LatR2_Drift = nan(num_acq, num_peaks);
+            result.LatR1_Std = nan(num_acq, 1);
+            result.LatR2_Std = nan(num_acq, 1);
+            obj.info('Start tracking peak centroids...')
+            for i = 1: num_acq
+                img_data = img_all(:, :, i);
+                new_centroids = centroids;
+                for j = 1: num_peaks
+                    new_centroids(j, :) = refineCentroid( ...
+                            img_data, centroids(j, :), opt1.refine_radius, opt1.refine_method, opt1.gauss_refine_subsample);
+                end
+                R = mean(new_centroids(:, 2:-1:1), 1);
+                R_Drift = new_centroids(:, 2:-1:1) - centroids(:, 2:-1:1);
+                if ~isempty(Lat) & ~isempty(Lat.V)
+                    LatR = R / Lat.V;
+                    LatR_Drift = R_Drift / Lat.V;
+                else
+                    LatR = nan(1, 2);
+                    LatR_Drift = nan(num_peaks, 2);
+                end
+                result.R1(i) = R(1);
+                result.R2(i) = R(2);
+                result.R1_Std(i) = std(R_Drift(:, 1));
+                result.R2_Std(i) = std(R_Drift(:, 2));
+                result.R1_Peak(i, :) = centroids(:, 2)';
+                result.R2_Peak(i, :) = centroids(:, 1)';
+                result.R1_Drift(i, :) = R_Drift(:, 1)';
+                result.R2_Drift(i, :) = R_Drift(:, 2)';
+                result.LatR1(i) = LatR(1);
+                result.LatR2(i) = LatR(2);
+                result.LatR1_Drift(i, :) = LatR_Drift(:, 1)';
+                result.LatR2_Drift(i, :) = LatR_Drift(:, 2)';
+                result.LatR1_Std(i) = std(LatR_Drift(:, 1));
+                result.LatR2_Std(i) = std(LatR_Drift(:, 2));
+                centroids = new_centroids;
+            end
+            obj.info('Finish tracking peak centroids.')
         end
 
-        function fit(obj, img_data, opt, opt1, opt2, opt3)
+        function fit(obj, img_all, opt, opt1, opt2, opt3)
             arguments
                 obj
-                img_data
+                img_all
                 opt.reset = obj.Fit_Reset
                 opt.auto_reset_runnum = obj.Fit_AutoResetWhenReachRunNum
                 opt.auto_reset_preaknum = obj.Fit_AutoResetWhenReachNumPeaks
@@ -144,7 +218,7 @@ classdef PointSource < BaseComputer
             args2 = namedargs2cell(opt2);
             args3 = namedargs2cell(opt3);
             obj.RunNumber = obj.RunNumber + 1;
-            obj.DataLastImages = img_data;            
+            obj.DataLastImages = img_all;            
             if opt.reset
                 obj.reset()
                 obj.info('PSF data is reset.')
@@ -153,10 +227,10 @@ classdef PointSource < BaseComputer
                 obj.reset()
                 obj.info('Reset frequency reached, PSF data is reset.')
             end
-            stats = obj.findPeaks(img_data, args1{:});
+            stats = obj.findPeaks(img_all, args1{:});
             obj.DataLastStats = stats;
             if height(stats) > 0
-                [psf, x_range, y_range] = obj.mergePeaks(img_data, stats, args2{:});
+                [psf, x_range, y_range] = obj.mergePeaks(img_all, stats, args2{:});
                 obj.updatePSF(stats, psf, x_range, y_range, args3{:})
             else
                 obj.warn('No peak found from data!')
@@ -166,7 +240,8 @@ classdef PointSource < BaseComputer
                     obj.DataNumPeaks, obj.DataPeakCount, obj.DataSumCount, toc(start_time))
             end
         end
-    
+        
+        % Find all isolated peaks in the image data
         function stats_all = findPeaks(obj, img_all, opt1)
             arguments
                 obj
@@ -246,7 +321,7 @@ classdef PointSource < BaseComputer
                     opt1.bin_threshold_perct * max(img_data(:)));
                 stats = stats(stats.MaxIntensity >= threshold, :);
             
-                % Refine the centroids by fitting 2D Gaussian and filter by width
+                % Refine the centroid by fitting 2D Gaussian and filter by width
                 stats4 = stats;
                 stats.RefinedCentroid = nan(height(stats), 2);
                 stats.RefinedWidth = nan(height(stats), 2);
@@ -254,28 +329,16 @@ classdef PointSource < BaseComputer
                 stats.RefinedAngle = nan(height(stats), 2);
                 stats.RefinedRSquare = nan(height(stats), 1);
                 for j = 1: height(stats)
-                    center = round(stats.WeightedCentroid(j, :));
-                    x_range = center(2) + (-opt1.refine_radius(1): opt1.refine_radius(1));
-                    y_range = center(1) + (-opt1.refine_radius(end): opt1.refine_radius(end));
-                    x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
-                    y_range = y_range((y_range > 0) & (y_range <= size(img_data, 2)));
-                    spot = img_data(x_range, y_range);
-                    switch opt1.refine_method
-                        case "Gaussian"
-                            [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true, 'sub_sample', opt1.gauss_refine_subsample);
-                            stats.RefinedCentroid(j, :) = [f.y0, f.x0];
-                            stats.RefinedWidth(j, :) = gof.eigen_widths;
-                            stats.RefinedAngle(j, :) = gof.eigen_angles;
-                            stats.RefinedRSquare(j) = gof.rsquare;
-                        case "GaussXY"
-                            [xc, yc, xw, yw] = fitGaussXY(spot, x_range, y_range, 'sub_sample', opt1.gauss_refine_subsample);
-                            stats.RefinedCentroid(j, :) = [yc, xc];
-                            stats.RefinedWidth(j, :) = sort([yw, xw]);
-                        case "COM"
-                            [xc, yc, xw, yw] = fitCenter2D(spot, x_range, y_range);
-                            stats.RefinedCentroid(j, :) = [yc, xc];
-                            stats.RefinedWidth(j, :) = sort([yw, xw]);
-                    end
+                    [refined_centroid, refined_width, refined_angle, rsquare] = refineCentroid( ...
+                        img_data, ...
+                        stats.WeightedCentroid(j, :), ...
+                        opt1.refine_radius, ...
+                        opt1.refine_method, ...
+                        opt1.gauss_refine_subsample);
+                    stats.RefinedCentroid(j, :) = refined_centroid;
+                    stats.RefinedWidth(j, :) = refined_width;
+                    stats.RefinedAngle(j, :) = refined_angle;
+                    stats.RefinedRSquare(j, :) = rsquare;
                 end
                 stats.MaxRefinedWidth = stats.RefinedWidth(:, 2);
                 stats = stats(stats.MaxRefinedWidth < opt1.filter_gausswid_max, :);       
@@ -297,7 +360,8 @@ classdef PointSource < BaseComputer
                 obj.info('Total elapsed time for finding peaks is %g s.', toc(total_timer))
             end
         end
-
+    
+        % Merge all the isolated peaks to get PSF
         function [psf, x_range, y_range, peaks] = mergePeaks(obj, img_all, stats, opt2)
             arguments
                 obj
@@ -336,7 +400,8 @@ classdef PointSource < BaseComputer
             end
             psf = mean(peaks, 3);
         end
-
+    
+        % Update the internally stored PSF data
         function updatePSF(obj, stats, psf, x_range, y_range, opt3)
             arguments
                 obj
@@ -398,7 +463,8 @@ classdef PointSource < BaseComputer
                 obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
             end
         end
-
+        
+        % Set the resolution ratio for peak filtering
         function setRatio(obj, ratio)
             obj.InitResolutionRatio = ratio;
         end
@@ -664,6 +730,35 @@ classdef PointSource < BaseComputer
             [obj.IdealPSFGauss, obj.IdealPSFGaussPeakIntensity] = getIdealPSFGauss(obj.RayleighResolution);
             [obj.IdealPSFAiry, obj.IdealPSFAiryPeakIntensity] = getIdealPSFAiry(obj.RayleighResolution);
         end
+    end
+end
+
+function [refined_centroid, refined_width, refined_angle, rsquare] = refineCentroid( ...
+             img_data, centroid, refine_radius, refine_method, gauss_subsample)
+    x_range = round(centroid(2)) + (-refine_radius(1): refine_radius(1));
+    y_range = round(centroid(1)) + (-refine_radius(end): refine_radius(end));
+    x_range = x_range((x_range > 0) & (x_range <= size(img_data, 1)));
+    y_range = y_range((y_range > 0) & (y_range <= size(img_data, 2)));
+    spot = img_data(x_range, y_range);
+    switch refine_method
+        case "Gaussian"
+            [f, gof] = fitGauss2D(spot, x_range, y_range, 'cross_term', true, 'sub_sample', gauss_subsample);
+            refined_centroid = [f.y0, f.x0];
+            refined_width = gof.eigen_widths;
+            refined_angle = gof.eigen_angles;
+            rsquare = gof.rsquare;
+        case "GaussXY"
+            [xc, yc, xw, yw] = fitGaussXY(spot, x_range, y_range, 'sub_sample', gauss_subsample);
+            refined_centroid = [yc, xc];
+            refined_width = sort([yw, xw]);
+            refined_angle = nan;
+            rsquare = nan;
+        case "COM"
+            [xc, yc, xw, yw] = fitCenter2D(spot, x_range, y_range);
+            refined_centroid = [yc, xc];
+            refined_width = sort([yw, xw]);
+            refined_angle = nan;
+            rsquare = nan;
     end
 end
 

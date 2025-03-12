@@ -45,7 +45,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         TrackCalib_CalibOFirst = true
         TrackCalib_CalibOEnd = true
         TrackCalib_CalibOEvery = true
-        TrackCalib_DropShifted = false
+        TrackCalib_DropShifted = true
     end
 
     properties (SetAccess = protected)
@@ -53,9 +53,16 @@ classdef LatCalibrator < DataProcessor & LatProcessor
     end
     
     methods
-        function obj = LatCalibrator(varargin)
+        function obj = LatCalibrator(varargin, options)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                options.reset_fields = true
+                options.init = true
+            end
             obj@DataProcessor('reset_fields', false, 'init', false)
-            obj@LatProcessor(varargin{:}, 'reset_fields', true, 'init', true)
+            obj@LatProcessor(varargin{:}, 'reset_fields', options.reset_fields, 'init', options.init)
         end
 
         % Generate stats (cloud centers, widths, FFT pattern, ...) for lattice calibration
@@ -368,7 +375,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         end
         
         % Track the lattice phase over frames
-        function result = trackCalib(obj, options)
+        function result = trackLat(obj, options)
             arguments
                 obj
                 options.crop_R_site = obj.TrackCalib_CropRSite
@@ -438,8 +445,14 @@ classdef LatCalibrator < DataProcessor & LatProcessor
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
-            init@DataProcessor(obj)
+        function init(obj, skip_init_data)
+            arguments
+                obj 
+                skip_init_data = false
+            end
+            if ~skip_init_data
+                init@DataProcessor(obj)
+            end
             % Create empty (un-calibrated) lattice objects
             for i = 1: length(obj.LatCameraList)
                 camera = obj.LatCameraList(i);
@@ -451,7 +464,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                     end
                     obj.LatCalib.(camera) = Lattice(camera, pixel_size, 'verbose', true);
                 else
-                    obj.info('Found calibration for %s in loaded LatCalib file.', camera)
+                    obj.info('Found lattice calibration for %s in loaded LatCalib file.', camera)
                 end
             end
             for i = 1: length(obj.ProjectorList)

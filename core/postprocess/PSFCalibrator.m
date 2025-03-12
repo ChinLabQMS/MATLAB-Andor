@@ -9,19 +9,27 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
     end
     
     properties (Constant)
-        PlotPSF_XLim = [-2.5, 2.5]
-        PlotPSF_YLim = [-2.5, 2.5]
+        PlotPSF_XLim = [-2.5, 2.5] % in um
+        PlotPSF_YLim = [-2.5, 2.5] % in um
         PlotPSF_StepDensity = 50
+        TrackPeaks_Camera = "Zelux"
     end
 
     properties (SetAccess = protected)
-        Stat
+        LabeledSignal
     end
 
     methods
-        function obj = PSFCalibrator(varargin)
+        function obj = PSFCalibrator(varargin, options)
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                options.reset_fields = true
+                options.init = true
+            end
             obj@DataProcessor('reset_fields', false, 'init', false)
-            obj@CombinedProcessor(varargin{:}, 'reset_fields', true, 'init', true)
+            obj@CombinedProcessor(varargin{:}, 'reset_fields', options.reset_fields, 'init', options.init)
         end
 
         function fit(obj, camera, idx_range, ratio, varargin)
@@ -35,13 +43,13 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
                 varargin
             end
             if isempty(idx_range)
-                idx_range = 1:size(obj.Stat.(camera), 3);
+                idx_range = 1:size(obj.LabeledSignal.(camera), 3);
             end
             if ~isempty(ratio)
                 obj.PSFCalib.(camera).setRatio(ratio);
             end
             p = obj.PSFCalib.(camera);
-            signal = obj.Stat.(camera)(:, :, idx_range);
+            signal = obj.LabeledSignal.(camera)(:, :, idx_range);
             p.fit(signal, varargin{:})
         end
 
@@ -84,8 +92,9 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
         end
 
         function plotSignal(obj, index)
-            if nargin == 1
-                index = 1;
+            arguments
+                obj
+                index = 1
             end
             num_cameras = length(obj.PSFCameraList);
             figure
@@ -93,8 +102,23 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
             for i = 1: num_cameras
                 camera = obj.PSFCameraList(i);
                 subplot(1, num_cameras, i)
-                imagesc2(obj.Stat.(camera)(:, :, index), 'title', camera)
+                imagesc2(obj.LabeledSignal.(camera)(:, :, index), 'title', camera)
             end
+        end
+
+        function result = trackPeaks(obj, camera, centroids, varargin)
+            arguments
+                obj
+                camera = obj.TrackPeaks_Camera
+                centroids = []
+            end
+            arguments (Repeating)
+                varargin
+            end
+            img_all = obj.LabeledSignal.(camera);
+            ps = obj.PSFCalib.(camera);
+            lat = obj.LatCalib.(camera);
+            result = ps.trackPeaks(img_all, centroids, lat, varargin{:});
         end
 
         % Save the calibration result to file
@@ -129,8 +153,14 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
     end
 
     methods (Access = protected, Hidden)
-        function init(obj)
-            init@DataProcessor(obj)
+        function init(obj, skip_init_data)
+            arguments
+                obj 
+                skip_init_data = false
+            end
+            if ~skip_init_data
+                init@DataProcessor(obj)
+            end
             for i = 1: length(obj.PSFCameraList)
                 camera = obj.PSFCameraList(i);
                 label = obj.PSFImageLabel(i);
@@ -139,7 +169,7 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
                 else
                     wavelength = "852";
                 end
-                obj.Stat.(camera) = obj.Signal.(camera).(label);
+                obj.LabeledSignal.(camera) = obj.Signal.(camera).(label);
                 if ~isfield(obj.PSFCalib, camera)
                     if isfield(obj.LatCalib, camera)
                         obj.PSFCalib.(camera) = PointSource( ...
@@ -152,7 +182,7 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
                             double(wavelength) / 1000, 'verbose', true);
                     end
                 else
-                    obj.info('Found calibration for %s in loaded PSFCalib file.', camera)
+                    obj.info('Found PSF calibration for %s in loaded PSFCalib file.', camera)
                 end
             end
         end
