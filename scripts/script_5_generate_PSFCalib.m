@@ -12,7 +12,7 @@
 
 clear; clc; close all
 p = PSFCalibrator( ...
-    "DataPath", "data/2025/02 February/20250218 DMD focus scan/end_of_day_sparse_r=3.mat", ...
+    "DataPath", "data/2025/03 March/20250311 big dataset to track drift/sparse.mat", ...
     "PSFCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "PSFImageLabel", ["Image", "Image", "Pattern_532"]);
 
@@ -41,7 +41,7 @@ p.PSFCalib.Andor19331
 
 %% Zelux
 close all
-p.fit('Zelux', 1, 2, 'plot_diagnostic', 1)
+p.fit('Zelux', 1, 1.5, 'plot_diagnostic', 1)
 % p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux
 
@@ -60,7 +60,7 @@ p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
 %% Zelux
-p.fit('Zelux', [], 2, 'filter_gausswid_max', inf, 'verbose', 1)
+p.fit('Zelux', [], 1.5, 'filter_gausswid_max', inf, 'verbose', 1)
 p.PSFCalib.Zelux.plotWidthDist()
 p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux

@@ -125,7 +125,7 @@ classdef PSFCalibrator < DataProcessor & CombinedProcessor
         function save(obj, filename, most_recent_filename, options)
             arguments
                 obj
-                filename = sprintf("calibration/PSFCalib_%s", datetime("now", "Format","uuuuMMdd"))
+                filename = sprintf("calibration/dated_PSFCalib/PSFCalib_%s", datetime("now", "Format","uuuuMMdd"))
                 most_recent_filename = "calibration/PSFCalib.mat"
                 options.clear_before_save = true
             end

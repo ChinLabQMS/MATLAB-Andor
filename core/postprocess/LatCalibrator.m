@@ -9,6 +9,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         LatImageLabel = ["Image", "Image", "Lattice_935"]
         ProjectorList = "DMD"
         TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
+        TemplateXLine = []
+        TemplateYLine = []
     end
 
     properties (Constant)
@@ -172,10 +174,9 @@ classdef LatCalibrator < DataProcessor & LatProcessor
 
         % Plot the pattern template (real space) image for calibrating
         % projector and cameras
-        function plotProjection(obj, index, opt)
+        function plotProjection(obj, opt)
             arguments
                 obj
-                index
                 opt.projector = obj.CalibProjector_Projector
                 opt.camera = obj.CalibProjector_Camera
                 opt.label = obj.CalibProjector_Label
@@ -188,7 +189,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 obj.error('Please calibrate lattice vector of camera %s first!', opt.camera2)
             end
             template = obj.Stat.(opt.projector).Template;
-            signal = obj.Signal.(opt.camera).(opt.label)(:, :, index);
+            signal = mean(obj.Signal.(opt.camera).(opt.label), 3);
             signal2 = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
             [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, ...
                   opt.crop_R_site * Lat2.V_norm);
@@ -353,7 +354,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         function save(obj, filename, most_recent_filename)
             arguments
                 obj
-                filename = sprintf("calibration/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
+                filename = sprintf("calibration/dated_LatCalib/LatCalib_%s", datetime("now", "Format","uuuuMMdd"))
                 most_recent_filename = "calibration/LatCalib.mat"
             end
             calib = obj.LatCalib;

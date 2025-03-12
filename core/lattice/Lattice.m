@@ -495,6 +495,14 @@
             obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
         end
 
+        
+        
+        % Calibrate according to a pattern image and an atom image
+        % Assuming obj space is a projector space (real space)
+        function calibrateProjection(obj, LatAtom, pattern_image, atom_image, ...
+                x_range, y_range, x_range2, y_range2)
+        end
+
         % Overlaying the lattice sites, first two arguments (optional) are
         % axis handle and sites, then name-value pairs
         function varargout = plot(obj, varargin, opt1, opt2)

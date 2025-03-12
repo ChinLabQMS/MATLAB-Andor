@@ -2,7 +2,6 @@ classdef AppConfig < BaseConfig
 
     properties (Constant)
         BaseAnalysis = ["Signal: Max", "Signal: Sum", "Background: Max", "Noise: Variance"]
-        AllProjectors = "DMD"
         SequenceName = "Full4Basic"
         TestMode = getTestMode()
         FigurePosition = getFigurePosition()

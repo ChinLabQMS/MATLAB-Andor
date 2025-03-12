@@ -12,7 +12,7 @@ p = CombinedCalibrator( ...
 % Lattice phase shift
 res = p.trackLat();
 
-%% Zelux PSF shift
+%% Zelux PSF shift drift report
 res.ZeluxPSF = p.trackPSF();
 
 %% Track drift in lattice frame over time
