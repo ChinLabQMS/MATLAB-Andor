@@ -339,8 +339,8 @@
                 + (coor(idx, 2) - y_range(1)) * size(signal, 1));
         end
         
-        % Cross conversion of one (functional, smooth) image from obj to Lat2
-        % for all pixels within (x_range2, y_range2) in Lat2 space
+        % Cross conversion of one (functional, smooth) image (function handle)
+        % from obj to Lat2 for all pixels within (x_range2, y_range2) in Lat2 space
         function transformed2 = transformFunctional( ...
                 obj, Lat2, x_range2, y_range2, func)
             [Y2, X2] = meshgrid(y_range2, x_range2);
@@ -494,13 +494,33 @@
                 crop_R_site, varargin)
             obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
         end
+        
+        % Assume the current obj is a projector space lattice, calibrate
+        % its origin to the density pattern on the atoms
+        function calibrateProjectorR(obj, signal, x_range, y_range, options)
+            arguments
+                obj
+                signal
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
+                options.placeholder
+            end
+        end
 
-        
-        
-        % Calibrate according to a pattern image and an atom image
-        % Assuming obj space is a projector space (real space)
-        function calibrateProjection(obj, LatAtom, pattern_image, atom_image, ...
-                x_range, y_range, x_range2, y_range2)
+        % Assume the current obj is a projector space lattice, calibrate it
+        % to the camera space lattice with a projector pattern and a camera
+        % image
+        function calibrateProjector(obj, Lat2, signal, x_range, y_range, options)
+            arguments
+                obj
+                Lat2
+                signal
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
+                options.pattern_shape = "Hash"
+                options.hash_vline = []
+                options.hash_hline = []
+            end
         end
 
         % Overlaying the lattice sites, first two arguments (optional) are

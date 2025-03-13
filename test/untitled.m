@@ -14,68 +14,72 @@ subplot(1, 3, 1)
 imagesc2(template)
 subplot(1, 3, 2)
 imagesc2(signal)
-hold on
-plot([617, 617 + 1000 * V1(2)], [901, 901 + 1000 * V1(1)], 'LineWidth', 2, 'Color', 'r')
-plot([617, 617 + 1000 * V2(2)], [901, 901 + 1000 * V2(1)], 'LineWidth', 2, 'Color', 'g')
+% hold on
+% plot([617, 617 + 1000 * V1(2)], [901, 901 + 1000 * V1(1)], 'LineWidth', 2, 'Color', 'r')
+% plot([617, 617 + 1000 * V2(2)], [901, 901 + 1000 * V2(1)], 'LineWidth', 2, 'Color', 'g')
 
 subplot(1, 3, 3)
 imagesc2(signal2)
 
 %%
-zelux_fft = abs(fftshift(fft2(signal)));
-xy_size = size(zelux_fft);
-[Y, X] = meshgrid(1: xy_size(2), 1: xy_size(1));
-xy_center = floor(xy_size / 2) + 1;
-K = ([X(:), Y(:)] - xy_center) ./ xy_size;
-ang = atan2d(K(:, 2), K(:, 1));
+peak_ang = findFFTAngle(signal, 1, linspace(0, 180, 3600), 'ascend', true);
 
 %%
-figure
-subplot(1, 2, 1)
-imagesc2(log(zelux_fft))
+peak_pos = findProjDensityPeak(peak_ang, signal, 1: size(signal, 1), 1: size(signal, 2), 1, 10000, true);
 
-subplot(1, 2, 2)
-imagesc2(reshape(ang, xy_size))
-colorbar
+function [peak_pos, proj_density] = findProjDensityPeak(peak_ang, signal, x_range, y_range, bw, num_points, plot_diagnostic)
+    K = [cosd(peak_ang)', sind(peak_ang)'];
+    [Y, X] = meshgrid(y_range, x_range);
+    Vproj = [X(:), Y(:)] * K;
+    proj_density = cell(2, 2);
+    peak_pos = nan(2, 2);
+    for i = 1: 2
+        [f, xf] = kde(Vproj(:, i), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
+        peak_pos(i, :) = findPeaks1D(xf, f, 2);
+        proj_density{i, 1} = xf;
+        proj_density{i, 2} = f;
+    end
+    if plot_diagnostic
+        figure('Name', 'Image projection density', 'OuterPosition',[100, 100, 1600, 600])
+        ax = subplot(1, 3, 1);
+        imagesc2(ax, y_range, x_range, signal);
+        hold(ax, "on")
+        quiver(ax, (y_range(1) + y_range(end))/2, (x_range(1) + x_range(end))/2, ...
+            K(1, 2), K(1, 1), 1000, 'LineWidth', 2, 'Color', 'r', 'DisplayName', 'K1')
+        quiver(ax, (y_range(1) + y_range(end))/2, (x_range(1) + x_range(end))/2, ...
+            K(2, 2), K(2, 1), 1000, 'LineWidth', 2, 'Color', 'm', 'DisplayName', 'K2')
+        legend(ax)
+        for i = 1: 2
+            subplot(1, 3, i + 1)
+            plot(proj_density{i, 1}, proj_density{i, 2})
+            hold on
+            xline(peak_pos(i, :), '--')
+            title(sprintf('V%d projection', i))
+        end
+    end
+end
 
-%%
-[f, xf] = kde(ang, "Weight", zelux_fft(:), "Bandwidth", 1, "EvaluationPoints", linspace(0, 180, 3600));
 
-peak_ang = findPeaks1D(xf, f, 2);
-peak_ang = sort(peak_ang, 'descend');
-
-%%
-figure
-plot(xf, f)
-hold on
-scatter(ang, zelux_fft(:) / sum(zelux_fft, 'all'), 2)
-xline(peak_ang)
-
-%%
-V = [-sind(peak_ang)', cosd(peak_ang)'];
-V1 = V(1, :);
-V2 = V(2, :);
-
-Vproj = [X(:), Y(:)] * V';
-
-figure
-subplot(1, 2, 1)
-% imagesc2(reshape(V1proj, xy_size))
-scatter(Vproj(:, 1), signal(:), 2)
-subplot(1, 2, 2)
-% imagesc2(reshape(V2proj, xy_size))
-scatter(Vproj(:, 2), signal(:), 2)
-
-%%
-[f, xf] = kde(Vproj(:, 2), "Weight", signal(:), "Bandwidth", 1, "NumPoints", 10000);
-
-%%
-peak_pos = findPeaks1D(xf, f, 2);
-
-figure
-plot(xf, f)
-hold on
-xline(peak_pos)
+% Use kde to find two line features in FFT pattern and get normalized V
+% vectors along the features as a matrix
+function peak_ang = findFFTAngle(signal, bw, eval_points, peak_order, plot_diagnostic)
+    signal_fft = abs(fftshift(fft2(signal)));
+    xy_size = size(signal_fft);
+    xy_center = floor(xy_size / 2) + 1;
+    [Y, X] = meshgrid(1: xy_size(2), 1: xy_size(1));
+    K = ([X(:), Y(:)] - xy_center) ./ xy_size;
+    ang = atan2d(K(:, 2), K(:, 1));
+    [f, xf] = kde(ang, "Weight", signal_fft(:), "Bandwidth", bw, "EvaluationPoints", eval_points);
+    peak_ang = findPeaks1D(xf, f, 2);
+    peak_ang = sort(peak_ang, peak_order);
+    if plot_diagnostic
+        figure('Name', 'FFT angular spectrum')
+        plot(xf, f)
+        hold on
+        scatter(ang, signal_fft(:) / sum(signal_fft, 'all'), 2)
+        xline(peak_ang, '--')
+    end
+end
 
 function [peak_x, peak_y, peak_idx] = findPeaks1D(x, y, num_peaks)
     peak_x = [];
