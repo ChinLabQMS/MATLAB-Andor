@@ -49,7 +49,7 @@ classdef Projector < BaseRunner
             if ~obj.IsWindowCreated
                 obj.MexHandle("open", obj.Config.PixelArrangement, false)
                 if options.verbose
-                    obj.info('Window created.')
+                    obj.info('Window is opened.')
                 end
             end
         end
@@ -63,7 +63,7 @@ classdef Projector < BaseRunner
             if obj.IsWindowCreated
                 obj.MexHandle("close", false)
                 if options.verbose
-                    obj.info('Window closed.')
+                    obj.info('Window is closed.')
                 end
             end
         end
@@ -103,6 +103,13 @@ classdef Projector < BaseRunner
         % Display a solid color
         function displayColor(obj, r, g, b)
             obj.MexHandle("displayColor", [r, g, b], false)
+        end
+        
+        % Preload the pattern memory with the BMPs from default paths
+        function preloadPatternMemory(obj)
+            for path = obj.Config.PreloadPatternPath
+                obj.MexHandle("loadPatternMemoryFromPath", path, false)
+            end
         end
         
         % Display a pattern from loaded memory

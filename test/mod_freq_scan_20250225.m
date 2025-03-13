@@ -64,20 +64,20 @@ end
 
 %%
 Signal = p.process(Data);
-x_range = 150:300;
-y_range = 350:550;
-mean_image = mean(Signal.Andor19330.Image, 3);
+x_range = 200: 400;
+y_range = 500:800;
+mean_image = mean(Signal.Andor19331.Image, 3);
 figure
 subplot(2, 1, 1)
 imagesc2(y_range, x_range, mean_image(x_range + 512, y_range))
-Andor19330.plot()
+Andor19331.plot()
 ylim([x_range(1), x_range(end)])
 xlim([y_range(1), y_range(end)])
 title('Start')
 
 subplot(2, 1, 2)
 imagesc2(y_range, x_range, mean_image(x_range, y_range))
-Andor19330.plot()
+Andor19331.plot()
 ylim([x_range(1), x_range(end)])
 xlim([y_range(1), y_range(end)])
 title('End')

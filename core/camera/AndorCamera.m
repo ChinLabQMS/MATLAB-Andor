@@ -271,7 +271,7 @@ classdef AndorCamera < Camera
                 [ret] = SetCurrentCamera(obj.CameraHandle);
                 CheckWarning(ret)
             else
-                obj.error('Camera handle is not set.')
+                obj.error('Camera handle is not set, please initialize camera.')
             end
         end
     end

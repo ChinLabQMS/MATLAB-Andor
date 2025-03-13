@@ -77,14 +77,6 @@ plot(xf, f)
 hold on
 xline(peak_pos)
 
-function xval = findMaxPosInRange(x_range, vals, center, width)
-    idx_range = (x_range > center - width) & (x_range < center + width);
-    box_x = x_range(idx_range);
-    box_y = vals(idx_range);
-    [~, new_pos] = max(box_y);
-    xval = box_x(new_pos);
-end
-
 function [peak_x, peak_y, peak_idx] = findPeaks1D(x, y, num_peaks)
     peak_x = [];
     peak_y = [];
