@@ -9,7 +9,7 @@ function [R, R_prime,V_prime] = correlate_frames(V1, V2, points1, points2)
 
     % Step 1: Find the centroid (center) of points in the first and second frames
     R = mean(points1, 1);
-    R_prime = mean(points2, 1);
+    % R_prime = mean(points2, 1);
 
     % Step 2: Translate points1 and points2 to their respective origins (centroids)
     points1_translated = points1 - R;
@@ -18,12 +18,14 @@ function [R, R_prime,V_prime] = correlate_frames(V1, V2, points1, points2)
     % Step 3: Reorder points based on the sum of distances between points within the same set
     points1_ordered = order_points_by_internal_distances(points1_translated);
     points2_ordered = order_points_by_internal_distances(points2_translated);
-
+    points1_ordered_with_offset = [ones(size(points1_ordered, 1)), points1_ordered];
+    % points2_ordered_with_offset = [ones(size(points2_ordered, 1)), points1_ordered];
+    
     % Step 4: Use linear regression to find the best 2x2 matrix V such that
-    % points1_ordered * V ≈ points2_ordered
+    % points1_ordered * V + Roffset ≈ points2_ordered
     % Solve the normal equations for least squares:
-    V_r = (points1_ordered' * points1_ordered) \ (points1_ordered' * points2_ordered);
-    V = [V1;V2];
+    V_r = (points1_ordered_with_offset' * points1_ordered_with_offset) \ (points1_ordered_with_offset' * points2_ordered);
+    V = [R; V1; V2];
     V_prime= V*V_r;
     error = (points1_ordered /V *V_prime) - points2_ordered;
 

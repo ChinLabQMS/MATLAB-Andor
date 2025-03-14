@@ -14,7 +14,7 @@ dmd = imread(PatternPath);
 %%
 figure
 subplot(1, 3, 1)
-Lattice.imagesc(mean_Andor19330)
+Lattice.imagesc(Signal.Andor19330.Image(:,:,1))
 subplot(1, 3, 2)
 Lattice.imagesc(mean_Zelux)
 subplot(1, 3, 3)

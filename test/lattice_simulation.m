@@ -9,7 +9,7 @@ k2 = 2*pi/wavelength * [-1, 0];
 E2 = 1;
 
 k3 = 2*pi/wavelength * [-sqrt(1/2), -sqrt(1/2)];
-E3 = 1;
+E3 = 2;
 
 E1_field = @(x) E1/2 * (exp(1i * k1 * x') + exp(-1i * k1 * x'));
 E2_field = @(x) E2/2 * (exp(1i * k2 * x') + exp(-1i * k2 * x'));

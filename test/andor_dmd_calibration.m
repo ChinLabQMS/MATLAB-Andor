@@ -33,7 +33,6 @@ V_andor = [V1_andor;V2_andor];
 %disp(zelux_coor_naive(2))testcoor);
 
 %% Transform index
-
 % Assume mean_zelux is an n*m array
 % Assume R_zelux is a 1x2 vector, e.g., [Rx, Ry]
 % Assume V_zelux is a 2x2 transformation matrix
@@ -46,10 +45,10 @@ new_andor = zeros(n, m);     % Initialize new_zelux to be the same size as mean_
 for a = 1:n
     for b = 1:m
         % Offset the index (a, b) by R_zelux
-        new_index = ([a, b] - R_andor)/V_andor;  % This gives a 1x2 array
+        new_index = ([a, b] - R_dmd)/V_dmd;  % This gives a 1x2 array
 
         % Apply the transformation V_zelux to the offset index
-        transformed_index_dmd = new_index * V_dmd + R_dmd;  % Result is a 1x2 array
+        transformed_index_dmd = new_index * V_andor + R_andor;  % Result is a 1x2 array
 
         % Now, use the transformed index to update new_zelux at (a, b)
         % Here you may need to use transformed_index to extract the correct value from mean_zelux
@@ -59,9 +58,9 @@ for a = 1:n
         col_idx = round(transformed_index_dmd(2));
 
         % Check if the calculated indices are within bounds of mean_zelux
-        if row_idx >= 1 && row_idx <= n && col_idx >= 1 && col_idx <= m
+        if row_idx >= 1 && col_idx
             % Assign the value from mean_zelux to new_zelux at (a, b)
-            new_andor(row_idx, col_idx) = mean_Andor19330(a,b);
+            new_andor(a, b) = mean_Andor19330(row_idx,col_idx);
         %else
             % If the transformed index is out of bounds, handle it (e.g., set to 0 or some default value)
             %new_andor(row_idx, col_idx) = 0;  % or any default value
