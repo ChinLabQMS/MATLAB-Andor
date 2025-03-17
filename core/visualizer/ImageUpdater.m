@@ -76,7 +76,7 @@ classdef ImageUpdater < AxesUpdater
             Lat = getLatCalib(obj, Live);
             num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
             x_shift = (Live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
-            R_shift = [x_shift', zeros(num_frames, 1)];
+            R_shift = [x_shift', zeros(num_frames, 1)]; % shift only in X
             obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
                 SiteGrid.prepareSite('Hex', "latr", options.lattice_hexr), ...
                 'center', Lat.R + R_shift, 'filter', false);

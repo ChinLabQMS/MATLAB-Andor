@@ -37,8 +37,7 @@ p = LatCalibrator( ...
     "DataPath", "data/2025/02 February/20250225 modulation frequency scan/gray_calibration_square_width=5_spacing=150.mat", ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"], ...
-    "ProjectorList", "DMD", ... 
-    "TemplatePath", "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
+    "ProjectorList", "DMD");
 
 %% Plot a single shot image to check
 p.plotSignal(1)
@@ -73,8 +72,8 @@ p.calibrate("Andor19331", [163, 270; 121, 206], ...
 
 %% Zelux: Plot FFT of the entire image
 % Note that Zelux image has larger magnification and more noisy.
-% Discretization improves the signal for atom image, but not for lattice
-% images.
+% Discretization improves the signal strength for atom image, but might not 
+% work for lattice images
 
 close all
 p.plotFFT("Zelux")
@@ -85,7 +84,7 @@ p.plotFFT("Zelux")
 
 close all
 p.calibrate("Zelux", [658, 565; 714, 595], ...
-            'binarize', 0, ...
+            'binarize', false, ...
             'plot_diagnosticR', 1, ...
             'plot_diagnosticV', 1)
 
@@ -99,15 +98,18 @@ p.calibrateO(1, 'sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'plot_diagnost
 % Matching the origin of the lattice between the two Andors
 p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnosticO', 0)
 
-%% Additional calibration: Cross-calibrate camera and projector
-% First to look at the image of pattern on camera (Zelux) and the actual 
-% pattern (real-space, "template") with atom density
-p.plotProjection(1)
-
-%%
-
 %% Plot an example of transformed signal to look at the overall calibration
 p.plotTransformed("x_lim", [-20, 20], "y_lim", [-20, 20], "index", 1)
+
+%% Cross-calibrate camera and projector
+% Projector needs to project a pattern of two vertical lines and two
+% horizontal lines, matching the default template image
+p.calibrateProjectorPattern(1)
+
+%%
+% Check the image of pattern on camera (Zelux) and the actual 
+% pattern (real-space, "template") with atom density
+p.plotProjection()
 
 %% Save lattice calibration of all three cameras
 % Default is "calibration/LatCalib_<today's date>.mat" for a record

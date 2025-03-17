@@ -8,9 +8,6 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         LatCameraList = ["Andor19330", "Andor19331", "Zelux"]
         LatImageLabel = ["Image", "Image", "Lattice_935"]
         ProjectorList = "DMD"
-        TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
-        TemplateXLine = []
-        TemplateYLine = []
     end
 
     properties (Constant)
@@ -34,12 +31,10 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_Debug = false
-        CalibProjector_Projector = "DMD"
-        CalibProjector_Camera = "Zelux"
-        CalibProjector_Label = "Pattern_532"
-        CalibProjector_Camera2 = "Andor19330"
-        CalibProjector_Label2 = "Image"
-        CalibProjector_CropRSite = 20
+        CalibProjectorPattern_Projector = "DMD"
+        CalibProjectorPattern_Camera = "Zelux"
+        CalibProjectorPattern_Label = "Pattern_532"
+        CalibProjectorPattern_PlotDiagnostic = true
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
@@ -101,10 +96,6 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 s.Width = [xw, yw];
                 s.FFTSize = [length(s.FFTX), length(s.FFTY)];
                 obj.Stat.(camera) = s;
-            end
-            for i = 1: length(obj.ProjectorList)
-                projector = obj.ProjectorList(i);
-                obj.Stat.(projector).Template = imread(obj.TemplatePath);
             end
             obj.info("Finish processing to get averaged images and basic statistics.")
         end
@@ -177,12 +168,11 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         function plotProjection(obj, opt)
             arguments
                 obj
-                opt.projector = obj.CalibProjector_Projector
-                opt.camera = obj.CalibProjector_Camera
-                opt.label = obj.CalibProjector_Label
-                opt.camera2 = obj.CalibProjector_Camera2
-                opt.label2 = obj.CalibProjector_Label2
-                opt.crop_R_site = obj.CalibProjector_CropRSite
+                opt.projector = obj.CalibProjectorPattern_Projector
+                opt.camera = obj.CalibProjectorPattern_Camera
+                opt.label = obj.CalibProjectorPattern_Label
+                opt.camera2 = obj.CalibProjectorSignal_Camera
+                opt.label2 = obj.CalibProjectorSignal_Label
             end
             Lat2 = obj.LatCalib.(opt.camera2);
             if isempty(Lat2.K)
@@ -191,8 +181,6 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             template = obj.Stat.(opt.projector).Template;
             signal = mean(obj.Signal.(opt.camera).(opt.label), 3);
             signal2 = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
-            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, ...
-                  opt.crop_R_site * Lat2.V_norm);
             figure
             subplot(1, 3, 1)
             imagesc(template)
@@ -204,7 +192,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             axis("image")
             title('Camera space')
             subplot(1, 3, 3)
-            imagesc(y_range2, x_range2, signal2)
+            imagesc(signal2)
             colorbar
             Lat2.plot()
             axis("image")
@@ -298,16 +286,23 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
 
-        % Cross-calibrate the camera and projector
         function calibrateProjector(obj, index, opt)
+        end
+
+        % Cross-calibrate the camera and projector
+        function calibrateProjectorPattern(obj, index, opt)
             arguments
                 obj
                 index
-                opt.projector = obj.CalibProjector_Projector
-                opt.camera = obj.CalibProjector_Camera
-                opt.label = obj.CalibProjector_Label
-                opt.template_path = obj.CalibProjector_TemplatePath
+                opt.projector = obj.CalibProjectorPattern_Projector
+                opt.camera = obj.CalibProjectorPattern_Camera
+                opt.label = obj.CalibProjectorPattern_Label
+                opt.plot_diagnostic = obj.CalibProjectorPattern_PlotDiagnostic
             end
+            signal = obj.Signal.(opt.camera).(opt.label)(:, :, index);
+            LatProjector = obj.LatCalib.(opt.projector);
+            LatCamera = obj.LatCalib.(opt.camera);
+            LatProjector.calibrateProjectorPattern(signal, LatCamera)
         end
         
         % Re-calibrate the lattice vectors and centers to mean image

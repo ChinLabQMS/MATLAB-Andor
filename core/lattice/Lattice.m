@@ -27,6 +27,17 @@
         CalibO_Verbose = false
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false
+        CalibProjectorPattern_HashXLine = [667, 817]
+        CalibProjectorPattern_HashYLine = [666, 816]
+        CalibProjectorPattern_FFTAngKDE_BW = 1
+        CalibProjectorPattern_FFTAngKDE_Points = linspace(0, 180, 3600)
+        CalibProjectorPattern_FFTAng_PeakOrder = 'ascend'
+        CalibProjectorPattern_FFTAng_PlotDiagnostic = false
+        CalibProjectorPattern_ProjKDE_BW = 1
+        CalibProjectorPattern_ProjKDE_NPoints = 10000
+        CalibProjectorPattern_ProjKDE_PlotDiagnostic = false
+        CalibProjectorPattern_ProjectorSize = [1482, 1481]
+        CalibProjectorPattern_PlotDiagnostic = true
     end
 
     properties (SetAccess = immutable)
@@ -40,6 +51,8 @@
         R  % Real-space lattice center, 1x2 double
         Rstat  % Statistics generated during calibrating lattice R
         Ostat  % Statistics generated during cross calibrating lattice R
+        ProjectorV % Camera space projector V vector
+        ProjectorR % Camera space projector R vector
     end
 
     properties (Dependent, Hidden)
@@ -132,6 +145,7 @@
         end
         
         % Convert lattice space coordinates to real space
+        % Accept center as N by 2 array
         function [coor, sites] = convert2Real(obj, sites, options)
             arguments
                 obj
@@ -164,8 +178,7 @@
             end
             % Transform coordinates to real space
             options.center = permute(options.center, [3, 2, 1]);
-            coor = sites * obj.V + options.center;
-            
+            coor = sites * obj.V + options.center;            
             % Filter lattice sites outside of a rectangular limit area
             if options.filter
                 idx = all(coor(:, 1, :) >= options.x_lim(1), 3) & ...
@@ -180,6 +193,30 @@
         % Convert real-space coordinates to lattice space
         function sites = convert2Lat(obj, coor)
             sites = (coor - obj.R) * obj.K';
+        end
+
+        % Convert projector space coordinates to camera space
+        function [coor, proj_coor] = convertProjector2Camera(obj, proj_coor, options)
+            arguments
+                obj
+                proj_coor = []
+                options.center = obj.ProjectorR
+                options.filter = false
+                options.x_lim = [1, Inf]
+                options.y_lim = [1, Inf]
+            end
+            % Transform coordinates to camera space
+            options.center = permute(options.center, [3, 2, 1]);
+            coor = proj_coor * obj.ProjectorV + options.center;    
+            % Filter sites outside of a rectangular limit area
+            if options.filter
+                idx = all(coor(:, 1, :) >= options.x_lim(1), 3) & ...
+                      all(coor(:, 1, :) <= options.x_lim(2), 3) & ...
+                      all(coor(:, 2, :) >= options.y_lim(1), 3) & ...
+                      all(coor(:, 2, :) <= options.y_lim(2), 3);
+                coor = coor(idx, :, :);
+                proj_coor = proj_coor(idx, :, :);
+            end
         end
         
         % Calibrate lattice center (R) by FFT phase
@@ -494,32 +531,73 @@
                 crop_R_site, varargin)
             obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
         end
-        
+
+        % Assume the current obj is on camera space, calibrate it
+        % to the projector space with a projector pattern and a camera
+        % image
+        function calibrateProjectorPattern(obj, signal, Lat, x_range, y_range, options)
+            arguments
+                obj
+                signal
+                Lat = []
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
+                options.hash_xline = obj.CalibProjectorPattern_HashXLine
+                options.hash_yline = obj.CalibProjectorPattern_HashYLine
+                options.fftang_kde_bw = obj.CalibProjectorPattern_FFTAngKDE_BW
+                options.fftang_kde_points = obj.CalibProjectorPattern_FFTAngKDE_Points
+                options.fftang_peak_order = obj.CalibProjectorPattern_FFTAng_PeakOrder
+                options.fftang_plot_diagnostic = obj.CalibProjectorPattern_FFTAng_PlotDiagnostic
+                options.proj_kde_bw = obj.CalibProjectorPattern_ProjKDE_BW
+                options.proj_kde_npoints = obj.CalibProjectorPattern_ProjKDE_NPoints
+                options.proj_plot_diagnostic = obj.CalibProjectorPattern_ProjKDE_PlotDiagnostic
+                options.projector_size = obj.CalibProjectorPattern_ProjectorSize
+                options.plot_diagnostic = obj.CalibProjectorPattern_PlotDiagnostic
+            end
+            fft_ang = findFFTAngle(signal, options.fftang_kde_bw, ...
+                options.fftang_kde_points, options.fftang_peak_order, ...
+                options.fftang_plot_diagnostic);
+            [peak_pos, norm_K] = findProjDensityPeak(fft_ang, 2, signal, x_range, y_range, ...
+                options.proj_kde_bw, options.proj_kde_npoints, options.proj_plot_diagnostic);
+            [obj.ProjectorV, obj.ProjectorR] = mapLineFeatures( ...
+                options.hash_xline, options.hash_yline, peak_pos, norm_K);
+            if ~isempty(Lat)
+                [obj.V, obj.R, obj.K] = getLatCalibFromProjector(obj.ProjectorV, obj.ProjectorR, Lat);
+            end
+            if options.plot_diagnostic
+                figure('Name', 'Camera signal and transformed lines')
+                imagesc(y_range, x_range, signal)
+                axis("image")
+                title('Camera signal')
+                hold on
+                num_xlines = length(options.hash_xline);
+                num_ylines = length(options.hash_yline);
+                for i = 1: num_xlines
+                    coor = [repmat(options.hash_xline(i), ...
+                        options.projector_size(2), 1), (1: options.projector_size(2))'];
+                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
+                        'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
+                    plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
+                end
+                for i = 1: num_ylines
+                    coor = [(1: options.projector_size(1))', ...
+                        repmat(options.hash_yline(i), options.projector_size(1), 1), ];
+                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
+                        'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
+                    plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
+                end
+            end
+        end
+
         % Assume the current obj is a projector space lattice, calibrate
-        % its origin to the density pattern on the atoms
-        function calibrateProjectorR(obj, signal, x_range, y_range, options)
+        % its origin to the density pattern on the atom image
+        function calibrateProjectorSignal(obj, signal, x_range, y_range, options)
             arguments
                 obj
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
                 options.placeholder
-            end
-        end
-
-        % Assume the current obj is a projector space lattice, calibrate it
-        % to the camera space lattice with a projector pattern and a camera
-        % image
-        function calibrateProjector(obj, Lat2, signal, x_range, y_range, options)
-            arguments
-                obj
-                Lat2
-                signal
-                x_range = 1: size(signal, 1)
-                y_range = 1: size(signal, 2)
-                options.pattern_shape = "Hash"
-                options.hash_vline = []
-                options.hash_hline = []
             end
         end
 
@@ -735,6 +813,106 @@ function peak_pos = convertK2FFTPeak(xy_size, K)
     peak_pos = K.*xy_size + xy_center;
 end
 
+% Update the lattice coordinates calibration (R, V) to
+% projector-camera calibration for a given camera lattice
+% Assume the current obj is at projector space
+function [V, R, K] = getLatCalibFromProjector(ProjectorV, ProjectorR, LatCamera)
+    V = LatCamera.V / ProjectorV;
+    K = inv(V)';
+    R = (LatCamera.R - ProjectorR) / ProjectorV;
+end
+
+% Use kde to find two line features in FFT angular spectrum and extract the
+% angles
+function peak_ang = findFFTAngle(signal, bw, eval_points, peak_order, plot_diagnostic)
+    signal_fft = abs(fftshift(fft2(signal)));
+    xy_size = size(signal_fft);
+    xy_center = floor(xy_size / 2) + 1;
+    [Y, X] = meshgrid(1: xy_size(2), 1: xy_size(1));
+    K = ([X(:), Y(:)] - xy_center) ./ xy_size;
+    ang = atan2d(K(:, 2), K(:, 1));
+    [f, xf] = kde(ang, "Weight", signal_fft(:), "Bandwidth", bw, "EvaluationPoints", eval_points);
+    peak_ang = findPeaks1D(xf, f, 2);
+    peak_ang = sort(peak_ang, peak_order);
+    if plot_diagnostic
+        figure('Name', 'FFT angular spectrum (log)', 'OuterPosition',[100, 100, 1600, 600])
+        ax1 = subplot(1, 3, 1);
+        imagesc2(ax1, signal_fft)
+        title(ax1, 'Signal FFT')
+        ax2 = subplot(1, 3, 2);
+        imagesc2(ax2, log(signal_fft))
+        title(ax2, 'Signal FFT (log)')
+        for ax = [ax1, ax2]
+            hold(ax, "on")
+            quiver(ax, xy_center(2), xy_center(1), ...
+                sind(peak_ang(1)) * xy_size(2), cosd(peak_ang(1)) * xy_size(1), ...
+                0.1, 'LineWidth', 2, 'Color', 'r', 'DisplayName', 'K1', ...
+                'MaxHeadSize', 0.5)
+            quiver(ax, xy_center(2), xy_center(1), ...
+                sind(peak_ang(2)) * xy_size(2), cosd(peak_ang(2)) * xy_size(1), ...
+                0.1, 'LineWidth', 2, 'Color', 'm', 'DisplayName', 'K2', ...
+                'MaxHeadSize', 0.5)
+            legend()
+        end
+        subplot(1, 3, 3)
+        plot(xf, f, 'DisplayName', 'signal density')
+        hold on
+        scatter(ang, signal_fft(:) / sum(signal_fft, 'all'), 2, 'DisplayName', 'signal')
+        xline(peak_ang, '--', 'DisplayName', 'peak angle')
+        legend()
+        title('Angular spectrum')
+    end
+end
+
+function [peak_pos, K, proj_density] = findProjDensityPeak(fft_ang, num_lines, ...
+    signal, x_range, y_range, bw, num_points, plot_diagnostic)
+    K = [cosd(fft_ang)', sind(fft_ang)'];
+    [Y, X] = meshgrid(y_range, x_range);
+    Kproj = [X(:), Y(:)] * K';
+    proj_density = cell(2, 2);
+    peak_pos = cell(1, 2);
+    [f1, xf1] = kde(Kproj(:, 1), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
+    [f2, xf2] = kde(Kproj(:, 2), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
+    peak_pos{1} = findPeaks1D(xf1, f1, num_lines(1));
+    peak_pos{2} = findPeaks1D(xf2, f2, num_lines(end));
+    proj_density{1, 1} = xf1;
+    proj_density{1, 2} = f1;
+    proj_density{2, 1} = xf2;
+    proj_density{2, 2} = f2;
+    if plot_diagnostic
+        figure('Name', 'Image projection density', 'OuterPosition',[100, 100, 1600, 600])
+        ax = subplot(1, 3, 1);
+        imagesc2(ax, y_range, x_range, signal);
+        hold(ax, "on")
+        quiver(ax, (y_range(1) + y_range(end))/2, (x_range(1) + x_range(end))/2, ...
+            K(1, 2), K(1, 1), 400, 'LineWidth', 2, 'Color', 'r', 'DisplayName', 'K1', ...
+            'MaxHeadSize', 10)
+        quiver(ax, (y_range(1) + y_range(end))/2, (x_range(1) + x_range(end))/2, ...
+            K(2, 2), K(2, 1), 400, 'LineWidth', 2, 'Color', 'm', 'DisplayName', 'K2', ...
+            'MaxHeadSize', 10)
+        legend(ax)
+        for i = 1: 2
+            subplot(1, 3, i + 1)
+            plot(proj_density{i, 1}, proj_density{i, 2})
+            hold on
+            xline(peak_pos{i}, '--')
+            title(sprintf('K%d projection', i))
+        end
+    end
+end
+
+function [V, R] = mapLineFeatures(x, y, peak_pos, K)
+    p = peak_pos{2};
+    q = peak_pos{1};
+    p_mean = mean(p);
+    q_mean = mean(q);
+    x_mean = mean(x);
+    y_mean = mean(y);
+    V = [0, (x - x_mean) * (p - p_mean)' / ((x - x_mean) * (x - x_mean)');
+         (y - y_mean) * (q - q_mean)' / ((y - y_mean) * (y - y_mean)'), 0] / K';
+    R = [q_mean, p_mean] / K' - [x_mean, y_mean] * V;
+end
+
 % Use 2D Gauss fit to fit the FFT amplitude peaks
 function [peak_pos, peak_info] = fitFFTPeaks(FFT, peak_init, R_fit)
     peak_pos = peak_init;
@@ -753,6 +931,24 @@ function [peak_pos, peak_info] = fitFFTPeaks(FFT, peak_init, R_fit)
         peak_info(i).GOF = GOF;
         peak_pos(i, :) = [PeakFit.x0, PeakFit.y0];
     end
+end
+
+function [peak_x, peak_y, peak_idx] = findPeaks1D(x, y, num_peaks)
+    peak_x = [];
+    peak_y = [];
+    peak_idx = [];
+    for i = 2: length(x) - 1
+        if y(i) > y(i - 1) && y(i) > y(i + 1)
+            peak_x(end + 1) = x(i); %#ok<AGROW>
+            peak_y(end + 1) = y(i); %#ok<AGROW>
+            peak_idx(end + 1) = i; %#ok<AGROW>
+        end
+    end
+    [~, sort_idx] = sort(peak_y, 'descend');
+    sort_idx = sort_idx(1: num_peaks);
+    peak_x = peak_x(sort_idx);
+    peak_y = peak_y(sort_idx);
+    peak_idx = peak_idx(sort_idx);
 end
 
 % Filter the signal with a given threshold percentage and min threshold
