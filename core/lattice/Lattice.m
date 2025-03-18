@@ -567,8 +567,15 @@
             if options.plot_diagnostic
                 figure('Name', 'Camera image and transformed lines')
                 ax1 = subplot(1, 2, 1);
+                obj.plot('filter', true, 'x_lim',[0, options.projector_size(1)], ...
+                    'y_lim', [0, options.projector_size(2)])
+                axis("image")
+                title("Projector space")
+                hold(ax1, "on")
                 ax2 = subplot(1, 2, 2);
                 imagesc(ax2, y_range, x_range, signal)
+                Lat.plot('filter', true, 'x_lim', [x_range(1), x_range(end)], ...
+                    'y_lim', [y_range(1), y_range(end)])
                 axis(ax2, "image")
                 title(ax2, 'Camera signal')
                 hold(ax2, "on")
@@ -579,6 +586,7 @@
                         options.projector_size(2), 1), (1: options.projector_size(2))'];
                     transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
                         'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
+                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2)
                     plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
                 end
                 for i = 1: num_ylines
@@ -586,6 +594,7 @@
                         repmat(options.hash_yline(i), options.projector_size(1), 1), ];
                     transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
                         'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
+                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2)
                     plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
                 end
             end
@@ -599,7 +608,8 @@
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
-                options.placeholder
+                options.hash_xline = obj.CalibProjectorPattern_HashXLine
+                options.hash_yline = obj.CalibProjectorPattern_HashYLine
             end
         end
 
@@ -866,21 +876,24 @@ function peak_ang = findFFTAngle(signal, bw, eval_points, peak_order, plot_diagn
     end
 end
 
-function [peak_pos, K, proj_density] = findProjDensityPeak(fft_ang, num_lines, ...
-    signal, x_range, y_range, bw, num_points, plot_diagnostic)
-    K = [cosd(fft_ang)', sind(fft_ang)'];
+function [proj_density, K] = getProjectionDensity(proj_ang, signal, x_range, y_range, bw, num_points)
+    num_ang = length(proj_ang);
+    K = [cosd(proj_ang)', sind(proj_ang)'];
     [Y, X] = meshgrid(y_range, x_range);
     Kproj = [X(:), Y(:)] * K';
-    proj_density = cell(2, 2);
-    peak_pos = cell(1, 2);
-    [f1, xf1] = kde(Kproj(:, 1), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
-    [f2, xf2] = kde(Kproj(:, 2), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
-    peak_pos{1} = findPeaks1D(xf1, f1, num_lines(1));
-    peak_pos{2} = findPeaks1D(xf2, f2, num_lines(end));
-    proj_density{1, 1} = xf1;
-    proj_density{1, 2} = f1;
-    proj_density{2, 1} = xf2;
-    proj_density{2, 2} = f2;
+    proj_density = cell(num_ang, 2);
+    for i = 1: num_ang
+        [f, xf] = kde(Kproj(:, i), "Weight", signal(:), "Bandwidth", bw, "NumPoints", num_points);
+        proj_density{i, 1} = xf;
+        proj_density{i, 2} = f;
+    end
+end
+
+function [peak_pos, K, proj_density] = findProjDensityPeak(fft_ang, num_lines, ...
+    signal, x_range, y_range, bw, num_points, plot_diagnostic)
+    [proj_density, K] = getProjectionDensity(fft_ang, signal, x_range, y_range, bw, num_points);
+    peak_pos{1} = findPeaks1D(proj_density{1, 1}, proj_density{1, 2}, num_lines(1));
+    peak_pos{2} = findPeaks1D(proj_density{2, 1}, proj_density{2, 2}, num_lines(end));
     if plot_diagnostic
         figure('Name', 'Image projection density', 'OuterPosition',[100, 100, 1600, 600])
         ax = subplot(1, 3, 1);
