@@ -7,12 +7,12 @@ p = Preprocessor();
 Signal = p.process(Data);
 
 %%
-template = imread("resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
+% template = imread("resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
 signal = Signal.Zelux.Pattern_532(:, :, 1);
 signal2 = mean(Signal.Andor19330.Image, 3);
 
 %%
-DMD.calibrateProjectorPattern(signal, 1: size(signal, 1), 1: size(signal, 2), Zelux)
+DMD.calibrateProjectorPattern(signal, Zelux)
 
 %%
 

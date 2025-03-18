@@ -565,11 +565,13 @@
                 [obj.V, obj.R, obj.K] = getLatCalibFromProjector(obj.ProjectorV, obj.ProjectorR, Lat);
             end
             if options.plot_diagnostic
-                figure('Name', 'Camera signal and transformed lines')
-                imagesc(y_range, x_range, signal)
-                axis("image")
-                title('Camera signal')
-                hold on
+                figure('Name', 'Camera image and transformed lines')
+                ax1 = subplot(1, 2, 1);
+                ax2 = subplot(1, 2, 2);
+                imagesc(ax2, y_range, x_range, signal)
+                axis(ax2, "image")
+                title(ax2, 'Camera signal')
+                hold(ax2, "on")
                 num_xlines = length(options.hash_xline);
                 num_ylines = length(options.hash_yline);
                 for i = 1: num_xlines
