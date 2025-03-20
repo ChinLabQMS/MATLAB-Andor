@@ -64,7 +64,6 @@ classdef (Abstract) BaseSequencer < BaseObject
                 [func, args] = step{:};
                 func(args{:})
             end
-
             if ~isempty(obj.LayoutManager)
                 obj.LayoutManager.update(obj.Live)
             end

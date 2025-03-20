@@ -35,26 +35,27 @@ classdef Projector < BaseRunner
             obj@BaseRunner(config)
             clear(obj.Config.MexFunctionName)
             obj.MexHandle = str2func(obj.Config.MexFunctionName);
-            obj.MexHandle("lock")
             obj.ID = id;
-            obj.setStaticPatternPath(obj.Config.DefaultStaticPatternPath)
         end
 
-        % Open pattern window
+        % Open pattern window with default static pattern
         function open(obj, options)
             arguments
                 obj
                 options.verbose = true
             end
+            obj.MexHandle("lock")
             if ~obj.IsWindowCreated
                 obj.MexHandle("open", obj.Config.PixelArrangement, false)
                 if options.verbose
                     obj.info('Window is opened.')
                 end
             end
+            obj.setStaticPatternPath(obj.Config.DefaultStaticPatternPath)
+            obj.preloadPatternMemory()
         end
         
-        % Close pattern window
+        % Close pattern window (which will reset the memory)
         function close(obj, options)
             arguments
                 obj 
@@ -66,6 +67,8 @@ classdef Projector < BaseRunner
                     obj.info('Window is closed.')
                 end
             end
+            obj.MexHandle("unlock")
+            clear(obj.Config.MexFunctionName)
         end
 
         % Main function to interface with the app
@@ -84,8 +87,10 @@ classdef Projector < BaseRunner
                 case "SolidColor"
                     obj.displayColor(options.red, options.green, options.blue)
                 case "DynamicPreloaded"
-                    for i = options.pattern_index
-                        obj.displayPatternMemory(i, "pattern_delay",options.pattern_delay)
+                    success = obj.displayPatternMemory(options.pattern_index, "pattern_delay",options.pattern_delay);
+                    if ~success && ~isempty(live)
+                        % Flag the bad projection
+                        live.BadFrameDetected = true;
                     end
                 case "Dynamic"
                     obj.warn2("Not implemented yet!")
@@ -113,13 +118,16 @@ classdef Projector < BaseRunner
         end
         
         % Display a pattern from loaded memory
-        function displayPatternMemory(obj, index, options)
+        function varargout = displayPatternMemory(obj, index, options)
             arguments
                 obj
                 index
                 options.pattern_delay = 0
             end
-            obj.MexHandle("displayPatternMemory", index, options.pattern_delay, false)
+            output = obj.MexHandle("displayPatternMemory", index, options.pattern_delay, false);
+            if nargout == 1
+                varargout{1} = output;
+            end
         end
 
         % Set the index of the display to position window
@@ -216,8 +224,6 @@ classdef Projector < BaseRunner
 
         function delete(obj)
             obj.close()
-            obj.MexHandle("unlock")
-            clear(obj.Config.MexFunctionName)
         end
 
         function val = get.IsWindowCreated(obj)

@@ -27,6 +27,7 @@
         CalibO_Verbose = false
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false
+        CalibProjectorPattern_Shape = "HashLines"
         CalibProjectorPattern_HashXLine = [667, 817]
         CalibProjectorPattern_HashYLine = [666, 816]
         CalibProjectorPattern_FFTAngKDE_BW = 1
@@ -535,7 +536,28 @@
         % Assume the current obj is on camera space, calibrate it
         % to the projector space with a projector pattern and a camera
         % image
-        function calibrateProjectorPattern(obj, signal, Lat, x_range, y_range, options)
+        function calibrateProjectorPattern(obj, signal, Lat, x_range, y_range, pattern_shape, varargin)
+            arguments
+                obj
+                signal
+                Lat = []
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
+                pattern_shape = obj.CalibProjectorPattern_Shape
+            end
+            arguments (Repeating)
+                varargin
+            end
+            switch pattern_shape
+                case "HashLines"
+                    obj.calibrateProjectorPatternHash(signal, Lat, x_range, y_range, varargin{:})
+                otherwise
+                    obj.error("Un-supported pattern shape for calibration!")
+            end            
+        end
+        
+        % Calibrate the projector-camera with hash lines pattern
+        function calibrateProjectorPatternHash(obj, signal, Lat, x_range, y_range, options)
             arguments
                 obj
                 signal
@@ -569,6 +591,7 @@
                 ax1 = subplot(1, 2, 1);
                 obj.plot('filter', true, 'x_lim',[0, options.projector_size(1)], ...
                     'y_lim', [0, options.projector_size(2)])
+                obj.plotV()
                 axis("image")
                 title("Projector space")
                 hold(ax1, "on")
@@ -576,6 +599,7 @@
                 imagesc(ax2, y_range, x_range, signal)
                 Lat.plot('filter', true, 'x_lim', [x_range(1), x_range(end)], ...
                     'y_lim', [y_range(1), y_range(end)])
+                Lat.plotV()
                 axis(ax2, "image")
                 title(ax2, 'Camera signal')
                 hold(ax2, "on")
@@ -586,16 +610,20 @@
                         options.projector_size(2), 1), (1: options.projector_size(2))'];
                     transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
                         'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
-                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2)
-                    plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
+                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
+                        'DisplayName', "xline: " + string(i))
+                    plot(ax2, transformed(:, 2), transformed(:, 1), ...
+                        'LineStyle','--', 'LineWidth',2, 'DisplayName', "xline: " + string(i))
                 end
                 for i = 1: num_ylines
                     coor = [(1: options.projector_size(1))', ...
                         repmat(options.hash_yline(i), options.projector_size(1), 1), ];
                     transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
                         'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
-                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2)
-                    plot(transformed(:, 2), transformed(:, 1), 'LineStyle','--', 'LineWidth',2)
+                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
+                        'DisplayName', "yline: " + string(i))
+                    plot(ax2, transformed(:, 2), transformed(:, 1), ...
+                        'LineStyle','--', 'LineWidth',2, 'DisplayName', "yline: " + string(i))
                 end
             end
         end
