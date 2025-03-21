@@ -7,9 +7,29 @@ load("calibration/LatCalib.mat")
 p = Preprocessor();
 Signal = p.process(Data);
 
-% template = imread("resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
+template = imread("resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp");
 signal = Signal.Zelux.Pattern_532(:, :, 1);
 signal2 = mean(Signal.Andor19330.Image, 3);
+
+%%
+figure
+imagesc2(template)
+DMD.plot()
+DMD.plotV()
+
+%%
+A = -DMD.V(1, 2);
+B = DMD.V(1, 1);
+C = DMD.V(1, 2) * DMD.R(1) - DMD.V(1, 1) * DMD.R(2);
+
+%%
+a = Projector();
+a.open()
+PatternWindowMex("drawLineOnReal", A, B, C, 5)
+a.plot3()
+
+%%
+a.close()
 
 %%
 figure

@@ -10,8 +10,6 @@
 % - LatCalibFilePath: path to pre-calibration file to use
 % - DataPath: path to .mat data file for this calibration. Lattice
 %             calibration should work in both sparse and dense settings
-% - InitCameraName: calibrations to create upon initialization, named as the
-%                   corresponding device, say, cameras/DMD
 % - LatCameraList: list of camera names for calibrating lattice V and R
 % - LatImageLabel: corresponding list of image labels for lattice
 %                  calibration
@@ -20,7 +18,6 @@ clear; clc; close all
 p = LatCalibrator( ...
     "LatCalibFilePath", "calibration/LatCalib.mat", ... 
     "DataPath", "data/2025/03 March/20250312/dense_begin_of_day.mat", ...
-    "InitCameraName", ["Andor19330", "Andor19331", "Zelux", "DMD"], ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"]);
 

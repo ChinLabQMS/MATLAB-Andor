@@ -354,9 +354,14 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             end
             calib = obj.LatCalib;
             calib.Config = obj.struct();
-            for camera = obj.InitCameraName
+            for camera = obj.LatCameraList
                 if isempty(calib.(camera).K)
                     obj.warn2("Camera %s is not calibrated.", camera)
+                end
+            end
+            for projector = obj.ProjectorList
+                if isempty(calib.(projector).K)
+                    obj.warn2("Projector %s is not calibrated.", projector)
                 end
             end
             if filename.endsWith('.mat')

@@ -129,6 +129,14 @@ classdef Projector < BaseRunner
                 varargout{1} = output;
             end
         end
+        
+        % Display the current pattern canvas on window
+        function varargout = displayPatternCanvas(obj)
+            output = obj.MexHandle("displayPatternCanvas", false);
+            if nargout == 1
+                varargout{1} = output;
+            end
+        end
 
         % Set the index of the display to position window
         function setDisplayIndex(obj, index, options)
@@ -192,7 +200,7 @@ classdef Projector < BaseRunner
         function plot2(obj, index, ax1, ax2)
             arguments
                 obj
-                index
+                index = 0
                 ax1 = []
                 ax2 = []
             end
@@ -211,6 +219,25 @@ classdef Projector < BaseRunner
             axis(ax1, "image")
             imagesc(ax2, pattern2)
             title(ax2, sprintf('Dynamic pattern (real space): %d', index))
+            axis(ax2, "image")
+        end
+
+        function plot3(obj, ax1, ax2)
+            arguments
+                obj
+                ax1 = []
+                ax2 = []
+            end
+            if isempty(ax1) && isempty(ax2)
+                figure
+                ax1 = subplot(1, 2, 1);
+                ax2 = subplot(1, 2, 2);
+            end
+            imagesc(ax1, obj.PatternCanvasRGB)
+            title(ax1, 'Pattern Canvas')
+            axis(ax1, "image")
+            imagesc(ax2, obj.RealCanvasRGB)
+            title(ax2, 'Pattern Canvas (real space)')
             axis(ax2, "image")
         end
 
