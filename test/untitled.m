@@ -20,13 +20,16 @@ DMD.plotV()
 %%
 A = -DMD.V(1, 2);
 B = DMD.V(1, 1);
-C = DMD.V(1, 2) * DMD.R(1) - DMD.V(1, 1) * DMD.R(2);
+C = DMD.V(1, 2) * (DMD.R(1)-1) - DMD.V(1, 1) * (DMD.R(2)-1);
 
 %%
 a = Projector();
 a.open()
-PatternWindowMex("drawLineOnReal", A, B, C, 5)
+PatternWindowMex("drawLineOnReal", A, B, C, 1)
+
 a.plot3()
+DMD.plot()
+DMD.plotV()
 
 %%
 a.close()
