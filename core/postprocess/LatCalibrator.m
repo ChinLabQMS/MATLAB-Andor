@@ -8,6 +8,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         LatCameraList = ["Andor19330", "Andor19331", "Zelux"]
         LatImageLabel = ["Image", "Image", "Lattice_935"]
         ProjectorList = "DMD"
+        TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
     end
 
     properties (Constant)
@@ -35,6 +36,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibProjectorPattern_Camera = "Zelux"
         CalibProjectorPattern_Label = "Pattern_532"
         CalibProjectorPattern_PlotDiagnostic = true
+        CalibProjectorSignal_Camera = "Andor19330"
+        CalibProjectorSignal_Label = "Image"
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
@@ -96,6 +99,11 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 s.Width = [xw, yw];
                 s.FFTSize = [length(s.FFTX), length(s.FFTY)];
                 obj.Stat.(camera) = s;
+            end
+            for i = 1: length(obj.ProjectorList)
+                projector = obj.ProjectorList(i);
+                file_path = obj.TemplatePath(i);
+                obj.Stat.(projector).Template = imread(file_path);
             end
             obj.info("Finish processing to get averaged images and basic statistics.")
         end

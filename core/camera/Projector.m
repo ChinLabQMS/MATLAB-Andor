@@ -137,7 +137,37 @@ classdef Projector < BaseRunner
                 varargout{1} = output;
             end
         end
-
+        
+        % Drawing a line along vector V (1x2), passing through R (1x2)
+        function drawLinesAlongVector(obj, V, R, options)
+            arguments
+                obj 
+                V
+                R
+                options.line_color = 0xFFFFFFFF
+                options.line_width = 5
+            end
+            A = -V(2);
+            B = V(1);
+            C =  V(2) * (R(1) - 1) - V(1) * (R(2) - 1);
+            obj.MexHandle("drawLineOnReal", A, B, C, options.line_width, options.line_color)
+        end
+        
+        % Drawing a star pattern along three lattice vector
+        function drawAndSaveLatStarPattern(obj, Lat, options)
+            arguments
+                obj 
+                Lat
+                options.line_color = 0xFFFFFFFF
+                options.line_width = 5
+            end
+            obj.MexHandle("resetPattern", 0xFF000000)
+            obj.drawLinesAlongVector(Lat.V1, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.drawLinesAlongVector(Lat.V2, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.drawLinesAlongVector(Lat.V3, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.MexHandle("selectAndSavePatternAsBMP", false)
+        end
+        
         % Set the index of the display to position window
         function setDisplayIndex(obj, index, options)
             arguments

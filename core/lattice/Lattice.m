@@ -18,6 +18,8 @@
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
+        CalibO_InverseMatch = false
+        CalibO_ConvertToSignal = true
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
         CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 3)
@@ -28,17 +30,18 @@
         CalibO_Debug = false
         CalibO_PlotDiagnostic = false
         CalibProjectorPattern_Shape = "HashLines"
-        CalibProjectorPattern_HashXLine = [667, 817]
-        CalibProjectorPattern_HashYLine = [666, 816]
-        CalibProjectorPattern_FFTAngKDE_BW = 1
-        CalibProjectorPattern_FFTAngKDE_Points = linspace(0, 180, 3600)
-        CalibProjectorPattern_FFTAng_PeakOrder = 'ascend'
-        CalibProjectorPattern_FFTAng_PlotDiagnostic = false
-        CalibProjectorPattern_ProjKDE_BW = 1
-        CalibProjectorPattern_ProjKDE_NPoints = 10000
-        CalibProjectorPattern_ProjKDE_PlotDiagnostic = false
-        CalibProjectorPattern_ProjectorSize = [1482, 1481]
-        CalibProjectorPattern_PlotDiagnostic = true
+        CalibProjectorVRHash_HashXLine = [667, 817]
+        CalibProjectorVRHash_HashYLine = [666, 816]
+        CalibProjectorVRHash_FFTAngKDE_BW = 1
+        CalibProjectorVRHash_FFTAngKDE_Points = linspace(0, 180, 3600)
+        CalibProjectorVRHash_FFTAng_PeakOrder = 'ascend'
+        CalibProjectorVRHash_FFTAng_PlotDiagnostic = false
+        CalibProjectorVRHash_ProjKDE_BW = 1
+        CalibProjectorVRHash_ProjKDE_NPoints = 10000
+        CalibProjectorVRHash_ProjKDE_PlotDiagnostic = false
+        CalibProjectorVRHash_ProjectorSize = [1482, 1481]
+        CalibProjectorVRHash_TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
+        CalibProjectorVRHash_PlotDiagnostic = true
     end
 
     properties (SetAccess = immutable)
@@ -57,6 +60,9 @@
     end
 
     properties (Dependent, Hidden)
+        V1
+        V2
+        V3
         V_norm
         Magnification
     end
@@ -119,6 +125,7 @@
                         obj.K = arg1.K;
                         obj.V = arg1.V;
                         obj.R = arg1.R;
+                    case "R"
                     otherwise
                         obj.error('Unrecongized input format %s.', options.format)
                 end
@@ -196,7 +203,7 @@
             sites = (coor - obj.R) * obj.K';
         end
 
-        % Convert projector space coordinates to camera space
+        % Convert projector space coordinates to camera (obj) space
         function [coor, proj_coor] = convertProjector2Camera(obj, proj_coor, options)
             arguments
                 obj
@@ -451,6 +458,8 @@
                 y_range {mustBeValidRange(signal, 2, y_range)} = 1:size(signal, 2)
                 x_range2 {mustBeValidRange(signal2, 1, x_range2)} = 1:size(signal2, 1)
                 y_range2 {mustBeValidRange(signal2, 2, y_range2)} = 1:size(signal2, 2)
+                options.covert_to_signal = obj.CalibO_ConvertToSignal
+                options.inverse_match = obj.CalibO_InverseMatch
                 options.calib_R = obj.CalibO_CalibR
                 options.calib_R_bootstrap = obj.CalibO_CalibR_Bootstrap
                 options.sites = obj.CalibO_Sites
@@ -478,8 +487,18 @@
             best_transformed = [];
             for i = 1: num_sites
                 obj.R = score.Center(i, :);
-                transformed = Lat2.transformSignal(obj, x_range, y_range, signal2, x_range2, y_range2);
-                score.SignalDist(i) = pdist2(signal(:)', transformed(:)', options.metric);
+                if options.covert_to_signal
+                    transformed = Lat2.transformSignal(obj, x_range, y_range, signal2, x_range2, y_range2);
+                    d = pdist2(signal(:)', transformed(:)', options.metric);
+                else
+                    transformed = obj.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
+                    d = pdist2(signal2(:)', transformed(:)', options.metric);
+                end
+                if options.inverse_match
+                    score.SignalDist(i) = -d;
+                else
+                    score.SignalDist(i) = d;
+                end
                 if score.SignalDist(i) < best_score
                     best_score = score.SignalDist(i);
                     best_transformed = transformed;
@@ -509,7 +528,7 @@
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
                 plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
-                    x_range, y_range, x_range2, y_range2)
+                    x_range, y_range, x_range2, y_range2, options.covert_to_signal)
             end
             if options.debug  % Reset to initial R
                 obj.R = R_init;
@@ -533,111 +552,64 @@
             obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
         end
 
-        % Assume the current obj is on camera space, calibrate it
-        % to the projector space with a projector pattern and a camera
-        % image
-        function calibrateProjectorPattern(obj, signal, Lat, x_range, y_range, pattern_shape, varargin)
-            arguments
-                obj
-                signal
-                Lat = []
-                x_range = 1: size(signal, 1)
-                y_range = 1: size(signal, 2)
-                pattern_shape = obj.CalibProjectorPattern_Shape
+        % Assume current obj is in projector space, calibrate the lattice
+        % with a given camera space lattice
+        % Update the lattice coordinates calibration (R, V) to
+        % projector-camera calibration for a given camera lattice
+        % Assume the current obj is at projector space
+        function calibrateProjector2Camera(obj, Lat)
+            if isempty(Lat.ProjectorV)
+                obj.error('Camera space Projector V R is not calibrated!')
             end
-            arguments (Repeating)
-                varargin
-            end
-            switch pattern_shape
-                case "HashLines"
-                    obj.calibrateProjectorPatternHash(signal, Lat, x_range, y_range, varargin{:})
-                otherwise
-                    obj.error("Un-supported pattern shape for calibration!")
-            end            
-        end
-        
-        % Calibrate the projector-camera with hash lines pattern
-        function calibrateProjectorPatternHash(obj, signal, Lat, x_range, y_range, options)
-            arguments
-                obj
-                signal
-                Lat = []
-                x_range = 1: size(signal, 1)
-                y_range = 1: size(signal, 2)
-                options.hash_xline = obj.CalibProjectorPattern_HashXLine
-                options.hash_yline = obj.CalibProjectorPattern_HashYLine
-                options.fftang_kde_bw = obj.CalibProjectorPattern_FFTAngKDE_BW
-                options.fftang_kde_points = obj.CalibProjectorPattern_FFTAngKDE_Points
-                options.fftang_peak_order = obj.CalibProjectorPattern_FFTAng_PeakOrder
-                options.fftang_plot_diagnostic = obj.CalibProjectorPattern_FFTAng_PlotDiagnostic
-                options.proj_kde_bw = obj.CalibProjectorPattern_ProjKDE_BW
-                options.proj_kde_npoints = obj.CalibProjectorPattern_ProjKDE_NPoints
-                options.proj_plot_diagnostic = obj.CalibProjectorPattern_ProjKDE_PlotDiagnostic
-                options.projector_size = obj.CalibProjectorPattern_ProjectorSize
-                options.plot_diagnostic = obj.CalibProjectorPattern_PlotDiagnostic
-            end
-            fft_ang = findFFTAngle(signal, options.fftang_kde_bw, ...
-                options.fftang_kde_points, options.fftang_peak_order, ...
-                options.fftang_plot_diagnostic);
-            [peak_pos, norm_K] = findProjDensityPeak(fft_ang, 2, signal, x_range, y_range, ...
-                options.proj_kde_bw, options.proj_kde_npoints, options.proj_plot_diagnostic);
-            [obj.ProjectorV, obj.ProjectorR] = mapLineFeatures( ...
-                options.hash_xline, options.hash_yline, peak_pos, norm_K);
-            if ~isempty(Lat)
-                [obj.V, obj.R, obj.K] = getLatCalibFromProjector(obj.ProjectorV, obj.ProjectorR, Lat);
-            end
-            if options.plot_diagnostic
-                figure('Name', 'Camera image and transformed lines')
-                ax1 = subplot(1, 2, 1);
-                obj.plot('filter', true, 'x_lim',[0, options.projector_size(1)], ...
-                    'y_lim', [0, options.projector_size(2)])
-                obj.plotV()
-                axis("image")
-                title("Projector space")
-                hold(ax1, "on")
-                ax2 = subplot(1, 2, 2);
-                imagesc(ax2, y_range, x_range, signal)
-                Lat.plot('filter', true, 'x_lim', [x_range(1), x_range(end)], ...
-                    'y_lim', [y_range(1), y_range(end)])
-                Lat.plotV()
-                axis(ax2, "image")
-                title(ax2, 'Camera signal')
-                hold(ax2, "on")
-                num_xlines = length(options.hash_xline);
-                num_ylines = length(options.hash_yline);
-                for i = 1: num_xlines
-                    coor = [repmat(options.hash_xline(i), ...
-                        options.projector_size(2), 1), (1: options.projector_size(2))'];
-                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
-                        'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
-                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
-                        'DisplayName', "xline: " + string(i))
-                    plot(ax2, transformed(:, 2), transformed(:, 1), ...
-                        'LineStyle','--', 'LineWidth',2, 'DisplayName', "xline: " + string(i))
-                end
-                for i = 1: num_ylines
-                    coor = [(1: options.projector_size(1))', ...
-                        repmat(options.hash_yline(i), options.projector_size(1), 1), ];
-                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
-                        'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)]);
-                    plot(ax1, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
-                        'DisplayName', "yline: " + string(i))
-                    plot(ax2, transformed(:, 2), transformed(:, 1), ...
-                        'LineStyle','--', 'LineWidth',2, 'DisplayName', "yline: " + string(i))
-                end
-            end
+            obj.V = Lat.V / Lat.ProjectorV;
+            obj.K = inv(obj.V)';
+            obj.R = (Lat.R - Lat.ProjectorR) / Lat.ProjectorV;
         end
 
-        % Assume the current obj is a projector space lattice, calibrate
-        % its origin to the density pattern on the atom image
-        function calibrateProjectorSignal(obj, signal, x_range, y_range, options)
+        % Assume current obj is in camera space, calibrate the projector
+        % space VR (ProjectorV, ProjectorR) with hash pattern
+        function calibrateProjectorVRHash(obj, signal, x_range, y_range, opt1, opt2, opt3)
             arguments
                 obj
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
-                options.hash_xline = obj.CalibProjectorPattern_HashXLine
-                options.hash_yline = obj.CalibProjectorPattern_HashYLine
+                opt1.hash_xline = obj.CalibProjectorVRHash_HashXLine
+                opt1.hash_yline = obj.CalibProjectorVRHash_HashYLine
+                opt1.x_lim = [x_range(1), x_range(end)]
+                opt1.y_lim = [y_range(1), y_range(end)]
+                opt1.projector_size = obj.CalibProjectorVRHash_ProjectorSize
+                opt2.fftang_kde_bw = obj.CalibProjectorVRHash_FFTAngKDE_BW
+                opt2.fftang_kde_points = obj.CalibProjectorVRHash_FFTAngKDE_Points
+                opt2.fftang_peak_order = obj.CalibProjectorVRHash_FFTAng_PeakOrder
+                opt2.fftang_plot_diagnostic = obj.CalibProjectorVRHash_FFTAng_PlotDiagnostic
+                opt2.proj_kde_bw = obj.CalibProjectorVRHash_ProjKDE_BW
+                opt2.proj_kde_npoints = obj.CalibProjectorVRHash_ProjKDE_NPoints
+                opt2.proj_plot_diagnostic = obj.CalibProjectorVRHash_ProjKDE_PlotDiagnostic
+                opt3.template_path = obj.CalibProjectorVRHash_TemplatePath
+                opt3.plot_diagnostic = obj.CalibProjectorVRHash_PlotDiagnostic
+            end
+            fft_ang = findFFTAngle(signal, opt2.fftang_kde_bw, ...
+                opt2.fftang_kde_points, opt2.fftang_peak_order, ...
+                opt2.fftang_plot_diagnostic);
+            [peak_pos, norm_K] = findProjDensityPeak(fft_ang, 2, signal, x_range, y_range, ...
+                opt2.proj_kde_bw, opt2.proj_kde_npoints, opt2.proj_plot_diagnostic);
+            [obj.ProjectorV, obj.ProjectorR] = mapLineFeatures( ...
+                opt1.hash_xline, opt1.hash_yline, peak_pos, norm_K);
+            if opt3.plot_diagnostic
+                args = namedargs2cell(opt1);
+                figure('Name', 'Camera image and transformed projector pattern (Hash lines)')
+                ax1 = subplot(1, 2, 1);
+                template = imread(opt3.template_path);
+                imagesc(ax1, template)
+                axis("image")
+                title("Projector space")
+                obj.plotHash(ax1, false, args{:})
+                ax2 = subplot(1, 2, 2);
+                imagesc(ax2, y_range, x_range, signal)
+                axis(ax2, "image")
+                title(ax2, 'Camera signal')
+                obj.plotHash(ax2, true, args{:})
             end
         end
 
@@ -724,6 +696,49 @@
                 varargout{1} = h;
             end
         end
+
+        function plotHash(obj, ax, plot_transformed, options)
+            arguments
+                obj
+                ax = gca()
+                plot_transformed = true
+                options.x_lim = [0, inf]
+                options.y_lim = [0, inf]
+                options.hash_xline = obj.CalibProjectorVRHash_HashXLine
+                options.hash_yline = obj.CalibProjectorVRHash_HashYLine
+                options.projector_size = obj.CalibProjectorVRHash_ProjectorSize
+            end
+            c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
+            hold(ax,'on');
+            num_xlines = length(options.hash_xline);
+            num_ylines = length(options.hash_yline);
+            for i = 1: num_xlines
+                coor = [repmat(options.hash_xline(i), ...
+                    options.projector_size(2), 1), (1: options.projector_size(2))'];
+                if isempty(obj.ProjectorV) || ~plot_transformed
+                    plot(ax, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
+                         'DisplayName', "xline: " + string(i))
+                else
+                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
+                        'x_lim', options.x_lim, 'y_lim', options.y_lim);
+                    plot(ax, transformed(:, 2), transformed(:, 1), ...
+                    'LineStyle','--', 'LineWidth',2, 'DisplayName', "xline: " + string(i))
+                end
+            end
+            for i = 1: num_ylines
+                coor = [(1: options.projector_size(1))', ...
+                    repmat(options.hash_yline(i), options.projector_size(1), 1), ];
+                if isempty(obj.ProjectorV) || ~plot_transformed
+                   plot(ax, coor(:, 2), coor(:, 1), 'LineWidth', 2, ...
+                         'DisplayName', "yline: " + string(i))
+                else
+                    transformed = obj.convertProjector2Camera(coor, 'filter', true, ...
+                        'x_lim', options.x_lim, 'y_lim', options.y_lim);
+                    plot(ax, transformed(:, 2), transformed(:, 1), ...
+                        'LineStyle','--', 'LineWidth',2, 'DisplayName', "yline: " + string(i))
+                end
+            end
+        end
         
         % Convert the current K vector to an expected FFT peak location
         function peak_pos = convert2FFTPeak(obj, xy_size)
@@ -756,16 +771,30 @@
                 fprintf('Lattice calibration is not initialized.\n\n')
                 return
             end
-            V1 = obj.V(1, :);
-            V2 = obj.V(2, :);
-            V3 = V1 + V2;            
+            v1 = obj.V1;
+            v2 = obj.V2;
+            v3 = obj.V3;            
             fprintf('Calibration result:\n')
             fprintf('\tR  = (%7.2f, %7.2f) px\n', obj.R(1), obj.R(2))
-            fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', V1(1), V1(2), norm(V1))
-            fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', V2(1), V2(2), norm(V2))
-            fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', V3(1), V3(2), norm(V3))
-            fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(V1*V2'/(norm(V1)*norm(V2))))
-            fprintf('\tAngle<V1,V3> = %6.2f deg\n\n', acosd(V1*V3'/(norm(V1)*norm(V3))))
+            fprintf('\tV1 = (%7.2f, %7.2f) px,\t|V1| = %7.2f px\n', v1(1), v1(2), norm(v1))
+            fprintf('\tV2 = (%7.2f, %7.2f) px,\t|V2| = %7.2f px\n', v2(1), v2(2), norm(v2))
+            fprintf('\tV3 = (%7.2f, %7.2f) px,\t|V3| = %7.2f px\n', v3(1), v3(2), norm(v3))
+            fprintf('\tAngle<V1,V2> = %6.2f deg\n', acosd(v1*v2'/(norm(v1)*norm(v2))))
+            fprintf('\tAngle<V1,V3> = %6.2f deg\n\n', acosd(v1*v3'/(norm(v1)*norm(v3))))
+        end
+
+        function val = get.V1(obj)
+            obj.checkInitialized()
+            val = obj.V(1, :);
+        end
+
+        function val = get.V2(obj)
+            obj.checkInitialized()
+            val = obj.V(2, :);
+        end
+
+        function val = get.V3(obj)
+            val = obj.V1 + obj.V2;
         end
 
         function val = get.V_norm(obj)
@@ -852,15 +881,6 @@ end
 function peak_pos = convertK2FFTPeak(xy_size, K)
     xy_center = floor(xy_size / 2) + 1;
     peak_pos = K.*xy_size + xy_center;
-end
-
-% Update the lattice coordinates calibration (R, V) to
-% projector-camera calibration for a given camera lattice
-% Assume the current obj is at projector space
-function [V, R, K] = getLatCalibFromProjector(ProjectorV, ProjectorR, LatCamera)
-    V = LatCamera.V / ProjectorV;
-    K = inv(V)';
-    R = (LatCamera.R - ProjectorR) / ProjectorV;
 end
 
 % Use kde to find two line features in FFT angular spectrum and extract the
@@ -1097,7 +1117,7 @@ function plotSimilarityMap(x_range, y_range, score, best)
 end
 
 function plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
-                x_range, y_range, x_range2, y_range2)
+                x_range, y_range, x_range2, y_range2, convert_to_signal)
     figure('Name', 'Cross-calibrated transformed images')
     subplot(1, 3, 1)
     imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
@@ -1110,9 +1130,15 @@ function plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed
     viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
         'EnhanceVisibility', false, 'LineWidth', 0.5);
     subplot(1, 3, 3)
-    imagesc2(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", obj.ID, Lat2.ID))
-    obj.plot()
-    obj.plotV()
-    viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
-        'EnhanceVisibility', false, 'LineWidth', 0.5);
+    if convert_to_signal
+        imagesc2(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", obj.ID, Lat2.ID))
+        obj.plot()
+        obj.plotV()
+        viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
+            'EnhanceVisibility', false, 'LineWidth', 0.5);
+    else
+        imagesc2(y_range2, x_range2, best_transformed, "title", sprintf("%s: best transformed from %s", Lat2.ID, obj.ID))
+        Lat2.plot()
+        Lat2.plotV()
+    end
 end
