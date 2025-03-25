@@ -159,13 +159,31 @@ classdef Projector < BaseRunner
             arguments
                 obj 
                 Lat
+                options.template_color = 0xFF000000
                 options.line_color = 0xFFAAAAAA
                 options.line_width = 5
             end
-            obj.MexHandle("resetPattern", 0xFF000000)
+            obj.MexHandle("resetPattern", options.template_color)
             obj.drawLinesAlongVector(Lat.V1, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
             obj.drawLinesAlongVector(Lat.V2, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
             obj.drawLinesAlongVector(Lat.V3, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.MexHandle("selectAndSavePatternAsBMP", false)
+        end
+
+        function drawCirclesOnSite(obj, Lat, sites, options)
+            arguments
+                obj
+                Lat
+                sites
+                options.radius = 5
+                options.draw_color = 0xFFAAAAAA
+                options.template_color = 0xFF000000
+            end
+            real_coor = Lat.convert2Real(sites) - [1, 1];
+            obj.MexHandle("resetPattern", options.template_color)
+            for i = 1: size(real_coor, 1)
+                obj.MexHandle("drawCircleOnReal", real_coor(i, 1), real_coor(i, 2), options.radius, options.draw_color)
+            end
             obj.MexHandle("selectAndSavePatternAsBMP", false)
         end
         

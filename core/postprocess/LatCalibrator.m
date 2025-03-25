@@ -43,6 +43,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibProjector_Verbose = true
         CalibProjector_Debug = false
         PlotProjection_AddGuide = true
+        PlotProjection_RawImage = false
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
@@ -187,6 +188,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 opt.camera2 = obj.CalibProjector_Camera2 % Atom camera
                 opt.label2 = obj.CalibProjector_Label2
                 opt.add_guide = obj.PlotProjection_AddGuide
+                opt.raw_image = obj.PlotProjection_RawImage
             end
             LatProj = obj.LatCalib.(opt.projector);
             LatCam = obj.LatCalib.(opt.camera);
@@ -202,18 +204,32 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             ax(1) = subplot(1, 3, 1);
             ax(2) = subplot(1, 3, 2);
             ax(3) = subplot(1, 3, 3);
-            content = {transformed_template, transformed_signal, transformed_signal2};
+            transformed = {transformed_template, transformed_signal, transformed_signal2};
+            raw = {Projector.Pattern2RGB(template), signal, signal2};
+            LatRaw = {LatProj, LatCam, LatAtom};
             title_label = [LatProj.ID, LatCam.ID, LatAtom.ID];
             for i = 1: 3
                 axes(ax(i)) %#ok<LAXES>
-                imagesc(y_range, x_range, content{i})
+                if opt.raw_image
+                    imagesc(raw{i})
+                    if opt.add_guide
+                        Lat = LatRaw{i};
+                        Lat.plot()
+                        Lat.plotV()
+                        Lat.plotHash('x_lim',[0, size(raw{i}, 1)], ...
+                            'y_lim', [0, size(raw{i}, 2)])
+                    end
+                else
+                    imagesc(y_range, x_range, transformed{i})
+                    if opt.add_guide
+                        LatSTD.plot()
+                        LatSTD.plotV()
+                        LatSTD.plotHash('x_lim', [x_range(1), x_range(end)], ...
+                            'y_lim', [y_range(1), y_range(end)])
+                    end
+                end
                 axis("image")
                 title(title_label(i))
-                if opt.add_guide
-                    LatSTD.plot()
-                    LatSTD.plotV()
-                    LatSTD.plotHash('x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
-                end
             end
         end
 

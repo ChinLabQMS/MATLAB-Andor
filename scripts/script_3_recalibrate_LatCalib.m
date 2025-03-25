@@ -53,7 +53,7 @@ p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 5), 'debug', f
 p.plotTransformed("x_lim", [-30, 30], "y_lim", [-30, 30], "index", 1)
 
 %% Plot the averaged signal to check full calibration
-p.plotProjection("add_guide", true)
+p.plotProjection("add_guide", false, 'raw_image', false)
 
 %% Save re-calibration result
 close all
