@@ -101,15 +101,19 @@ p.calibrateO(20, 'sites', SiteGrid.prepareSite('Hex', 'latr', 2), 'plot_diagnost
 %% Plot an example of transformed signal to look at the overall calibration
 p.plotTransformed("x_lim", [-20, 20], "y_lim", [-20, 20], "index", 1)
 
-%% Cross-calibrate camera and projector
-% Projector needs to project a pattern of two vertical lines and two
-% horizontal lines, matching the default template image
-p.calibrateProjectorPattern(1)
+%% Cross-calibrate Zelux and DMD with atom signal on Andor19330
+% Please make sure that the projected signal is hash cross pattern
+% Turn on debug mode such that only diagnostic plots are generated, the
+% actual lattice parameters are not updated
+p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'debug', true)
 
-%%
-% Check the image of pattern on camera (Zelux) and the actual 
-% pattern (real-space, "template") with atom density
-p.plotProjection()
+%% Pick the site with highest similarity and input the coordinate for calibrating Zelux
+p.LatCalib.Zelux.init([542.331, 559.936], 'format', 'R')
+p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 5), 'debug', false)
+
+%% Plot the averaged signal to check full calibration
+p.plotProjection('add_guide', false)
+p.plotProjection('add_guide', true)
 
 %% Save lattice calibration of all three cameras
 % Default is "calibration/LatCalib_<today's date>.mat" for a record

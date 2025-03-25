@@ -402,8 +402,8 @@
             arguments
                 obj
                 signal 
-                x_range 
-                y_range
+                x_range = 1: size(signal, 1)
+                y_range = 1: size(signal, 2)
                 options1.r = obj.Standard_R
                 options1.v1 = obj.Standard_V1
                 options1.v2 = obj.Standard_V2
@@ -416,6 +416,10 @@
             x_range2 = options2.x_lim(1): 1/options2.scale: options2.x_lim(2);
             y_range2 = options2.y_lim(1): 1/options2.scale: options2.y_lim(2);
             transformed2 = obj.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
+            if ~isempty(obj.ProjectorV)
+                Lat2.ProjectorV = obj.ProjectorV / obj.V * Lat2.V;
+                Lat2.ProjectorR = (obj.ProjectorR - obj.R) / obj.V * Lat2.V;
+            end
         end
 
         function [transformed2, x_range2, y_range2, Lat2] = transformSignalStandardCrop(obj, signal, crop_R, varargin)
@@ -536,20 +540,13 @@
         end
 
         % Calibrate the origin of obj to Lat2 based on signal overlapping,
-        % with cropped signal
-        function calibrateOCrop(obj, Lat2, signal, signal2, ...
-                crop_R, varargin)
-            [signal, x_range, y_range] = prepareBox(signal, obj.R, crop_R);
-            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R);
-            obj.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:})
-        end
-
-        % Calibrate the origin of obj to Lat2 based on signal overlapping,
         % with cropped signal, crop radius is in the unit of lattice
         % spacing
         function calibrateOCropSite(obj, Lat2, signal, signal2, ...
                 crop_R_site, varargin)
-            obj.calibrateOCrop(Lat2, signal, signal2, crop_R_site * obj.V_norm, varargin{:})
+            [signal, x_range, y_range] = prepareBox(signal, obj.R, crop_R_site * obj.V_norm);
+            [signal2, x_range2, y_range2] = prepareBox(signal2, Lat2.R, crop_R_site * Lat2.V_norm);
+            obj.calibrateO(Lat2, signal, signal2, x_range, y_range, x_range2, y_range2, varargin{:})
         end
 
         % Assume current obj is in projector space, calibrate the lattice
@@ -1119,26 +1116,32 @@ end
 function plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
                 x_range, y_range, x_range2, y_range2, convert_to_signal)
     figure('Name', 'Cross-calibrated transformed images')
-    subplot(1, 3, 1)
-    imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
-    Lat2.plot()
-    Lat2.plotV()
-    subplot(1, 3, 2)
-    imagesc2(y_range, x_range, signal, "title", sprintf("%s: calibrated", obj.ID))
-    obj.plot()
-    obj.plotV()
-    viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
-        'EnhanceVisibility', false, 'LineWidth', 0.5);
-    subplot(1, 3, 3)
     if convert_to_signal
+        subplot(1, 2, 1)
+        imagesc2(y_range, x_range, signal, "title", sprintf("%s: reference", obj.ID))
+        obj.plot()
+        obj.plotV()
+        viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
+            'EnhanceVisibility', false, 'LineWidth', 0.5);
+        subplot(1, 2, 2)
         imagesc2(y_range, x_range, best_transformed, "title", sprintf("%s: best transformed from %s", obj.ID, Lat2.ID))
         obj.plot()
         obj.plotV()
         viscircles(R_init(2:-1:1), 0.5*obj.V_norm, 'Color', 'w', ...
             'EnhanceVisibility', false, 'LineWidth', 0.5);
     else
+        R_init = obj.transform(Lat2, R_init);
+        subplot(1, 2, 1)
+        imagesc2(y_range2, x_range2, signal2, "title", sprintf("%s: reference", Lat2.ID))
+        Lat2.plot()
+        Lat2.plotV()
+        viscircles(R_init(2:-1:1), 0.5*Lat2.V_norm, 'Color', 'w', ...
+            'EnhanceVisibility', false, 'LineWidth', 0.5);
+        subplot(1, 2, 2)
         imagesc2(y_range2, x_range2, best_transformed, "title", sprintf("%s: best transformed from %s", Lat2.ID, obj.ID))
         Lat2.plot()
         Lat2.plotV()
+        viscircles(R_init(2:-1:1), 0.5*Lat2.V_norm, 'Color', 'w', ...
+            'EnhanceVisibility', false, 'LineWidth', 0.5);
     end
 end

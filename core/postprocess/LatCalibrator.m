@@ -32,12 +32,17 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibO_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
         CalibO_Verbose = true
         CalibO_Debug = false
-        CalibProjectorPattern_Projector = "DMD"
-        CalibProjectorPattern_Camera = "Zelux"
-        CalibProjectorPattern_Label = "Pattern_532"
-        CalibProjectorPattern_PlotDiagnostic = true
-        CalibProjectorSignal_Camera = "Andor19330"
-        CalibProjectorSignal_Label = "Image"
+        CalibProjector_Projector = "DMD"
+        CalibProjector_Camera = "Zelux"
+        CalibProjector_Label = "Pattern_532"
+        CalibProjector_Camera2 = "Andor19330"
+        CalibProjector_Label2 = "Image"
+        CalibProjector_CropRSite = 20
+        CalibProjector_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
+        CalibProjector_PlotDiagnostic = true
+        CalibProjector_Verbose = true
+        CalibProjector_Debug = false
+        PlotProjection_AddGuide = true
         Recalib_ResetCenters = false
         Recalib_BinarizeCameraList = ["Andor19330", "Andor19331"]
         Recalib_CalibO = true
@@ -176,35 +181,40 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         function plotProjection(obj, opt)
             arguments
                 obj
-                opt.projector = obj.CalibProjectorPattern_Projector
-                opt.camera = obj.CalibProjectorPattern_Camera
-                opt.label = obj.CalibProjectorPattern_Label
-                opt.camera2 = obj.CalibProjectorSignal_Camera
-                opt.label2 = obj.CalibProjectorSignal_Label
+                opt.projector = obj.CalibProjector_Projector
+                opt.camera = obj.CalibProjector_Camera % Pattern camera
+                opt.label = obj.CalibProjector_Label
+                opt.camera2 = obj.CalibProjector_Camera2 % Atom camera
+                opt.label2 = obj.CalibProjector_Label2
+                opt.add_guide = obj.PlotProjection_AddGuide
             end
-            Lat2 = obj.LatCalib.(opt.camera2);
-            if isempty(Lat2.K)
-                obj.error('Please calibrate lattice vector of camera %s first!', opt.camera2)
-            end
-            template = obj.Stat.(opt.projector).Template;
+            LatProj = obj.LatCalib.(opt.projector);
+            LatCam = obj.LatCalib.(opt.camera);
+            LatAtom = obj.LatCalib.(opt.camera2);
+            template = Projector.RGB2Pattern(obj.Stat.(opt.projector).Template);
             signal = mean(obj.Signal.(opt.camera).(opt.label), 3);
             signal2 = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
+            transformed_template = LatProj.transformSignalStandard(template);
+            transformed_template = Projector.Pattern2RGB(uint32(transformed_template));
+            [transformed_signal, x_range, y_range, LatSTD] = LatCam.transformSignalStandard(signal);
+            transformed_signal2 = LatAtom.transformSignalStandard(signal2);
             figure
-            subplot(1, 3, 1)
-            imagesc(template)
-            axis("image")
-            title('Projector space')
-            subplot(1, 3, 2)
-            imagesc(signal)
-            colorbar
-            axis("image")
-            title('Camera space')
-            subplot(1, 3, 3)
-            imagesc(signal2)
-            colorbar
-            Lat2.plot()
-            axis("image")
-            title("Atom image")
+            ax(1) = subplot(1, 3, 1);
+            ax(2) = subplot(1, 3, 2);
+            ax(3) = subplot(1, 3, 3);
+            content = {transformed_template, transformed_signal, transformed_signal2};
+            title_label = [LatProj.ID, LatCam.ID, LatAtom.ID];
+            for i = 1: 3
+                axes(ax(i)) %#ok<LAXES>
+                imagesc(y_range, x_range, content{i})
+                axis("image")
+                title(title_label(i))
+                if opt.add_guide
+                    LatSTD.plot()
+                    LatSTD.plotV()
+                    LatSTD.plotHash('x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+                end
+            end
         end
 
         % Plot FFT pattern of images for calibrating specific camera
@@ -293,24 +303,36 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             Lat2 = obj.LatCalib.(opt3.camera2);
             Lat.calibrateOCropSite(Lat2, signal, signal2, opt3.crop_R_site, args{:});
         end
-
-        function calibrateProjector(obj, index, opt)
-        end
-
-        % Cross-calibrate the camera and projector
-        function calibrateProjectorPattern(obj, index, opt)
+        
+        % Cross-calibrate the camera and projector with atom images
+        function calibrateProjector(obj, opt)
             arguments
                 obj
-                index
-                opt.projector = obj.CalibProjectorPattern_Projector
-                opt.camera = obj.CalibProjectorPattern_Camera
-                opt.label = obj.CalibProjectorPattern_Label
-                opt.plot_diagnostic = obj.CalibProjectorPattern_PlotDiagnostic
+                opt.projector = obj.CalibProjector_Projector
+                opt.camera = obj.CalibProjector_Camera
+                opt.label = obj.CalibProjector_Label
+                opt.camera2 = obj.CalibProjector_Camera2
+                opt.label2 = obj.CalibProjector_Label2
+                opt.crop_R_site = obj.CalibProjector_CropRSite
+                opt.sites = obj.CalibProjector_Sites
+                opt.plot_diagnostic = obj.CalibProjector_PlotDiagnostic
+                opt.verbose = obj.CalibProjector_Verbose
+                opt.debug = obj.CalibProjector_Debug
             end
-            signal = obj.Signal.(opt.camera).(opt.label)(:, :, index);
-            LatProjector = obj.LatCalib.(opt.projector);
-            LatCamera = obj.LatCalib.(opt.camera);
-            LatProjector.calibrateProjectorPattern(signal, LatCamera)
+            LatProj = obj.LatCalib.(opt.projector);
+            LatCam = obj.LatCalib.(opt.camera);
+            LatAtom = obj.LatCalib.(opt.camera2);
+            cam_signal = mean(obj.Signal.(opt.camera).(opt.label), 3);
+            atom_signal = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
+            % Calibrate projector VR with hash pattern
+            LatCam.calibrateProjectorVRHash(cam_signal)
+            % Cross calibrate lattice origin with atom signal
+            LatCam.calibrateOCropSite(LatAtom, cam_signal, atom_signal, opt.crop_R_site, ...
+                "inverse_match", true, "covert_to_signal", false, ...
+                "calib_R", [false, true], "sites", opt.sites, ...
+                "plot_diagnosticO", opt.plot_diagnostic, "verbose", opt.verbose, "debug", opt.debug)
+            % Cross calibrate projector space lattice to camera space
+            LatProj.calibrateProjector2Camera(LatCam)
         end
         
         % Re-calibrate the lattice vectors and centers to mean image

@@ -121,3 +121,11 @@ hold on
 yline(white1/white2, '--', 'LineWidth', 2)
 legend('counts ratio', 'counts ratio with solid white pattern')
 xlabel('checkerboard size')
+
+%%
+Signal = p.process(Data);
+
+%%
+figure
+imagesc2(mean(Signal.Andor19331.Image, 3))
+Andor19331.plot()

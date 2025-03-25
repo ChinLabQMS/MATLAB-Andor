@@ -114,6 +114,7 @@ classdef Projector < BaseRunner
         function preloadPatternMemory(obj)
             for path = obj.Config.PreloadPatternPath
                 obj.MexHandle("loadPatternMemoryFromPath", path, false)
+                obj.info("Pattern loaded from path to the memory: %s", path)
             end
         end
         
@@ -158,7 +159,7 @@ classdef Projector < BaseRunner
             arguments
                 obj 
                 Lat
-                options.line_color = 0xFFFFFFFF
+                options.line_color = 0xFFAAAAAA
                 options.line_width = 5
             end
             obj.MexHandle("resetPattern", 0xFF000000)
