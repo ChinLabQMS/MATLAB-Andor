@@ -1,6 +1,8 @@
 classdef SiteCounter < BaseComputer
 
     properties (Constant)
+        LatCalib_DefaultPath = "calibration/LatCalib.mat"
+        PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
         Count_DefaultMethod = "linear_inverse"
     end
 
@@ -16,9 +18,29 @@ classdef SiteCounter < BaseComputer
     
     methods
         function obj = SiteCounter(id, lat, ps, grid)
+            arguments
+                id = "Andor19330"
+                lat = []
+                ps = []
+                grid = SiteGrid()
+            end
             obj@BaseComputer(id)
-            obj.Lattice = lat;
-            obj.PointSource = ps;
+            if isempty(lat)
+                try
+                    obj.Lattice = load(obj.LatCalib_DefaultPath).(id);
+                catch
+                    obj.warn("No lattice calibration provided!")
+                    obj.Lattice = [];
+                end
+            end
+            if isempty(ps)
+                try
+                    obj.PointSource = load(obj.PSFCalib_DefaultPath).(id);
+                catch
+                    obj.warn("No PSF calibration provided!")
+                    obj.PointSource = [];
+                end
+            end
             obj.SiteGrid = grid;
         end
 
