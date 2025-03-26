@@ -22,8 +22,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         Calibrate_PlotDiagnosticV = true
         CalibO_CropRSite = 20
         CalibO_PlotDiagnostic = true
-        CalibO_Camera = "Andor19331"
-        CalibO_Camera2 = "Andor19330"
+        CalibO_Camera = "Andor19330"
+        CalibO_Camera2 = "Andor19331"
         CalibO_Label = "Image"
         CalibO_Label2 = "Image"
         CalibO_SignalIndex = 1
@@ -35,7 +35,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
         CalibProjector_Projector = "DMD"
         CalibProjector_Camera = "Zelux"
         CalibProjector_Label = "Pattern_532"
-        CalibProjector_Camera2 = "Andor19330"
+        CalibProjector_Camera2 = "Andor19331"
         CalibProjector_Label2 = "Image"
         CalibProjector_CropRSite = 20
         CalibProjector_Sites = SiteGrid.prepareSite('Hex', 'latr', 5)
@@ -217,7 +217,7 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                         Lat.plot()
                         Lat.plotV()
                         Lat.plotHash('x_lim',[0, size(raw{i}, 1)], ...
-                            'y_lim', [0, size(raw{i}, 2)])
+                                     'y_lim', [0, size(raw{i}, 2)])
                     end
                 else
                     imagesc(y_range, x_range, transformed{i})
@@ -340,8 +340,8 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             LatAtom = obj.LatCalib.(opt.camera2);
             cam_signal = mean(obj.Signal.(opt.camera).(opt.label), 3);
             atom_signal = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
-            % Calibrate projector VR with hash pattern
-            LatCam.calibrateProjectorVRHash(cam_signal)
+            % Calibrate projector VR on camera space with hash pattern
+            LatCam.calibrateProjectorVRHash(cam_signal, 'plot_diagnostic', true)
             % Cross calibrate lattice origin with atom signal
             LatCam.calibrateOCropSite(LatAtom, cam_signal, atom_signal, opt.crop_R_site, ...
                 "inverse_match", true, "covert_to_signal", false, ...

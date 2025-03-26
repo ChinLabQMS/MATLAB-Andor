@@ -531,8 +531,10 @@
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
-                plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
-                    x_range, y_range, x_range2, y_range2, options.covert_to_signal)
+                if ~options.debug
+                    plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
+                        x_range, y_range, x_range2, y_range2, options.covert_to_signal)
+                end
             end
             if options.debug  % Reset to initial R
                 obj.R = R_init;
@@ -940,6 +942,8 @@ function [peak_pos, K, proj_density] = findProjDensityPeak(fft_ang, num_lines, .
     [proj_density, K] = getProjectionDensity(fft_ang, signal, x_range, y_range, bw, num_points);
     peak_pos{1} = findPeaks1D(proj_density{1, 1}, proj_density{1, 2}, num_lines(1));
     peak_pos{2} = findPeaks1D(proj_density{2, 1}, proj_density{2, 2}, num_lines(end));
+    peak_pos{1} = sort(peak_pos{1});
+    peak_pos{2} = sort(peak_pos{2}, 'descend');
     if plot_diagnostic
         figure('Name', 'Image projection density', 'OuterPosition',[100, 100, 1600, 600])
         ax = subplot(1, 3, 1);

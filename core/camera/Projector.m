@@ -50,9 +50,9 @@ classdef Projector < BaseRunner
                 if options.verbose
                     obj.info('Window is opened.')
                 end
+                obj.setStaticPatternPath(obj.Config.DefaultStaticPatternPath)
+                obj.preloadPatternMemory()
             end
-            obj.setStaticPatternPath(obj.Config.DefaultStaticPatternPath)
-            obj.preloadPatternMemory()
         end
         
         % Close pattern window (which will reset the memory)
@@ -140,7 +140,7 @@ classdef Projector < BaseRunner
         end
         
         % Drawing a line along vector V (1x2), passing through R (1x2)
-        function drawLinesAlongVector(obj, V, R, options)
+        function drawLineAlongVector(obj, V, R, options)
             arguments
                 obj 
                 V
@@ -164,9 +164,9 @@ classdef Projector < BaseRunner
                 options.line_width = 5
             end
             obj.MexHandle("resetPattern", options.template_color)
-            obj.drawLinesAlongVector(Lat.V1, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
-            obj.drawLinesAlongVector(Lat.V2, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
-            obj.drawLinesAlongVector(Lat.V3, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.drawLineAlongVector(Lat.V1, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.drawLineAlongVector(Lat.V2, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
+            obj.drawLineAlongVector(Lat.V3, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
             obj.MexHandle("selectAndSavePatternAsBMP", false)
         end
 

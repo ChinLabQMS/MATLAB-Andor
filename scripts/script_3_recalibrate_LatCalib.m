@@ -17,7 +17,7 @@
 clear; clc; close all
 p = LatCalibrator( ...
     "LatCalibFilePath", "calibration/LatCalib.mat", ... 
-    "DataPath", "data/2025/03 March/20250324/dense_calibration2.mat", ...
+    "DataPath", "data/2025/03 March/20250325/dense_calibration4.mat", ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"], ...
     "ProjectorList", "DMD");
@@ -27,9 +27,9 @@ p.plotSignal(1)
 
 %% Recalibrate the lattice to new dataset
 % Check diagnostic outputs to make sure all fits are reasonable
-
+close all
 p.recalibrate( ...
-    "reset_centers", 1, ...
+    "reset_centers", 0, ...
     "calibO", 1, "signal_index", 1, "sites", SiteGrid.prepareSite('Hex', 'latr', 20), ... % Specify the shot index for cross calibration
     "plot_diagnosticV", 1, ...
     "plot_diagnosticR", 1, ...
@@ -46,14 +46,14 @@ p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'debug', 
 % Or directly run the calibration algorithm with debug mode off if the
 % initial center is close
 close all
-p.LatCalib.Zelux.init([586.071, 468.551], 'format', 'R')
+p.LatCalib.Zelux.init([596.174, 444.202], 'format', 'R')
 p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 5), 'debug', false)
 
 %% Plot an example shot of transformed images
 p.plotTransformed("x_lim", [-30, 30], "y_lim", [-30, 30], "index", 1)
 
 %% Plot the averaged signal to check full calibration
-p.plotProjection("add_guide", false, 'raw_image', false)
+p.plotProjection("add_guide", true, 'raw_image', false)
 
 %% Save re-calibration result
 close all
