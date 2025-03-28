@@ -34,10 +34,11 @@
         CalibProjectorVRHash_HashYLine = [666, 816]
         CalibProjectorVRHash_FFTAngKDE_BW = 1
         CalibProjectorVRHash_FFTAngKDE_Points = linspace(0, 180, 3600)
-        CalibProjectorVRHash_FFTAng_PeakOrder = 'ascend'
+        CalibProjectorVRHash_FFTAng_PeakOrder = "ascend"
         CalibProjectorVRHash_FFTAng_PlotDiagnostic = false
         CalibProjectorVRHash_ProjKDE_BW = 1
         CalibProjectorVRHash_ProjKDE_NPoints = 10000
+        CalibProjectorVRHash_ProjKDE_PeakOrder = ["ascend", "descend"]
         CalibProjectorVRHash_ProjKDE_PlotDiagnostic = false
         CalibProjectorVRHash_ProjectorSize = [1482, 1481]
         CalibProjectorVRHash_TemplatePath = "resources/pattern_line/gray_square_on_black_spacing=150/template/width=5.bmp"
@@ -584,6 +585,7 @@
                 opt2.fftang_plot_diagnostic = obj.CalibProjectorVRHash_FFTAng_PlotDiagnostic
                 opt2.proj_kde_bw = obj.CalibProjectorVRHash_ProjKDE_BW
                 opt2.proj_kde_npoints = obj.CalibProjectorVRHash_ProjKDE_NPoints
+                opt2.proj_kde_peak_order = obj.CalibProjectorVRHash_ProjKDE_PeakOrder
                 opt2.proj_plot_diagnostic = obj.CalibProjectorVRHash_ProjKDE_PlotDiagnostic
                 opt3.template_path = obj.CalibProjectorVRHash_TemplatePath
                 opt3.plot_diagnostic = obj.CalibProjectorVRHash_PlotDiagnostic
@@ -592,7 +594,8 @@
                 opt2.fftang_kde_points, opt2.fftang_peak_order, ...
                 opt2.fftang_plot_diagnostic);
             [peak_pos, norm_K] = findProjDensityPeak(fft_ang, 2, signal, x_range, y_range, ...
-                opt2.proj_kde_bw, opt2.proj_kde_npoints, opt2.proj_plot_diagnostic);
+                opt2.proj_kde_bw, opt2.proj_kde_npoints, opt2.proj_kde_peak_order, ...
+                opt2.proj_plot_diagnostic);
             [obj.ProjectorV, obj.ProjectorR] = mapLineFeatures( ...
                 opt1.hash_xline, opt1.hash_yline, peak_pos, norm_K);
             if opt3.plot_diagnostic
@@ -938,12 +941,12 @@ function [proj_density, K] = getProjectionDensity(proj_ang, signal, x_range, y_r
 end
 
 function [peak_pos, K, proj_density] = findProjDensityPeak(fft_ang, num_lines, ...
-    signal, x_range, y_range, bw, num_points, plot_diagnostic)
+    signal, x_range, y_range, bw, num_points, peak_order, plot_diagnostic)
     [proj_density, K] = getProjectionDensity(fft_ang, signal, x_range, y_range, bw, num_points);
     peak_pos{1} = findPeaks1D(proj_density{1, 1}, proj_density{1, 2}, num_lines(1));
     peak_pos{2} = findPeaks1D(proj_density{2, 1}, proj_density{2, 2}, num_lines(end));
-    peak_pos{1} = sort(peak_pos{1});
-    peak_pos{2} = sort(peak_pos{2}, 'descend');
+    peak_pos{1} = sort(peak_pos{1}, peak_order(1));
+    peak_pos{2} = sort(peak_pos{2}, peak_order(2));
     if plot_diagnostic
         figure('Name', 'Image projection density', 'OuterPosition',[100, 100, 1600, 600])
         ax = subplot(1, 3, 1);
