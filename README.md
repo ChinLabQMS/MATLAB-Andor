@@ -21,7 +21,7 @@ The code includes classes for controlling the following devices:
 - Thorlabs Zelux CMOS camera
 - Texas Instruments DLP LightCrafter 4500 Evaluation Module (DMD) as projector of optical patterns
 
-The class definitions are under [camera](camera/) folder.
+The class definitions are under [camera](core/camera/) folder.
 
 ### Image processing and analysis
 

@@ -3,7 +3,10 @@ classdef SiteCounter < BaseComputer
     properties (Constant)
         LatCalib_DefaultPath = "calibration/LatCalib.mat"
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
-        Count_DefaultMethod = "linear_inverse"
+        Count_CalibMode = "offset"
+        Count_CountMethod = "linear_inverse"
+        Count_ClassifyMethod = "single_threshold"
+        Count_PlotDiagnostic = false
     end
 
     properties (SetAccess = immutable)
@@ -13,6 +16,8 @@ classdef SiteCounter < BaseComputer
     end
 
     properties (SetAccess = protected)
+        SiteCenters
+        TransformMatrix
         DeconvPattern
     end
     
@@ -29,7 +34,7 @@ classdef SiteCounter < BaseComputer
                 try
                     obj.Lattice = load(obj.LatCalib_DefaultPath).(id);
                 catch
-                    obj.warn("No lattice calibration provided!")
+                    obj.error("No lattice calibration provided!")
                     obj.Lattice = [];
                 end
             end
@@ -42,6 +47,7 @@ classdef SiteCounter < BaseComputer
                 end
             end
             obj.SiteGrid = grid;
+            obj.updateSiteCenters()
         end
 
         function stat = count(obj, signal, x_range, y_range, options)
@@ -50,30 +56,80 @@ classdef SiteCounter < BaseComputer
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
-                options.count_method = obj.Count_DefaultMethod
+                options.count_method = obj.Count_CountMethod
+                options.classify_method = obj.Count_ClassifyMethod
+                options.calib_mode = obj.Count_CalibMode
+                options.plot_diagnostic = obj.Count_PlotDiagnostic
             end
-            stat = obj.SiteGrid.struct();
+            switch options.calib_mode
+                case "full"
+                    obj.Lattice.calibrate(signal, x_range, y_range)
+                    obj.updateSiteCenters()
+                case "offset"
+                    obj.Lattice.calibrateR(signal, x_range, y_range)
+                    obj.updateSiteCenters()
+                case "none"
+                otherwise
+                    obj.error("Unsupported calibration mode: %s!", options.calib_mode)
+            end
+            stat.SiteInfo = obj.SiteGrid.struct(obj.SiteGrid.VisibleProp);
+            stat.SiteInfo.SiteCenters = obj.SiteCenters;
+            stat.SiteInfo.CountMethod = options.count_method;
+            stat.SiteInfo.CalibMode = options.calib_mode;
             switch options.count_method
-                case "max_signal"
-
+                case "center_signal"
+                    stat = getCount_CenterSignal(stat, signal, x_range, y_range);
+                case "circle_sum"
+                    stat = getCount_CircleSum(stat, signal, x_range, y_range);
                 case "linear_inverse"
+                    stat = getCount_LinearInverse(stat, signal, x_range, y_range);
+            end
+            if options.plot_diagnostic
+                plotCounts(stat, signal, x_range, y_range, obj.Lattice)
             end
         end
 
-        function updateDeconvPattern(obj)
+        function updateSiteCenters(obj)
+            if ~isempty(obj.Lattice)
+                obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
+            end
         end
     end
 
-    methods (Access = protected)
-        function count = getCount_MaxSignal(obj, signal, x_range, y_range)
-            
-        end
-        
-        function count = getCount_LinearInverse(obj, signal, x_range, y_range)
-        
-        end
-    end
+end
 
+%% Functions to extract site counts from signal image
+function stat = getCount_CenterSignal(stat, signal, x_range, y_range)
+    site_centers = round(stat.SiteInfo.SiteCenters);
+    index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
+    stat.LatCount = signal(index);
+end
+
+function stat = getCount_CircleSum(stat, signal, x_range, y_range)
+    
+end
+
+function stat = getCount_LinearInverse(stat, signal, x_range, y_range)
+    
+end
+
+%%
+function plotCounts(stat, signal, x_range, y_range, lat)
+    bg = zeros(size(signal));
+    figure
+    subplot(1, 2, 1)
+    imagesc2(y_range, x_range, signal)
+    lat.plot(stat.SiteInfo.Sites)
+    title('Signal')
+    limts = clim();
+    subplot(1, 2, 2)
+    imagesc2(y_range, x_range, bg)
+    hold on
+    scatter3(stat.SiteInfo.SiteCenters(:, 2), stat.SiteInfo.SiteCenters(:, 1), stat.LatCount, 10, stat.LatCount, 'filled')
+    lat.plot(stat.SiteInfo.Sites, 'diff_origin', false, 'filled', true, ...
+        'norm_radius', 0.45, 'fill_color', stat.LatCount)
+    lat.plot(stat.SiteInfo.Sites)
+    clim(limts)
 end
 
 function Count = getCount(Signal,XStart,Deconv)

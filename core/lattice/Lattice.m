@@ -622,7 +622,7 @@
                 obj
             end
             arguments (Repeating)
-                varargin
+                varargin  % Optional, site index/ax handle
             end
             arguments
                 opt1.center = obj.R
@@ -635,6 +635,8 @@
                 opt2.diff_origin = true
                 opt2.origin_radius = 0.5
                 opt2.line_width = 0.5
+                opt2.filled = false
+                opt2.fill_color = [1, 0, 0]
             end
             if isempty(varargin)
                 ax = gca();
@@ -660,8 +662,9 @@
             else
                 radius = opt2.norm_radius * obj.V_norm;
             end
-            h = viscircles(ax, corr(:, 2:-1:1), radius, ...
-                'Color', opt2.color, 'EnhanceVisibility', false, 'LineWidth', opt2.line_width);
+            h = viscircles2(ax, corr(:, 2:-1:1), radius, ...
+                'Color', opt2.color, 'EnhanceVisibility', false, ...
+                'LineWidth', opt2.line_width, 'Filled', opt2.filled, 'FillColor', opt2.fill_color);
             % Output the handle to the group of circles
             if nargout == 1
                 varargout{1} = h;
