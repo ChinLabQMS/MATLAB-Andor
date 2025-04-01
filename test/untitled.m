@@ -3,9 +3,21 @@ Signal = p.process(Data);
 load("calibration/LatCalib.mat")
 
 %%
-signal = mean(Signal.Andor19331.Image, 3);
+signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
 [signal, x_range, y_range] = prepareBox(signal, Andor19331.R, 150);
 
+%%
+counter = SiteCounter("Andor19331");
+
+%%
+tic
+stat = counter.count(signal, x_range, y_range, 'plot_diagnostic', false, 'calib_mode', 'none');
+toc
+
+%%
+histogram(stat.LatCount, 100)
+
+%%
 figure
 subplot(1, 2, 1)
 imagesc2(y_range, x_range, signal)

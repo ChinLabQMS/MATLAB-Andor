@@ -4,7 +4,7 @@ classdef SiteCounter < BaseComputer
         LatCalib_DefaultPath = "calibration/LatCalib.mat"
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
         Count_CalibMode = "offset"
-        Count_CountMethod = "linear_inverse"
+        Count_CountMethod = "center_signal"
         Count_ClassifyMethod = "single_threshold"
         Count_PlotDiagnostic = false
     end
@@ -83,9 +83,16 @@ classdef SiteCounter < BaseComputer
                     stat = getCount_CircleSum(stat, signal, x_range, y_range);
                 case "linear_inverse"
                     stat = getCount_LinearInverse(stat, signal, x_range, y_range);
+                otherwise
+                    obj.error('Unsupported counting method: %s!', options.count_method)
+            end
+            switch options.classify_method
+                case "single_threshold"
+                otherwise
+                    obj.error('Unsupported classification method: %s!', options.classify_method)
             end
             if options.plot_diagnostic
-                plotCounts(stat, signal, x_range, y_range, obj.Lattice)
+                plotDiagnostic(stat, signal, x_range, y_range, obj.Lattice)
             end
         end
 
@@ -114,21 +121,20 @@ function stat = getCount_LinearInverse(stat, signal, x_range, y_range)
 end
 
 %%
-function plotCounts(stat, signal, x_range, y_range, lat)
-    bg = zeros(size(signal));
+function plotDiagnostic(stat, signal, x_range, y_range, lat)
     figure
     subplot(1, 2, 1)
     imagesc2(y_range, x_range, signal)
     lat.plot(stat.SiteInfo.Sites)
+    lat.plotV()
     title('Signal')
     limts = clim();
     subplot(1, 2, 2)
-    imagesc2(y_range, x_range, bg)
+    lat.plotCounts(stat.SiteInfo.Sites, stat.LatCount, 'filter', true, ...
+        'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
     hold on
-    scatter3(stat.SiteInfo.SiteCenters(:, 2), stat.SiteInfo.SiteCenters(:, 1), stat.LatCount, 10, stat.LatCount, 'filled')
-    lat.plot(stat.SiteInfo.Sites, 'diff_origin', false, 'filled', true, ...
-        'norm_radius', 0.45, 'fill_color', stat.LatCount)
-    lat.plot(stat.SiteInfo.Sites)
+    lat.plotV()
+    title('Counts')
     clim(limts)
 end
 

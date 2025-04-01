@@ -51,7 +51,8 @@ end
 
 % Fill the circles
 if options.Filled && isnumeric(options.FillColor)
-    fill(x_nonan, y_nonan, options.FillColor, 'Parent', h, 'LineStyle', 'none')
+    fill(x_nonan, y_nonan, options.FillColor, 'Parent', h, ...
+        'LineStyle', 'none', 'HitTest', false)
 else
     % Draw the thinner foreground colored circle
     line(x,y,'Parent',h, ...

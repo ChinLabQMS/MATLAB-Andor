@@ -635,8 +635,6 @@
                 opt2.diff_origin = true
                 opt2.origin_radius = 0.5
                 opt2.line_width = 0.5
-                opt2.filled = false
-                opt2.fill_color = [1, 0, 0]
             end
             if isempty(varargin)
                 ax = gca();
@@ -653,20 +651,73 @@
             obj.checkInitialized()
             opt1.remove_origin = opt2.diff_origin;
             args = namedargs2cell(opt1);
-            corr = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
+            coor = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
             % Use a different radius to display origin
             if opt2.diff_origin
-                radius = [repmat(opt2.norm_radius * obj.V_norm, size(corr, 1), 1);
+                radius = [repmat(opt2.norm_radius * obj.V_norm, size(coor, 1), 1);
                           repmat(opt2.origin_radius * obj.V_norm, size(opt1.center, 1), 1)];
-                corr = [corr; opt1.center];
+                coor = [coor; opt1.center];
             else
                 radius = opt2.norm_radius * obj.V_norm;
             end
-            h = viscircles2(ax, corr(:, 2:-1:1), radius, ...
+            h = viscircles2(ax, coor(:, 2:-1:1), radius, ...
                 'Color', opt2.color, 'EnhanceVisibility', false, ...
-                'LineWidth', opt2.line_width, 'Filled', opt2.filled, 'FillColor', opt2.fill_color);
+                'LineWidth', opt2.line_width);
             % Output the handle to the group of circles
             if nargout == 1
+                varargout{1} = h;
+            end
+        end
+        
+        % Plot a count distribution
+        function varargout = plotCounts(obj, varargin, opt1, opt2)
+            arguments
+                obj
+            end
+            arguments (Repeating)
+                varargin
+            end
+            arguments
+                opt1.center = obj.R
+                opt1.filter = false
+                opt1.x_lim = [1, 1440]
+                opt1.y_lim = [1, 1440]
+                opt1.full_range = false
+                opt2.fill_radius = 0.45
+                opt2.add_background = true
+            end
+            if isempty(varargin)
+                ax = gca();
+                sites = SiteGrid.prepareSite('Hex', 'latr', 20);
+                counts = zeros(height(sites), 1);
+            elseif length(varargin) == 2
+                ax = gca();
+                sites = varargin{1};
+                counts = varargin{2};
+            elseif length(varargin) == 3
+                ax = varargin{1};
+                sites = varargin{2};
+                counts = varargin{3};
+            else
+                obj.error("Unsupported number of input positional arguments.")
+            end
+            obj.checkInitialized()
+            c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
+            args = namedargs2cell(opt1);
+            coor = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
+            counts = reshape(counts, [], 1);
+            radius = opt2.fill_radius * obj.V_norm;
+            if opt2.add_background
+                bg = zeros(opt1.x_lim(2) - opt1.x_lim(1), opt1.y_lim(2) - opt1.y_lim(1));
+                imagesc2(ax, opt1.y_lim(1):opt1.y_lim(2), opt1.x_lim(1):opt1.x_lim(2), bg);
+            end
+            h = viscircles2(ax, coor(:, 2:-1:1), radius, ...
+                'Color', 'r', 'EnhanceVisibility', false, ...
+                'LineWidth', 0, 'Filled', true, 'FillColor', counts);
+            hold on
+            scatter(ax, coor(:, 2), coor(:, 1), 5, counts, "filled");
+            % Output the handle to the group of circles
+            if nargout > 0
                 varargout{1} = h;
             end
         end
