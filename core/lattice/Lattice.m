@@ -668,9 +668,50 @@
                 varargout{1} = h;
             end
         end
+
+        function varargout = plotOccup(obj, varargin, opt1, opt2)
+            arguments
+                obj
+            end
+            arguments (Repeating)
+                varargin 
+            end
+            arguments
+                opt1.center = obj.R
+                opt1.filter = false
+                opt1.x_lim = [1, 1440]
+                opt1.y_lim = [1, 1440]
+                opt2.occup_color = 'r'
+                opt2.unoccup_color = 'w'
+                opt2.radius = 0.1
+            end
+            if isempty(varargin)
+                ax = gca();
+                occup = SiteGrid.prepareSite('Hex', 'latr', 20);
+                unoccup = zeros(0, 2);
+            elseif length(varargin) == 2
+                ax = gca();
+                occup = varargin{1};
+                unoccup = varargin{2};
+            elseif length(varargin) == 3
+                ax = varargin{1};
+                occup = varargin{2};
+                unoccup = varargin{3};
+            else
+                obj.error("Unsupported number of input positional arguments.")
+            end
+            args = namedargs2cell(opt1);
+            h_occup = obj.plot(ax, occup, args{:}, 'diff_origin', false, ...
+                'norm_radius', opt2.radius, 'color', opt2.occup_color);
+            h_unoccup = obj.plot(ax, unoccup, args{:}, 'diff_origin', false, ...
+                'norm_radius', opt2.radius, 'color', opt2.unoccup_color);
+            if nargout == 1
+                varargout = [h_occup, h_unoccup];
+            end
+        end
         
         % Plot a count distribution
-        function varargout = plotCounts(obj, varargin, opt1, opt2)
+        function plotCounts(obj, varargin, opt1, opt2)
             arguments
                 obj
             end
@@ -711,15 +752,11 @@
                 bg = zeros(opt1.x_lim(2) - opt1.x_lim(1), opt1.y_lim(2) - opt1.y_lim(1));
                 imagesc2(ax, opt1.y_lim(1):opt1.y_lim(2), opt1.x_lim(1):opt1.x_lim(2), bg);
             end
-            h = viscircles2(ax, coor(:, 2:-1:1), radius, ...
+            viscircles2(ax, coor(:, 2:-1:1), radius, ...
                 'Color', 'r', 'EnhanceVisibility', false, ...
                 'LineWidth', 0, 'Filled', true, 'FillColor', counts);
             hold on
             scatter(ax, coor(:, 2), coor(:, 1), 5, counts, "filled");
-            % Output the handle to the group of circles
-            if nargout > 0
-                varargout{1} = h;
-            end
         end
         
         % Plot lattice vectors

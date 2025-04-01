@@ -6,6 +6,8 @@ classdef SiteCounter < BaseComputer
         Count_CalibMode = "offset"
         Count_CountMethod = "center_signal"
         Count_ClassifyMethod = "single_threshold"
+        Count_SingleThreshold = 80
+        Count_SiteCircleRadius = 2
         Count_PlotDiagnostic = false
     end
 
@@ -17,6 +19,8 @@ classdef SiteCounter < BaseComputer
 
     properties (SetAccess = protected)
         SiteCenters
+        SiteCircleX
+        SiteCircleY
         TransformMatrix
         DeconvPattern
     end
@@ -47,95 +51,114 @@ classdef SiteCounter < BaseComputer
                 end
             end
             obj.SiteGrid = grid;
-            obj.updateSiteCenters()
+            obj.updateSiteProp()
         end
 
-        function stat = count(obj, signal, x_range, y_range, options)
+        function stat = count(obj, signal, x_range, y_range, opt, opt1)
             arguments
                 obj
                 signal
                 x_range = 1: size(signal, 1)
                 y_range = 1: size(signal, 2)
-                options.count_method = obj.Count_CountMethod
-                options.classify_method = obj.Count_ClassifyMethod
-                options.calib_mode = obj.Count_CalibMode
-                options.plot_diagnostic = obj.Count_PlotDiagnostic
+                opt.calib_mode = obj.Count_CalibMode
+                opt.count_method = obj.Count_CountMethod
+                opt.classify_method = obj.Count_ClassifyMethod
+                opt.single_threshold = obj.Count_SingleThreshold
+                opt.plot_diagnostic = obj.Count_PlotDiagnostic
+                opt1.site_circle_radius = obj.Count_SiteCircleRadius
             end
-            switch options.calib_mode
+            switch opt.calib_mode
                 case "full"
                     obj.Lattice.calibrate(signal, x_range, y_range)
-                    obj.updateSiteCenters()
+                    args = namedargs2cell(opt1);
+                    obj.updateSiteProp(args{:})
                 case "offset"
                     obj.Lattice.calibrateR(signal, x_range, y_range)
-                    obj.updateSiteCenters()
+                    args = namedargs2cell(opt1);
+                    obj.updateSiteProp(args{:})
                 case "none"
                 otherwise
-                    obj.error("Unsupported calibration mode: %s!", options.calib_mode)
+                    obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
             end
             stat.SiteInfo = obj.SiteGrid.struct(obj.SiteGrid.VisibleProp);
-            stat.SiteInfo.SiteCenters = obj.SiteCenters;
-            stat.SiteInfo.CountMethod = options.count_method;
-            stat.SiteInfo.CalibMode = options.calib_mode;
-            switch options.count_method
+            stat.SiteInfo.CountMethod = opt.count_method;
+            stat.SiteInfo.CalibMode = opt.calib_mode;
+            switch opt.count_method
                 case "center_signal"
-                    stat = getCount_CenterSignal(stat, signal, x_range, y_range);
+                    stat = getCount_CenterSignal(obj, stat, signal, x_range, y_range);
                 case "circle_sum"
-                    stat = getCount_CircleSum(stat, signal, x_range, y_range);
+                    stat = getCount_CircleSum(obj, stat, signal, x_range, y_range);
                 case "linear_inverse"
-                    stat = getCount_LinearInverse(stat, signal, x_range, y_range);
+                    stat = getCount_LinearInverse(obj, stat, signal, x_range, y_range);
                 otherwise
-                    obj.error('Unsupported counting method: %s!', options.count_method)
+                    obj.error('Unsupported counting method: %s!', opt.count_method)
             end
-            switch options.classify_method
+            switch opt.classify_method
                 case "single_threshold"
+                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt.single_threshold);
                 otherwise
-                    obj.error('Unsupported classification method: %s!', options.classify_method)
+                    obj.error('Unsupported classification method: %s!', opt.classify_method)
             end
-            if options.plot_diagnostic
-                plotDiagnostic(stat, signal, x_range, y_range, obj.Lattice)
+            if opt.plot_diagnostic
+                plotCountsDiagnostic(stat, signal, x_range, y_range, obj.Lattice)
             end
         end
 
-        function updateSiteCenters(obj)
-            if ~isempty(obj.Lattice)
-                obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
+        function updateSiteProp(obj, options)
+            arguments
+                obj 
+                options.site_circle_radius = obj.Count_SiteCircleRadius
             end
+            if isempty(obj.Lattice)
+                return
+            end
+            obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
+            r = options.site_circle_radius;
+            [Y, X] = meshgrid(-r:r, -r:r);
+            idx = X(:).^2 + Y(:).^2 <= r^2;
+            X = X(idx);
+            Y = Y(idx);
+            obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
+            obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
         end
     end
 
 end
 
 %% Functions to extract site counts from signal image
-function stat = getCount_CenterSignal(stat, signal, x_range, y_range)
-    site_centers = round(stat.SiteInfo.SiteCenters);
+function stat = getCount_CenterSignal(obj, stat, signal, x_range, y_range)
+    site_centers = round(obj.SiteCenters);
     index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
     stat.LatCount = signal(index);
 end
 
-function stat = getCount_CircleSum(stat, signal, x_range, y_range)
-    
+function stat = getCount_CircleSum(obj, stat, signal, x_range, y_range)
+    index = obj.SiteCircleX - x_range(1) + (obj.SiteCircleY - y_range(1)) * length(x_range);
+    stat.LatCount = sum(reshape(signal(index), size(obj.SiteCircleX)), 2);
 end
 
-function stat = getCount_LinearInverse(stat, signal, x_range, y_range)
-    
+function stat = getCount_LinearInverse(obj, stat, signal, x_range, y_range)    
+end
+
+%% Functions to extract occupancies from counts
+function occup = getOccup_SingleThreshold(counts, threshold)
+    occup = counts > threshold;
 end
 
 %%
-function plotDiagnostic(stat, signal, x_range, y_range, lat)
-    figure
+function plotCountsDiagnostic(stat, signal, x_range, y_range, lat)
+    figure('Name', 'Diagnostic plots for counts reconstruction')
     subplot(1, 2, 1)
     imagesc2(y_range, x_range, signal)
     lat.plot(stat.SiteInfo.Sites)
     lat.plotV()
     title('Signal')
-    limts = clim();
     subplot(1, 2, 2)
     lat.plotCounts(stat.SiteInfo.Sites, stat.LatCount, 'filter', true, ...
         'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
     hold on
     lat.plotV()
     title('Counts')
-    clim(limts)
 end
 
 function Count = getCount(Signal,XStart,Deconv)

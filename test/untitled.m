@@ -1,3 +1,7 @@
+clear; clc; close all
+
+Data = load("data/2025/03 March/20250326/dense_no_green.mat").Data;
+
 p = Preprocessor();
 Signal = p.process(Data);
 load("calibration/LatCalib.mat")
@@ -10,12 +14,17 @@ signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
 counter = SiteCounter("Andor19331");
 
 %%
-tic
-stat = counter.count(signal, x_range, y_range, 'plot_diagnostic', false, 'calib_mode', 'none');
-toc
+stat1 = counter.count(signal, x_range, y_range, 'plot_diagnostic', true, 'count_method', "circle_sum");
 
 %%
-histogram(stat.LatCount, 100)
+stat2 = counter.count(signal, x_range, y_range, 'plot_diagnostic', true, 'count_method', "center_signal");
+
+%%
+figure
+histogram(stat1.LatCount, 100)
+
+figure
+histogram(stat2.LatCount, 100)
 
 %%
 figure
@@ -26,7 +35,9 @@ subplot(1, 2, 2)
 imagesc2(y_range, x_range, signal)
 Andor19331.plot()
 Andor19331.plotV()
+Andor19331.plotOccup(stat2.SiteInfo.Sites(stat2.LatOccup, :), stat2.SiteInfo.Sites(~stat2.LatOccup, :))
 
+%%
 sites = SiteGrid.prepareSite("Rect", "latx_range", -20:5:20, "laty_range", -20: 5: 20);
 Andor19331.plot(sites, 'color', 'w', 'norm_radius', 0.5, 'filter', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
 
