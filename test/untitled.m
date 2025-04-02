@@ -2,22 +2,22 @@ clear; clc; close all
 
 Data = load("data/2025/03 March/20250326/dense_no_green.mat").Data;
 
+%%
 p = Preprocessor();
 Signal = p.process(Data);
 load("calibration/LatCalib.mat")
 
 %%
 signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
-[signal, x_range, y_range] = prepareBox(signal, Andor19331.R, 150);
 
 %%
 counter = SiteCounter("Andor19331");
 
 %%
-stat1 = counter.count(signal, x_range, y_range, 'plot_diagnostic', true, 'count_method', "circle_sum");
+stat1 = counter.count(signal, 2, 'plot_diagnostic', true, 'count_method', "circle_sum");
 
 %%
-stat2 = counter.count(signal, x_range, y_range, 'plot_diagnostic', true, 'count_method', "center_signal");
+stat2 = counter.count(signal, 2, 'plot_diagnostic', true, 'count_method', "center_signal");
 
 %%
 figure
@@ -25,6 +25,10 @@ histogram(stat1.LatCount, 100)
 
 figure
 histogram(stat2.LatCount, 100)
+
+%%
+figure
+scatter(stat2.LatCount(:, 1), stat2.LatCount(:, 2))
 
 %%
 figure
@@ -43,7 +47,6 @@ Andor19331.plot(sites, 'color', 'w', 'norm_radius', 0.5, 'filter', true, 'x_lim'
 
 
 %%
-
 Zelux.calibrateR(Signal.Zelux.Pattern_532(:, :, 1))
 
 figure

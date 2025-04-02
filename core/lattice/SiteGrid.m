@@ -18,7 +18,7 @@ classdef SiteGrid < BaseProcessor
                 "latr", obj.HexRadiusR, ...
                 "latx_range", -obj.RectRadiusX: obj.RectRadiusX, ...
                 "laty_range", -obj.RectRadiusY: obj.RectRadiusY);
-            obj.NumSites = size(obj.Sites);
+            obj.NumSites = size(obj.Sites, 1);
         end
     end
 

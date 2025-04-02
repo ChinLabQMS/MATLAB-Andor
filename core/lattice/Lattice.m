@@ -704,7 +704,7 @@
             h_occup = obj.plot(ax, occup, args{:}, 'diff_origin', false, ...
                 'norm_radius', opt2.radius, 'color', opt2.occup_color);
             h_unoccup = obj.plot(ax, unoccup, args{:}, 'diff_origin', false, ...
-                'norm_radius', opt2.radius, 'color', opt2.unoccup_color);
+                    'norm_radius', opt2.radius, 'color', opt2.unoccup_color);
             if nargout == 1
                 varargout = [h_occup, h_unoccup];
             end
@@ -724,7 +724,9 @@
                 opt1.x_lim = [1, 1440]
                 opt1.y_lim = [1, 1440]
                 opt1.full_range = false
+                opt2.fill_sites = true
                 opt2.fill_radius = 0.45
+                opt2.scatter_radius = 50
                 opt2.add_background = true
             end
             if isempty(varargin)
@@ -752,11 +754,13 @@
                 bg = zeros(opt1.x_lim(2) - opt1.x_lim(1), opt1.y_lim(2) - opt1.y_lim(1));
                 imagesc2(ax, opt1.y_lim(1):opt1.y_lim(2), opt1.x_lim(1):opt1.x_lim(2), bg);
             end
-            viscircles2(ax, coor(:, 2:-1:1), radius, ...
-                'Color', 'r', 'EnhanceVisibility', false, ...
-                'LineWidth', 0, 'Filled', true, 'FillColor', counts);
-            hold on
-            scatter(ax, coor(:, 2), coor(:, 1), 5, counts, "filled");
+            if opt2.fill_sites
+                viscircles2(ax, coor(:, 2:-1:1), radius, ...
+                    'Color', 'r', 'EnhanceVisibility', false, ...
+                    'LineWidth', 0, 'Filled', true, 'FillColor', counts);
+            end
+            hold(ax, "on")
+            scatter(ax, coor(:, 2), coor(:, 1), opt2.scatter_radius, counts, "filled");
         end
         
         % Plot lattice vectors

@@ -37,6 +37,8 @@ classdef AnalysisRegistry < BaseObject
                            ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
         RecordMotorStatus  (@recordMotor, ...
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
+        CountSites         (@countSites, ...
+                            [])
     end
 
 end
@@ -121,7 +123,7 @@ function calibLatO(live, info, varargin, options)
         varargin
     end
     arguments
-        options.ref_camera = "Andor19330"
+        options.ref_camera = "Andor19331"
         options.ref_label = "Image"
         options.crop_R_site = 15
         options.verbose = false
@@ -194,5 +196,6 @@ function recordMotor(live, info, options)
     end
 end
 
-%% Other utilities functions
-
+function countSites(live, info, options)
+    
+end

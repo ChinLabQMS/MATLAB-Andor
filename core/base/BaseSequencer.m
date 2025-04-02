@@ -43,7 +43,7 @@ classdef (Abstract) BaseSequencer < BaseObject
             obj.Analyzer = analyzer;
             obj.DataStorage = data;
             obj.StatStorage = stat;
-            obj.Live = LiveData(obj.CameraManager, obj.Analyzer.LatCalib, obj.Analyzer.PSFCalib);
+            obj.Live = LiveData(obj.CameraManager, obj.Analyzer.LatCalib, obj.Analyzer.PSFCalib, obj.Analyzer.SiteCounters);
         end
     end
 

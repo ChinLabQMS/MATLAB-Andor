@@ -19,18 +19,21 @@ classdef LiveData < BaseObject
         CameraManager
         LatCalib
         PSFCalib
+        SiteCounters
     end
 
     methods
-        function obj = LiveData(cameras, lat_calib, psf_calib)
+        function obj = LiveData(cameras, lat_calib, psf_calib, counters)
             arguments
                 cameras = CameraManager()
                 lat_calib = []
                 psf_calib = []
+                counters = []
             end
             obj.CameraManager = cameras;
             obj.LatCalib = lat_calib;
             obj.PSFCalib = psf_calib;
+            obj.SiteCounters = counters;
             obj.reset()
         end
 

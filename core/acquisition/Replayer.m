@@ -1,7 +1,7 @@
 classdef Replayer < BaseSequencer & DataProcessor
     
     properties (Constant)
-        DefaultDataPath = "data/2025/02 February/20250218/end_of_day_sparse_r=3.mat"
+        DefaultDataPath = "data/2025/03 March/20250325/dense_calibration4.mat"
     end
 
     properties (SetAccess = {?BaseObject})
@@ -13,17 +13,22 @@ classdef Replayer < BaseSequencer & DataProcessor
             obj@BaseSequencer(varargin{:})
             obj@DataProcessor('DataPath', Replayer.DefaultDataPath)
         end
+
+        function initSequence2(obj)
+            obj.initSequence()
+            obj.info2("Sequence is initialized.")
+        end
     end
 
     methods (Access = protected, Hidden)
-        % Override the load data command in DataProcessor
+        % Override the load data function in DataProcessor
         function loadData(obj, path)
             loadData@DataProcessor(obj, path)
             obj.AcquisitionConfig.config(obj.Raw.AcquisitionConfig)
             obj.CameraManager.config(obj.Raw)
             obj.DataStorage.config(obj.Raw, "config_cameras", false, "config_acq", false)
             obj.initSequence()
-            obj.info2("Replay data loaded from '%s', sequence initialized.", obj.DataPath)
+            obj.info("Data loaded from: %s, sequence initialized.", path)
         end
         
         % Override the start acquisition command, do not operate cameras

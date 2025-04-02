@@ -1,11 +1,5 @@
-classdef Analyzer < CombinedProcessor
+classdef Analyzer < SiteProcessor
     %ANALYZER Live analyzer
-
-    properties (SetAccess = immutable)
-        CounterAndor19330
-        CounterAndor19331
-    end
-    
     methods
         function analyze(obj, live, info, options)
             arguments
@@ -28,20 +22,4 @@ classdef Analyzer < CombinedProcessor
             end
         end
     end
-
-    methods (Access = protected, Hidden)
-        function init(obj)
-            init@CombinedProcessor(obj)
-        end
-
-        function analysis = analyzeSingleLabel(obj, signal, info, options)
-        end
-
-        function analysis = analyzeSingleData(obj, data, options)
-        end
-
-        function analysis = analyzeData(obj, data, options)
-        end
-    end
-
 end
