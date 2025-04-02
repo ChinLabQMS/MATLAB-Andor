@@ -60,7 +60,7 @@ classdef SiteCounter < BaseComputer
             obj.updateSiteProp()
         end
 
-        function stat = count(obj, signal, num_frames, opt, opt1, opt2, opt3)
+        function stat = process(obj, signal, num_frames, opt, opt1, opt2, opt3)
             arguments
                 obj
                 signal
@@ -152,16 +152,16 @@ classdef SiteCounter < BaseComputer
             obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
             obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
             % Update properties related to count method "linear_inverse"
+
         end
     end
 
     methods (Static)
-        function stat_diag = getDiagStat(stat, options)
+        function stat = addOccupStat(stat, options)
             arguments
                 stat
                 options.verbose = true
             end
-            
         end
     end
 end
@@ -179,6 +179,7 @@ function counts = getCount_CircleSum(obj, signal, x_range, y_range)
 end
 
 function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
+
 end
 
 %% Functions to extract occupancy from counts
@@ -186,7 +187,7 @@ function occup = getOccup_SingleThreshold(counts, threshold)
     occup = counts > threshold;
 end
 
-%% Get thresholds to classify 0 and 1 from counts distribution
+%% Get adaptive thresholds to classify 0 and 1 from counts distribution
 function thresholds = getThreshold(counts)
 end
 
@@ -202,7 +203,7 @@ function plotCountsDiagnostic(lat, stat, signal, num_frames, index)
     subplot(1, 2, 1)
     imagesc2(signal)
     for j = 1: num_frames
-        lat.plotOccup(sites(occup(:, j), :), zeros(0, 2), ...
+        lat.plotOccup(sites(occup(:, j), :), sites(~occup(:, j), :), ...
             'center', centers(j, :), 'filter', true, ...
             'x_lim', [0, x_size], 'y_lim', [0, y_size])
     end
