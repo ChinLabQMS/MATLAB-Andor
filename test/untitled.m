@@ -1,6 +1,9 @@
 clear; clc; close all
 
-Data = load("data/2025/03 March/20250326/dense_no_green.mat").Data;
+% Data = load("data/2025/03 March/20250326/dense_no_green.mat").Data;
+% Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_dense.mat").Data;
+% Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_sparse.mat").Data;
+Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
 
 %%
 p = Preprocessor();
@@ -58,8 +61,12 @@ psf = counter.PointSource.PSF;
 lat = counter.Lattice;
 
 %%
-function [pat_func, pattern, x_range, y_range] = generateDeconvPattern(lat, psf, options)
-    
+function [deconv_func, deconv_pat, x_range, y_range] = getDeconv(lat, psf, options)
+    arguments
+        lat
+        psf
+        options.placeholder
+    end
 end
 
 %%

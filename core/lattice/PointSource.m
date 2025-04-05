@@ -458,9 +458,14 @@ classdef PointSource < BaseComputer
             end
             obj.DataSumCount = obj.DataSumCount*old_weight + sum_count*new_weight;
             [Y, X] = meshgrid(y_range, x_range);
-            obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF / obj.DataSumCount, y, x);
+            % obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF / obj.DataSumCount, y, x);
+            obj.PSF = @(x, y) funcPSF(obj.DataPSF / obj.DataSumCount, X, Y, x, y);
             if opt3.update_ratio
                 obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
+            end
+            function val = funcPSF(data, X, Y, x, y)
+                val = interp2(Y, X, data, y, x);
+                val(isnan(val) | val < 0) = 0;
             end
         end
         

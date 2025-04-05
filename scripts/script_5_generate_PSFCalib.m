@@ -12,11 +12,11 @@
 
 clear; clc; close all
 p = PSFCalibrator( ...
-    "DataPath", "data/2025/03 March/20250325/sparse_no_cooling_between.mat", ...
+    "DataPath", "data/2025/03 March/20250326 line offset scan/sparse_no_green.mat", ...
     "PSFCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "PSFImageLabel", ["Image", "Image", "Pattern_532"]);
 
-%% Check signals, should be sparse
+%% Check signals, should be sparse point source in all images
 p.plotSignal()
 
 %% Process single image, to check whether the filtering parameters are good

@@ -38,7 +38,7 @@ classdef AnalysisRegistry < BaseObject
         RecordMotorStatus  (@recordMotor, ...
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
         CountSites         (@countSites, ...
-                            [])
+                            ["LatCount"])
     end
 
 end
@@ -197,5 +197,9 @@ function recordMotor(live, info, options)
 end
 
 function countSites(live, info, options)
-    
+    arguments
+       live
+       info
+       options.verbose = false
+    end
 end
