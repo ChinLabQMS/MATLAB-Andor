@@ -207,12 +207,35 @@ classdef SiteCounter < BaseComputer
             end
         end
 
-        function reconstructImage(obj)
+        function [reconstructed, x_range, y_range] = reconstructImage(obj, sites, counts, x_range, y_range, opt2)
+            arguments
+                obj
+                sites
+                counts 
+                x_range = []
+                y_range = []
+                opt2.spread_sites = obj.SpreadMatrix_Sites
+                opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
+                opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
+                opt2.spread_center = [0, 0]
+            end
+            if isempty(x_range) || isempty(y_range)
+                centers = obj.Lattice.convert2Real(sites);
+                xmin = max(1, round(min(centers(:, 1))));
+                xmax = round(max(centers(:, 2)));
+                ymin = max(1, round(min(centers(:, 2))));
+                ymax = round(max(centers(:, 2)));
+                x_range = xmin : xmax;
+                y_range = ymin : ymax;
+            end
+            args = namedargs2cell(opt2);
+            M = obj.getSpreadMatrix(x_range, y_range, args{:});
+            reconstructed = reshape(M' * counts, length(x_range), length(y_range));
         end
     end
 
     methods (Static)
-        function descript = describe(stat, options)
+        function description = describe(stat, options)
             arguments
                 stat
                 options.verbose = true
@@ -234,7 +257,7 @@ function counts = getCount_CircleSum(obj, signal, x_range, y_range)
 end
 
 function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
-
+    
 end
 
 %% Functions to extract occupancy from counts
