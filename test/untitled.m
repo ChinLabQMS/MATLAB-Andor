@@ -10,10 +10,7 @@ p = Preprocessor();
 Signal = p.process(Data);
 load("calibration/LatCalib.mat")
 
-%%
 signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
-
-%%
 counter = SiteCounter("Andor19331");
 
 %%
@@ -34,33 +31,29 @@ figure
 scatter(stat2.LatCount(:, 1), stat2.LatCount(:, 2))
 
 %%
-figure
-subplot(1, 2, 1)
-imagesc2(y_range, x_range, signal)
-
-subplot(1, 2, 2)
-imagesc2(y_range, x_range, signal)
-Andor19331.plot()
-Andor19331.plotV()
-Andor19331.plotOccup(stat2.SiteInfo.Sites(stat2.LatOccup, :), stat2.SiteInfo.Sites(~stat2.LatOccup, :))
-
-%%
-sites = SiteGrid.prepareSite("Rect", "latx_range", -20:5:20, "laty_range", -20: 5: 20);
-Andor19331.plot(sites, 'color', 'w', 'norm_radius', 0.5, 'filter', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
-
-%%
-Zelux.calibrateR(Signal.Zelux.Pattern_532(:, :, 1))
-
-figure
-imagesc2(Signal.Zelux.Pattern_532(:, :, 1))
-Zelux.plot()
-Zelux.plotV()
-
-%%
-psf = counter.PointSource.PSF;
+close all
+ps = counter.PointSource;
 lat = counter.Lattice;
 
 %%
+x_range = -100:100;
+y_range = -100:100;
+[Y, X] = meshgrid(x_range, y_range);
+val = reshape(ps.PSFNormalized(X(:), Y(:)), length(x_range), length(y_range));
+
+figure
+imagesc2(y_range, x_range, val)
+
+%%
+x_range = -30: 0.1: 30;
+y_range = -30: 0.1: 30;
+
+%%
+M = counter.getSpreadMatrix(x_range, y_range);
+pat = reshape(M(1, :), length(x_range), length(y_range));
+figure
+imagesc2(y_range, x_range, pat)
+
 function [deconv_func, deconv_pat, x_range, y_range] = getDeconv(lat, psf, options)
     arguments
         lat
@@ -70,7 +63,7 @@ function [deconv_func, deconv_pat, x_range, y_range] = getDeconv(lat, psf, optio
 end
 
 %%
-[pattern, x_range, y_range] = matDeconv(lat, psf, 10, 30, 4, 2);
+[pattern, x_range, y_range] = matDeconv(lat, ps.PSFNormalized, 10, 50, 5, 2);
 imagesc2(y_range, x_range, pattern)
 lat.plot('center', [0, 0])
 
@@ -117,10 +110,7 @@ function [Pattern, x_range, y_range] = matDeconv(Lat,funcPSF,PSFR,RPattern,Facto
             Pixel = x'+(y-1)*(2*Factor*RPattern+1);
             [YP,XP] = meshgrid((y-1)/Factor-RPattern,(x-1)/Factor-RPattern);
             val = funcPSF(XP(:)-Center(1),YP(:)-Center(2))/Factor^2;
-            try
-                M(Site,Pixel) = val;
-            catch
-            end
+            M(Site,Pixel) = val;
         end
     end
 
@@ -135,4 +125,25 @@ function [Pattern, x_range, y_range] = matDeconv(Lat,funcPSF,PSFR,RPattern,Facto
     %Pattern= Pattern/sum(Pattern,"all");
 end
 
+%%
+figure
+subplot(1, 2, 1)
+imagesc2(y_range, x_range, signal)
 
+subplot(1, 2, 2)
+imagesc2(y_range, x_range, signal)
+Andor19331.plot()
+Andor19331.plotV()
+Andor19331.plotOccup(stat2.SiteInfo.Sites(stat2.LatOccup, :), stat2.SiteInfo.Sites(~stat2.LatOccup, :))
+
+%%
+sites = SiteGrid.prepareSite("Rect", "latx_range", -20:5:20, "laty_range", -20: 5: 20);
+Andor19331.plot(sites, 'color', 'w', 'norm_radius', 0.5, 'filter', true, 'x_lim', [x_range(1), x_range(end)], 'y_lim', [y_range(1), y_range(end)])
+
+%%
+Zelux.calibrateR(Signal.Zelux.Pattern_532(:, :, 1))
+
+figure
+imagesc2(Signal.Zelux.Pattern_532(:, :, 1))
+Zelux.plot()
+Zelux.plotV()

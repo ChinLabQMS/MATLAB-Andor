@@ -24,7 +24,9 @@ classdef PointSource < BaseComputer
         MergePeaks_SuperSample = 70 % Divided by RayleighResolution
         MergePeaks_CropRadius = 3 % Multiply by RayleighResolution 
         Update_WarnThreshold = 0.1
-        Update_NormalizeMethod = "Gaussian" 
+        Update_NormalizeMethod = "Gaussian"
+        Update_NormalizeCutoff = 10
+        Update_NormalizeNStep = 100
         Update_GaussFitCropRadius = 2 % Multiply by RayleighResolution
         Update_GaussFitSubSample = 70 % Divided by RayleighResolution
         Update_UpdateResolutionRatio = false
@@ -49,6 +51,7 @@ classdef PointSource < BaseComputer
         IdealPSFGaussPeakIntensity
         IdealPSFAiryPeakIntensity
         PSF
+        PSFNormalized
         GaussPSF
         GaussGOF  % Goodness of fit
         DataPSF
@@ -211,6 +214,8 @@ classdef PointSource < BaseComputer
                 opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
                 opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
                 opt3.normalize_method = obj.Update_NormalizeMethod
+                opt3.normalize_cutoff = obj.Update_NormalizeCutoff
+                opt3.normalize_nstep = obj.Update_NormalizeNStep
                 opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
             start_time = tic;
@@ -413,6 +418,8 @@ classdef PointSource < BaseComputer
                 opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
                 opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
                 opt3.normalize_method = obj.Update_NormalizeMethod
+                opt3.normalize_cutoff = obj.Update_NormalizeCutoff
+                opt3.normalize_nstep = obj.Update_NormalizeNStep
                 opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
             if (~isempty(obj.DataXRange) && (~isequal(x_range, obj.DataXRange)) || ...
@@ -458,14 +465,10 @@ classdef PointSource < BaseComputer
             end
             obj.DataSumCount = obj.DataSumCount*old_weight + sum_count*new_weight;
             [Y, X] = meshgrid(y_range, x_range);
-            % obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF / obj.DataSumCount, y, x);
-            obj.PSF = @(x, y) funcPSF(obj.DataPSF / obj.DataSumCount, X, Y, x, y);
+            obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF, y, x);
+            obj.PSFNormalized = normalizePSF(obj.PSF, opt3.normalize_cutoff, opt3.normalize_nstep);
             if opt3.update_ratio
                 obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
-            end
-            function val = funcPSF(data, X, Y, x, y)
-                val = interp2(Y, X, data, y, x);
-                val(isnan(val) | val < 0) = 0;
             end
         end
         
@@ -565,10 +568,10 @@ classdef PointSource < BaseComputer
             [y, x, z] = prepareSurfaceData(ysub_range, xsub_range, psf_sub);
             [Y, X] = meshgrid(obj.DataYRange, obj.DataXRange);
             psf_airy = obj.DataSumCount*reshape(obj.IdealPSFAiry(X(:), Y(:)), length(obj.DataXRange), length(obj.DataYRange));
-            [val1, range1] = findPSFLineCut(obj.PSF, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 1), obj.GaussGOF.eigen_widths(1)*opt.linecut_range);
-            [val10, range10] = findPSFLineCut(obj.IdealPSFAiry, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 1), obj.GaussGOF.eigen_widths(1)*opt.linecut_range);
-            [val2, range2] = findPSFLineCut(obj.PSF, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 2), obj.GaussGOF.eigen_widths(2)*opt.linecut_range);
-            [val20, range20] = findPSFLineCut(obj.IdealPSFAiry, obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 2), obj.GaussGOF.eigen_widths(2)*opt.linecut_range);
+            [val1, range1] = findPSFLineCut(obj.PSF, 1/obj.DataSumCount, obj.GaussGOF.eigen_vectors(:, 1), obj.GaussGOF.eigen_widths(1)*opt.linecut_range);
+            [val10, range10] = findPSFLineCut(obj.IdealPSFAiry, 1, obj.GaussGOF.eigen_vectors(:, 1), obj.GaussGOF.eigen_widths(1)*opt.linecut_range);
+            [val2, range2] = findPSFLineCut(obj.PSF, 1/obj.DataSumCount,obj.GaussGOF.eigen_vectors(:, 2), obj.GaussGOF.eigen_widths(2)*opt.linecut_range);
+            [val20, range20] = findPSFLineCut(obj.IdealPSFAiry, 1, obj.GaussGOF.eigen_vectors(:, 2), obj.GaussGOF.eigen_widths(2)*opt.linecut_range);
             ax1 = subplot(2, 3, 6);
             subplot(2, 3, 1)
             imagesc2(obj.DataYRange, obj.DataXRange, psf_airy)
@@ -738,6 +741,26 @@ classdef PointSource < BaseComputer
     end
 end
 
+function psf_norm = normalizePSF(psf, cutoff_radius, num_step)
+    theta_range = 0: 0.01: 2*pi;
+    x = cutoff_radius * cos(theta_range)';
+    y = cutoff_radius * sin(theta_range)';
+    offset = mean(psf(x, y), 'all');
+    x_range = linspace(-cutoff_radius, cutoff_radius, num_step);
+    y_range = linspace(-cutoff_radius, cutoff_radius, num_step);
+    [Y, X] = meshgrid(y_range, x_range);
+    idx = (X(:).^2 + Y(:).^2 < cutoff_radius^2);
+    X = X(idx);
+    Y = Y(idx);
+    val = psf(X, Y) * (x_range(2) - x_range(1)) * (y_range(2) - y_range(1));
+    amp = sum(val) - offset * 4 * cutoff_radius^2;
+    psf_norm = @funcPSF;
+    function val = funcPSF(x, y)
+        val = (psf(x, y) - offset) / amp;
+        val(isnan(val) | (x.^2 + y.^2 >= cutoff_radius^2) | (val < 0)) = 0;
+    end
+end
+
 function [refined_centroid, refined_width, refined_angle, rsquare] = refineCentroid( ...
              img_data, centroid, refine_radius, refine_method, gauss_subsample)
     x_range = round(centroid(2)) + (-refine_radius(1): refine_radius(1));
@@ -770,7 +793,7 @@ end
 function [val, s_range] = findPSFLineCut(psf, amp, v, step_range)
     v_range = v .* step_range;
     s_range = norm(v) * step_range';
-    val = amp*psf(v_range(1, :)', v_range(2, :)');
+    val = amp * psf(v_range(1, :)', v_range(2, :)');
 end
 
 function [func, peak_val] = getIdealPSFGauss(resolution)

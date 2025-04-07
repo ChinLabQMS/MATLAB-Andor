@@ -8,9 +8,14 @@ classdef SiteCounter < BaseComputer
         Count_ClassifyMethod = "single_threshold"
         Count_PlotDiagnostic = false
         Count_PlotIndex = 1
-        Count_SingleThreshold = 80
-        Count_SiteCircleRadius = 2
-        Count_CalibRCropSites = 20
+        Classify_SingleThreshold = 80
+        CalibR_CropSites = 20
+        CircleSum_SiteCircleRadius = 2
+        SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
+        SpreadMatrix_PixelXRange = -30: 0.1: 30
+        SpreadMatrix_PixelYRange = -30: 0.1: 30
+        SpreadMatrix_EdgePSFVal_WarnThreshold = 0.05
+        SpreadMatrix_PSFRadius = 3.5
     end
 
     properties (SetAccess = immutable)
@@ -23,7 +28,9 @@ classdef SiteCounter < BaseComputer
         SiteCenters
         SiteCircleX
         SiteCircleY
-        TransformMatrix
+        SpreadMatrix
+        SpreadSites
+        SpreadPixels
         DeconvPattern
     end
     
@@ -70,9 +77,9 @@ classdef SiteCounter < BaseComputer
                 opt.classify_method = obj.Count_ClassifyMethod
                 opt.plot_diagnostic = obj.Count_PlotDiagnostic
                 opt.plot_index = obj.Count_PlotIndex
-                opt1.calib_crop_R_sites = obj.Count_CalibRCropSites
-                opt2.site_circle_radius = obj.Count_SiteCircleRadius
-                opt3.single_threshold = obj.Count_SingleThreshold
+                opt1.calib_crop_R_sites = obj.CalibR_CropSites
+                opt2.site_circle_radius = obj.CircleSum_SiteCircleRadius
+                opt3.single_threshold = obj.Classify_SingleThreshold
             end
             [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
             x_range = 1: (x_size / num_frames);
@@ -111,7 +118,8 @@ classdef SiteCounter < BaseComputer
                         case "center_signal"
                             stat.LatCount(:, j, i) = getCount_CenterSignal(obj, single_frame, x_range, y_range);
                         case "circle_sum"
-                            stat.LatCount(:, j, i) = getCount_CircleSum(obj, single_frame, x_range, y_range);
+                            args2 = namedargs2cell(opt2);
+                            stat.LatCount(:, j, i) = getCount_CircleSum(obj, single_frame, x_range, y_range, args2{:});
                         case "linear_inverse"
                             stat.LatCount(:, j, i) = getCount_LinearInverse(obj, single_frame, x_range, y_range);
                         otherwise
@@ -134,17 +142,21 @@ classdef SiteCounter < BaseComputer
             end
         end
 
-        function updateSiteProp(obj, options)
+        function updateSiteProp(obj, opt1, opt2)
             arguments
                 obj 
-                options.site_circle_radius = obj.Count_SiteCircleRadius
+                opt1.site_circle_radius = obj.CircleSum_SiteCircleRadius
+                opt2.spread_sites = obj.SpreadMatrix_Sites
+                opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
+                opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius
+                opt2.spread_center = [0, 0]
             end
             if isempty(obj.Lattice)
                 return
             end
             obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
             % Update properties related to count method "circle_sum"
-            r = options.site_circle_radius;
+            r = opt1.site_circle_radius;
             [Y, X] = meshgrid(-r:r, -r:r);
             idx = X(:).^2 + Y(:).^2 <= r^2;
             X = X(idx);
@@ -152,12 +164,55 @@ classdef SiteCounter < BaseComputer
             obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
             obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
             % Update properties related to count method "linear_inverse"
+            args = namedargs2cell(opt2);
+            obj.SpreadMatrix = getSpreadMatrix(obj, args{:});
+        end
 
+        function M = getSpreadMatrix(obj, x_range, y_range, opt2)
+            arguments
+                obj
+                x_range
+                y_range
+                opt2.spread_sites = obj.SpreadMatrix_Sites
+                opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
+                opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
+                opt2.spread_center = [0, 0]
+            end
+            Lat = obj.Lattice;
+            PS = obj.PointSource;
+            num_sites = height(opt2.spread_sites);
+            num_px = length(x_range) * length(y_range);
+            x_step = x_range(2) - x_range(1);
+            y_step = y_range(2) - y_range(1);
+            M = zeros(num_sites, num_px);
+            if PS.PSFNormalized(x_range(1), y_range(1)) > opt2.spread_psf_warn_threshold
+                obj.warn('PSF value at edge is significant: %.2f, please consider setting a different radius.')
+            end
+            for site_i = 1: num_sites
+                i = opt2.spread_sites(site_i, 1);
+                j = opt2.spread_sites(site_i, 2);
+                center = [i, j] * Lat.V + opt2.spread_center;
+                center_xidx = (center(1) - x_range(1)) / x_step + 1;
+                center_yidx = (center(2) - y_range(1)) / y_step + 1;
+                min_xidx = max(1, round(center_xidx - opt2.spread_psf_radius / x_step));
+                max_xidx = min(length(x_range), round(center_xidx + opt2.spread_psf_radius / x_step));
+                min_yidx = max(1, round(center_yidx - opt2.spread_psf_radius / y_step));
+                max_yidx = min(length(y_range), round(center_yidx + opt2.spread_psf_radius / y_step));
+                xidx = min_xidx : max_xidx;
+                yidx = min_yidx : max_yidx;
+                idx = xidx' + (yidx - 1) * length(x_range);
+                [YP,XP] = meshgrid(y_range(yidx), x_range(xidx));
+                val = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+                M(site_i, idx) = val;
+            end
+        end
+
+        function reconstructImage(obj)
         end
     end
 
     methods (Static)
-        function stat = addOccupStat(stat, options)
+        function descript = describe(stat, options)
             arguments
                 stat
                 options.verbose = true
@@ -191,7 +246,7 @@ end
 function thresholds = getThreshold(counts)
 end
 
-%%
+%% Utility functions
 function plotCountsDiagnostic(lat, stat, signal, num_frames, index)
     signal = signal(:, :, index);
     sites = stat.SiteInfo.Sites;
