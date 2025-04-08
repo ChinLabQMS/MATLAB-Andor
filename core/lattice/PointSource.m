@@ -25,7 +25,7 @@ classdef PointSource < BaseComputer
         MergePeaks_CropRadius = 3 % Multiply by RayleighResolution 
         Update_WarnThreshold = 0.1
         Update_NormalizeMethod = "Gaussian"
-        Update_NormalizeCutoff = 10
+        Update_NormalizeCutoff = 2.6 % Multiply by RayleighResolution
         Update_NormalizeNStep = 100
         Update_GaussFitCropRadius = 2 % Multiply by RayleighResolution
         Update_GaussFitSubSample = 70 % Divided by RayleighResolution
@@ -214,7 +214,7 @@ classdef PointSource < BaseComputer
                 opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
                 opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
                 opt3.normalize_method = obj.Update_NormalizeMethod
-                opt3.normalize_cutoff = obj.Update_NormalizeCutoff
+                opt3.normalize_cutoff = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_NormalizeCutoff)
                 opt3.normalize_nstep = obj.Update_NormalizeNStep
                 opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end
@@ -418,7 +418,7 @@ classdef PointSource < BaseComputer
                 opt3.gauss_crop_radius = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_GaussFitCropRadius)
                 opt3.gauss_sub_sample = round(obj.Update_GaussFitSubSample / (obj.InitResolutionRatio * obj.RayleighResolution))
                 opt3.normalize_method = obj.Update_NormalizeMethod
-                opt3.normalize_cutoff = obj.Update_NormalizeCutoff
+                opt3.normalize_cutoff = round((obj.InitResolutionRatio * obj.RayleighResolution) * obj.Update_NormalizeCutoff)
                 opt3.normalize_nstep = obj.Update_NormalizeNStep
                 opt3.update_ratio = obj.Update_UpdateResolutionRatio
             end

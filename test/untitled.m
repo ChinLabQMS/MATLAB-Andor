@@ -14,10 +14,10 @@ ps = counter.PointSource;
 lat = counter.Lattice;
 
 %%
+close all
 stat1 = counter.process(signal, 2, 'plot_diagnostic', 0, 'count_method', "circle_sum");
 stat2 = counter.process(signal, 2, 'plot_diagnostic', 0, 'count_method', "center_signal");
 
-%%
 figure
 histogram(stat1.LatCount, 100)
 
@@ -25,6 +25,7 @@ figure
 histogram(stat2.LatCount, 100)
 
 %%
+close all
 figure
 scatter(stat2.LatCount(:, 1), stat2.LatCount(:, 2))
 
@@ -42,7 +43,6 @@ lat.plotOccup(stat2.SiteInfo.Sites(stat2.LatOccup(:, 1), :), stat2.SiteInfo.Site
 %%
 [rec_signal, x_range, y_range] = counter.reconstructSignal(stat2.SiteInfo.Sites, stat2.LatCount(:, 1));
 
-%%
 figure
 subplot(1, 2, 1)
 imagesc2(y_range, x_range, rec_signal)
@@ -67,7 +67,6 @@ weights = counter.getDeconvWeight();
 idx = weights{100}(:, 1);
 val = weights{100}(:, 2);
 site_count = signal(idx) * val'
-
 
 %%
 

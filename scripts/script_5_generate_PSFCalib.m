@@ -60,6 +60,7 @@ p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
 %% Zelux
+close all
 p.fit('Zelux', [], 1.5, 'filter_gausswid_max', inf, 'verbose', 1)
 p.PSFCalib.Zelux.plotWidthDist()
 p.PSFCalib.Zelux.plotPSF()
@@ -69,7 +70,7 @@ p.PSFCalib.Zelux
 p.plotPSF()
 
 %% Save the fitted PSF to a calibration file
-% Default is "calibration/PSFCalib_<today's date>.mat"
-% It will also update the default LatCalib file "calibration/LatCalib.mat"
+% Default is "calibration/dated_PSFCalib/PSFCalib_<today's date>.mat"
+% It will also update the default PSFCalib file "calibration/PSFCalib.mat"
 close all
 p.save()

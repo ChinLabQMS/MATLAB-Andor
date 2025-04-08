@@ -15,7 +15,7 @@ classdef SiteCounter < BaseComputer
         SpreadMatrix_YRange = -30: 0.1: 30
         SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
         SpreadMatrix_EdgePSFVal_WarnThreshold = 0.05
-        SpreadMatrix_PSFRadius = 3.5
+        SpreadMatrix_PSFRadius = 4
         DeconvWeight_XRange = 1: 1024
         DeconvWeight_YRange = 1: 1024
         DeconvWeight_Threshold = 0.01
