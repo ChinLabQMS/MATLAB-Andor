@@ -11,11 +11,16 @@ classdef SiteCounter < BaseComputer
         Classify_SingleThreshold = 80
         CalibR_CropSites = 20
         CircleSum_SiteCircleRadius = 2
+        SpreadMatrix_XRange = -30: 0.1: 30
+        SpreadMatrix_YRange = -30: 0.1: 30
         SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
-        SpreadMatrix_PixelXRange = -30: 0.1: 30
-        SpreadMatrix_PixelYRange = -30: 0.1: 30
         SpreadMatrix_EdgePSFVal_WarnThreshold = 0.05
         SpreadMatrix_PSFRadius = 3.5
+        DeconvWeight_XRange = 1: 1024
+        DeconvWeight_YRange = 1: 1024
+        DeconvWeight_Threshold = 0.01
+        ReconstructSignal_XRange = []
+        ReconstructSignal_YRange = []
     end
 
     properties (SetAccess = immutable)
@@ -118,8 +123,7 @@ classdef SiteCounter < BaseComputer
                         case "center_signal"
                             stat.LatCount(:, j, i) = getCount_CenterSignal(obj, single_frame, x_range, y_range);
                         case "circle_sum"
-                            args2 = namedargs2cell(opt2);
-                            stat.LatCount(:, j, i) = getCount_CircleSum(obj, single_frame, x_range, y_range, args2{:});
+                            stat.LatCount(:, j, i) = getCount_CircleSum(obj, single_frame, x_range, y_range);
                         case "linear_inverse"
                             stat.LatCount(:, j, i) = getCount_LinearInverse(obj, single_frame, x_range, y_range);
                         otherwise
@@ -141,7 +145,8 @@ classdef SiteCounter < BaseComputer
                 plotCountsDiagnostic(obj.Lattice, stat, signal, num_frames, opt.plot_index)
             end
         end
-
+        
+        % Update the class properties to a new calibration (Lat or PS)
         function updateSiteProp(obj, opt1, opt2)
             arguments
                 obj 
@@ -164,22 +169,24 @@ classdef SiteCounter < BaseComputer
             obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
             obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
             % Update properties related to count method "linear_inverse"
-            args = namedargs2cell(opt2);
-            obj.SpreadMatrix = getSpreadMatrix(obj, args{:});
         end
-
-        function M = getSpreadMatrix(obj, x_range, y_range, opt2)
+        
+        % Generate a spread matrix of size (num_sites, num_pixels)
+        % Each entry is the fraction of the signal from 1 site to 1 pixel
+        function [M, x_range, y_range] = getSpreadMatrix(obj, opt2)
             arguments
                 obj
-                x_range
-                y_range
                 opt2.spread_sites = obj.SpreadMatrix_Sites
+                opt2.spread_center = [0, 0]
+                opt2.spread_xrange = obj.SpreadMatrix_XRange
+                opt2.spread_yrange = obj.SpreadMatrix_YRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
                 opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
-                opt2.spread_center = [0, 0]
             end
             Lat = obj.Lattice;
             PS = obj.PointSource;
+            x_range = opt2.spread_xrange;
+            y_range = opt2.spread_yrange;
             num_sites = height(opt2.spread_sites);
             num_px = length(x_range) * length(y_range);
             x_step = x_range(2) - x_range(1);
@@ -189,9 +196,7 @@ classdef SiteCounter < BaseComputer
                 obj.warn('PSF value at edge is significant: %.2f, please consider setting a different radius.')
             end
             for site_i = 1: num_sites
-                i = opt2.spread_sites(site_i, 1);
-                j = opt2.spread_sites(site_i, 2);
-                center = [i, j] * Lat.V + opt2.spread_center;
+                center = opt2.spread_sites(site_i, :) * Lat.V + opt2.spread_center;
                 center_xidx = (center(1) - x_range(1)) / x_step + 1;
                 center_yidx = (center(2) - y_range(1)) / y_step + 1;
                 min_xidx = max(1, round(center_xidx - opt2.spread_psf_radius / x_step));
@@ -202,34 +207,83 @@ classdef SiteCounter < BaseComputer
                 yidx = min_yidx : max_yidx;
                 idx = xidx' + (yidx - 1) * length(x_range);
                 [YP,XP] = meshgrid(y_range(yidx), x_range(xidx));
-                val = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
-                M(site_i, idx) = val;
+                M(site_i, idx) = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+            end
+        end
+        
+        % Generate a function handle to de-convolution pattern
+        function [func, pat, x_range, y_range] = getDeconvFunc(obj, varargin)
+            [M, x_range, y_range] = obj.getSpreadMatrix(varargin{:});
+            Minv = (M * M') \ M;
+            num_sites = size(M, 1);
+            pat = reshape(Minv(ceil(num_sites / 2), :), length(x_range), length(y_range));
+            [Y, X] = meshgrid(y_range, x_range);
+            func = @deconvFunc;
+            function val = deconvFunc(x, y)
+                val = interp2(Y, X, pat, y, x);
+                val(isnan(val)) = 0;
             end
         end
 
-        function [reconstructed, x_range, y_range] = reconstructImage(obj, sites, counts, x_range, y_range, opt2)
+        % Generate a list of pixel weights for each site from a deconv func
+        function weights = getDeconvWeight(obj, opt1, opt2)
+            arguments
+                obj
+                opt1.radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
+                opt1.x_range = obj.DeconvWeight_XRange
+                opt1.y_range = obj.DeconvWeight_YRange
+                opt1.threshold = obj.DeconvWeight_Threshold
+                opt2.spread_sites = obj.SpreadMatrix_Sites
+                opt2.spread_center = [0, 0]
+                opt2.spread_xrange = obj.SpreadMatrix_XRange
+                opt2.spread_yrange = obj.SpreadMatrix_YRange
+                opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
+                opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
+            end
+            args = namedargs2cell(opt2);
+            func = obj.getDeconvFunc(args{:});
+            x_step = opt1.x_range(2) - opt1.x_range(1);
+            y_step = opt1.y_range(2) - opt1.y_range(1);
+            centers = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
+            weights = cell(1, size(centers, 1));
+            for site_i = 1: size(centers, 1)
+                center = centers(site_i, :);
+                xmin = max(opt1.x_range(1), round(center(1)) - opt1.radius(1));
+                xmax = min(opt1.x_range(end), round(center(1)) + opt1.radius(1));
+                ymin = max(opt1.y_range(1), round(center(2)) - opt1.radius(end));
+                ymax = min(opt1.y_range(end), round(center(2) + opt1.radius(end)));
+                xidx = ((xmin: xmax) - opt1.x_range(1)) / x_step;
+                yidx = ((ymin: ymax) - opt1.y_range(1)) / y_step;
+                idx = xidx' + (yidx - 1) * length(opt1.x_range);
+                [YP, XP] = meshgrid((ymin:ymax) - center(2), (xmin:xmax) - center(1));
+                val = func(XP(:), YP(:));
+                keep = abs(val) > opt1.threshold;
+                weights{site_i} = [idx(keep), val(keep)];
+            end
+        end
+        
+        % Generate a simulated image given the counts on the sites
+        function [reconstructed, x_range, y_range] = reconstructSignal(obj, sites, counts, opt2)
             arguments
                 obj
                 sites
-                counts 
-                x_range = []
-                y_range = []
-                opt2.spread_sites = obj.SpreadMatrix_Sites
+                counts
+                opt2.spread_xrange = obj.ReconstructSignal_XRange
+                opt2.spread_yrange = obj.ReconstructSignal_YRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
                 opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
-                opt2.spread_center = [0, 0]
             end
-            if isempty(x_range) || isempty(y_range)
+            if isempty(opt2.spread_xrange) || isempty(opt2.spread_yrange)
                 centers = obj.Lattice.convert2Real(sites);
                 xmin = max(1, round(min(centers(:, 1))));
-                xmax = round(max(centers(:, 2)));
+                xmax = round(max(centers(:, 1)));
                 ymin = max(1, round(min(centers(:, 2))));
                 ymax = round(max(centers(:, 2)));
-                x_range = xmin : xmax;
-                y_range = ymin : ymax;
+                opt2.spread_xrange = xmin : xmax;
+                opt2.spread_yrange = ymin : ymax;
             end
             args = namedargs2cell(opt2);
-            M = obj.getSpreadMatrix(x_range, y_range, args{:});
+            [M, x_range, y_range] = obj.getSpreadMatrix('spread_sites', sites, 'spread_center', obj.Lattice.R, args{:});
             reconstructed = reshape(M' * counts, length(x_range), length(y_range));
         end
     end
@@ -375,60 +429,3 @@ function  [Deconv,DecPat] = getDeconv(Lat,funcPSF,Site,XLim,YLim)
     end
     
 end
-
-function Pattern = matDeconv(Lat,funcPSF,PSFR,RPattern,Factor,LatRLim)
-% Calculate deconvolution pattern by inverting (-LatRLim:LatRLim) PSF
-
-    % Number of sites
-    NumSite = (2*LatRLim+1)^2;
-
-    % Number of pixels
-    NumPx = (2*Factor*RPattern+1)^2;
-
-    M = zeros(NumSite,NumPx);
-    if funcPSF(PSFR,PSFR)>0.001
-        warning(['Probability density at edge is significant = %.4f\nCheck' ...
-            ' PSFR (radius for calculating PSF spread)'],funcPSF(PSFR,PSFR))
-    end
-    
-    % For each lattice site, find its spread into nearby pixels
-    for i = -LatRLim:LatRLim
-        for j = -LatRLim:LatRLim
-            
-            % Site index
-            Site = (i+LatRLim+1)+(j+LatRLim)*(2*LatRLim+1);
-
-            % Lattice site coordinate
-            Center = [i,j]*Lat.V;
-
-            % Convert coordinate to magnified pixel index
-            CXIndex = round(Factor*(Center(1)+RPattern))+1;
-            CYIndex = round(Factor*(Center(2)+RPattern))+1;
-
-            % Range of pixel index to run through
-            xMin = CXIndex-PSFR*Factor;
-            xMax = CXIndex+PSFR*Factor;
-            yMin = CYIndex-PSFR*Factor;
-            yMax = CYIndex+PSFR*Factor;
-
-            % Go through all pixels and assign the spread
-            x = xMin:xMax;
-            y = yMin:yMax;
-            Pixel = x'+(y-1)*(2*Factor*RPattern+1);
-            [YP,XP] = meshgrid((y-1)/Factor-RPattern,(x-1)/Factor-RPattern);
-            M(Site,Pixel) = funcPSF(XP(:)-Center(1),YP(:)-Center(2))/Factor^2;
-            
-        end
-    end
-
-    % Convert transfer matrix to deconvolution pattern
-    MInv = (M*M')\M;
-    Pattern = reshape(MInv(round(NumSite/2),:),sqrt(NumPx),[]);
-
-    % Re-normalize deconvolution pattern
-    Area = abs(det(Lat.V));
-    %disp(Area);
-    Pattern = Area/(sum(Pattern,"all")/Factor^2)*Pattern;
-    %Pattern= Pattern/sum(Pattern,"all");
-end
-

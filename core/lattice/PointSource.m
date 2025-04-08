@@ -513,6 +513,7 @@ classdef PointSource < BaseComputer
                 ax = gca()
             end
             h = imagesc(ax, obj.DataYRange, obj.DataXRange, obj.DataPSF);
+            axis(ax, "image")
             if nargout == 1
                 varargout{1} = h;
             end
