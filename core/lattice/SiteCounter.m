@@ -359,6 +359,7 @@ classdef SiteCounter < BaseComputer
                 loss_rate = loss ./ total;
                 description.LossNumber = loss(2:end, :);
                 description.LossRate = loss_rate(2:end, :);
+                description.MeanLossRate = sum(description.LossNumber, 2) ./ sum(description.TotalNumber(1: (end-1)), 2);
             else
                 
             end

@@ -4,7 +4,7 @@ clear; clc; close all
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_dense.mat").Data;
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_sparse.mat").Data;
 % Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
-Data = load("data/2025/04 April/20250408 mod freq scan/dense_no_green.mat").Data;
+Data = load("data/2025/04 April/20250408 mod freq scan/sparse_no_green.mat").Data;
 
 p = Preprocessor();
 Signal = p.process(Data);
