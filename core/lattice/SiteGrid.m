@@ -3,6 +3,7 @@ classdef SiteGrid < BaseProcessor
     properties (SetAccess = {?BaseObject})
         SiteFormat = "Hex"
         HexRadiusR = 20
+        HexStep = 1
         RectRadiusX = 10
         RectRadiusY = 10
     end
@@ -16,6 +17,7 @@ classdef SiteGrid < BaseProcessor
         function init(obj)
             obj.Sites = obj.prepareSite(obj.SiteFormat, ...
                 "latr", obj.HexRadiusR, ...
+                "latr_step", obj.HexStep, ...
                 "latx_range", -obj.RectRadiusX: obj.RectRadiusX, ...
                 "laty_range", -obj.RectRadiusY: obj.RectRadiusY);
             obj.NumSites = size(obj.Sites, 1);
@@ -29,6 +31,7 @@ classdef SiteGrid < BaseProcessor
                 options.latx_range = -10:10
                 options.laty_range = -10:10
                 options.latr = 10
+                options.latr_step = 1
             end    
             switch format
                 case 'Rect'
@@ -36,7 +39,8 @@ classdef SiteGrid < BaseProcessor
                     sites = [X(:), Y(:)];
                 case 'Hex'
                     r = options.latr;
-                    [Y, X] = meshgrid(-r:r, -r:r);
+                    step = options.latr_step;
+                    [Y, X] = meshgrid(-r:step:r, -r:step:r);
                     idx = (Y(:) <= X(:) + r) & (Y(:) >= X(:) - r);
                     sites = [X(idx), Y(idx)];
                 otherwise

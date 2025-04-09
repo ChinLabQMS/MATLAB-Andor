@@ -519,7 +519,7 @@
             obj.Ostat.Others = others;
             obj.Ostat.BestTransformed = best_transformed;
             obj.Ostat.OriginalSignal = signal;
-            info_str = sprintf("Center is calibrated to %s, now at (%d, %d) = (%5.2f, %5.2f) px, initially at (%5.2f, %5.2f) px, min dist = %5.3f among (%s).", ...
+            info_str = sprintf("Center is calibrated to %s, now at (%.1f, %.1f) = (%5.2f, %5.2f) px, initially at (%5.2f, %5.2f) px, min dist = %5.3f among (%s).", ...
                     Lat2.ID, best.Site(1), best.Site(2), best.Center(1), best.Center(2), ...
                     R_init(1), R_init(2), best.SignalDist, join(string(compose('%4.3f', min_val)), ", "));
             if all(best.Site == [0, 0]) && ...
@@ -532,6 +532,7 @@
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
+                obj.plotV()
                 if ~options.debug
                     plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
                         x_range, y_range, x_range2, y_range2, options.covert_to_signal)

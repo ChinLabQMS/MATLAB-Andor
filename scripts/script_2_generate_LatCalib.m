@@ -112,7 +112,7 @@ p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'debug', 
 %% Pick the site with highest similarity and input the coordinate for calibrating Zelux
 close all
 p.LatCalib.Zelux.init([553.046, 580.971], 'format', 'R')
-p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 5), 'debug', false)
+p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 5, 'latr_step', 0.2), 'debug', false)
 
 %% Plot the averaged signal to check full calibration
 close all
@@ -122,4 +122,4 @@ p.plotProjection('add_guide', true)
 %% Save lattice calibration of all three cameras
 % Default is "calibration/LatCalib_<today's date>.mat" for a record
 % It will also update the default LatCalib file "calibration/LatCalib.mat"
-p.save("calibration/dated_LatCalib/LatCalib_20250225")
+p.save()

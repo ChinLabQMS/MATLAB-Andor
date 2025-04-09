@@ -3,7 +3,8 @@ clear; clc; close all
 % Data = load("data/2025/03 March/20250326/dense_no_green.mat").Data;
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_dense.mat").Data;
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_sparse.mat").Data;
-Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
+% Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
+Data = load("data/2025/04 April/20250408 mod freq scan/halfplane_mod=50kHz.mat").Data;
 
 p = Preprocessor();
 Signal = p.process(Data);
@@ -61,12 +62,23 @@ subplot(1, 2, 2)
 ps.plot()
 
 %%
-weights = counter.getDeconvWeight();
+tic
+[weights, centers] = counter.getDeconvWeight();
+toc
 
 %%
-idx = weights{100}(:, 1);
-val = weights{100}(:, 2);
-site_count = signal(idx) * val'
+x = weights{102, 1};
+y = weights{102, 2};
+idx = weights{102, 3};
+val = weights{102, 4};
+site_count = signal(idx)' * val
+
+%%
+figure
+imagesc2(signal)
+hold on
+scatter3(y, x, val, 20, val, 'filled')
+scatter(centers(102, 2), centers(102, 1), 'r')
 
 %%
 

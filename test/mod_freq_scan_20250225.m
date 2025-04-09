@@ -1,12 +1,13 @@
-freq = [1, 2, 5, 10, 20, 50, 100];
-x_range = 50:400;
-y_range = 250:650;
+close all; clear; clc
+freq = [2, 5, 10, 20, 25, 27, 29, 30, 40, 50, 60, 70, 80, 100, 120, 150, 200];
+x_range = 50:500;
+y_range = 220:670;
 
 p = Preprocessor();
 count1 = zeros(1, length(freq));
 count2 = zeros(1, length(freq));
 for i = 1: length(freq)
-    filename = fullfile('data/2025/02 February/20250228/', sprintf('halfplane_mod=%dkHz.mat', freq(i)));
+    filename = fullfile('data/2025/04 April/20250408 mod freq scan/', sprintf('halfplane2_mod=%dkHz.mat', freq(i)));
     Data = load(filename).Data;
 
     Signal = p.process(Data);

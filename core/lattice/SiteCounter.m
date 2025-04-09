@@ -3,24 +3,23 @@ classdef SiteCounter < BaseComputer
     properties (Constant)
         LatCalib_DefaultPath = "calibration/LatCalib.mat"
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
-        Count_CalibMode = "offset"
-        Count_CountMethod = "center_signal"
-        Count_ClassifyMethod = "single_threshold"
-        Count_PlotDiagnostic = false
-        Count_PlotIndex = 1
-        Classify_SingleThreshold = 80
-        CalibR_CropSites = 20
-        CircleSum_SiteCircleRadius = 2
+        Process_CalibMode = "full"
+        Process_CountMethod = "center_signal"
+        Process_ClassifyMethod = "single_threshold"
+        Process_PlotDiagnostic = false
+        Process_PlotDiagnosticIndex = 1
+        ProcessCalib_CropRSites = 20
+        ProcessClassify_SingleThreshold = 80
+        CountCircleSum_SiteCircleRadius = 2
+        SpreadMatrix_Center = [0, 0]
+        SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
         SpreadMatrix_XRange = -30: 0.1: 30
         SpreadMatrix_YRange = -30: 0.1: 30
-        SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
         SpreadMatrix_EdgePSFVal_WarnThreshold = 0.05
         SpreadMatrix_PSFRadius = 4
         DeconvWeight_XRange = 1: 1024
         DeconvWeight_YRange = 1: 1024
         DeconvWeight_Threshold = 0.01
-        ReconstructSignal_XRange = []
-        ReconstructSignal_YRange = []
     end
 
     properties (SetAccess = immutable)
@@ -37,6 +36,8 @@ classdef SiteCounter < BaseComputer
         SpreadSites
         SpreadPixels
         DeconvPattern
+        SignalXRange = []
+        SignalYRange = []
     end
     
     methods
@@ -71,49 +72,54 @@ classdef SiteCounter < BaseComputer
             obj.SiteGrid = grid;
             obj.updateSiteProp()
         end
-
-        function stat = process(obj, signal, num_frames, opt, opt1, opt2, opt3)
+        
+        % Main interface for app and analysis
+        function stat = process(obj, signal, num_frames, opt)
             arguments
                 obj
                 signal
                 num_frames = 1
-                opt.calib_mode = obj.Count_CalibMode
-                opt.count_method = obj.Count_CountMethod
-                opt.classify_method = obj.Count_ClassifyMethod
-                opt.plot_diagnostic = obj.Count_PlotDiagnostic
-                opt.plot_index = obj.Count_PlotIndex
-                opt1.calib_crop_R_sites = obj.CalibR_CropSites
-                opt2.site_circle_radius = obj.CircleSum_SiteCircleRadius
-                opt3.single_threshold = obj.Classify_SingleThreshold
+                % Parameters on the entire flow
+                opt.calib_mode = obj.Process_CalibMode
+                opt.count_method = obj.Process_CountMethod
+                opt.classify_method = obj.Process_ClassifyMethod
+                opt.plot_diagnostic = obj.Process_PlotDiagnostic
+                opt.plot_index = obj.Process_PlotDiagnosticIndex
+                opt.calib_cropRsites = obj.ProcessCalib_CropRSites
+                opt.classify_threshold = obj.ProcessClassify_SingleThreshold
             end
             [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
             x_range = 1: (x_size / num_frames);
             y_range = 1: y_size;
-            % Calibrate lattice center offset, or use the existing Lat.R
-            args = namedargs2cell(opt2);
-            switch opt.calib_mode
-                case "offset"
-                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
-                    obj.Lattice.calibrateRCropSite(signal_sum, opt1.calib_crop_R_sites)
-                    obj.updateSiteProp(args{:})
-                case "offset_every"
-                case "none"
-                otherwise
-                    obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
-            end
             % Initialize result stat structure
             stat.SiteInfo = obj.SiteGrid.struct(obj.SiteGrid.VisibleProp);
             stat.SiteInfo.CountMethod = opt.count_method;
             stat.SiteInfo.CalibMode = opt.calib_mode;
             stat.LatCount = nan(obj.SiteGrid.NumSites, num_frames, num_acq);
             stat.LatOccup = nan(obj.SiteGrid.NumSites, num_frames, num_acq);
+            % Calibrate lattice center offset, or use the existing Lat.R
+            switch opt.calib_mode
+                case {"full", "full_first_offset_every"}
+                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
+                    obj.Lattice.calibrateCropSite(signal_sum, opt.calib_cropRsites)
+                    obj.updateSiteProp(opt.count_method)
+                case "offset"
+                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
+                    obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
+                    obj.updateSiteProp(opt.count_method)
+                case "offset_every"
+                case "none"
+                otherwise
+                    obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
+            end
             % Get site-wise counts for each acquisition and sub-frame
             for i = 1: num_acq
                 single_shot = signal(:, :, i);
-                if opt.calib_mode == "offset_every"
-                    signal_sum = getSignalSum(single_shot, num_frames, 'first_only', false);
-                    obj.Lattice.calibrateRCropSite(signal_sum, opt1.calib_crop_R_sites)
-                    obj.updateSiteProp(args{:})
+                switch opt.calib_mode
+                    case {"offset_every", "full_first_offset_every"}
+                        signal_sum = getSignalSum(single_shot, num_frames, 'first_only', false);
+                        obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
+                        obj.updateSiteProp(opt.count_method)
                 end
                 x_range_all = x_range + ((x_size/num_frames) .* (0: (num_frames -1)))';
                 for j = 1: num_frames
@@ -134,7 +140,7 @@ classdef SiteCounter < BaseComputer
             % Classify sites as occupied/unoccupied
             switch opt.classify_method
                 case "single_threshold"
-                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt3.single_threshold);
+                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt.classify_threshold);
                 case "adaptive_threshold"
                     thresholds = getThreshold(stat.LatCount);
                     stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, thresholds);
@@ -147,28 +153,29 @@ classdef SiteCounter < BaseComputer
         end
         
         % Update the class properties to a new calibration (Lat or PS)
-        function updateSiteProp(obj, opt1, opt2)
+        % depending on the counting methods
+        function updateSiteProp(obj, count_method)
             arguments
                 obj 
-                opt1.site_circle_radius = obj.CircleSum_SiteCircleRadius
-                opt2.spread_sites = obj.SpreadMatrix_Sites
-                opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
-                opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius
-                opt2.spread_center = [0, 0]
+                count_method = obj.Process_CountMethod
             end
             if isempty(obj.Lattice)
                 return
             end
             obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
-            % Update properties related to count method "circle_sum"
-            r = opt1.site_circle_radius;
-            [Y, X] = meshgrid(-r:r, -r:r);
-            idx = X(:).^2 + Y(:).^2 <= r^2;
-            X = X(idx);
-            Y = Y(idx);
-            obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
-            obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
-            % Update properties related to count method "linear_inverse"
+            switch count_method
+                case "circle_sum"
+                    % Update properties related to count method "circle_sum"
+                    r = opt1.circlesum_radius;
+                    [Y, X] = meshgrid(-r:r, -r:r);
+                    idx = X(:).^2 + Y(:).^2 <= r^2;
+                    X = X(idx);
+                    Y = Y(idx);
+                    obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
+                    obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
+                case "linear_inverse"
+                    
+            end
         end
         
         % Generate a spread matrix of size (num_sites, num_pixels)
@@ -176,8 +183,8 @@ classdef SiteCounter < BaseComputer
         function [M, x_range, y_range] = getSpreadMatrix(obj, opt2)
             arguments
                 obj
+                opt2.spread_center = obj.SpreadMatrix_Center
                 opt2.spread_sites = obj.SpreadMatrix_Sites
-                opt2.spread_center = [0, 0]
                 opt2.spread_xrange = obj.SpreadMatrix_XRange
                 opt2.spread_yrange = obj.SpreadMatrix_YRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
@@ -192,7 +199,8 @@ classdef SiteCounter < BaseComputer
             x_step = x_range(2) - x_range(1);
             y_step = y_range(2) - y_range(1);
             M = zeros(num_sites, num_px);
-            if PS.PSFNormalized(x_range(1), y_range(1)) > opt2.spread_psf_warn_threshold
+            if PS.PSFNormalized(x_range(1) - opt2.spread_center(1), ...
+                                y_range(1) - opt2.spread_center(2)) > opt2.spread_psf_warn_threshold
                 obj.warn('PSF value at edge is significant: %.2f, please consider setting a different radius.')
             end
             for site_i = 1: num_sites
@@ -213,63 +221,76 @@ classdef SiteCounter < BaseComputer
         
         % Generate a function handle to de-convolution pattern
         function [func, pat, x_range, y_range] = getDeconvFunc(obj, varargin)
-            [M, x_range, y_range] = obj.getSpreadMatrix(varargin{:});
+            [M, x_range, y_range] = obj.getSpreadMatrix(varargin{:}, 'spread_center', [0, 0]);
             Minv = (M * M') \ M;
             num_sites = size(M, 1);
             pat = reshape(Minv(ceil(num_sites / 2), :), length(x_range), length(y_range));
             [Y, X] = meshgrid(y_range, x_range);
-            func = @deconvFunc;
-            function val = deconvFunc(x, y)
-                val = interp2(Y, X, pat, y, x);
-                val(isnan(val)) = 0;
-            end
+            func = @(x, y) interp2(Y, X, pat, y, x, "linear", 0);
         end
 
         % Generate a list of pixel weights for each site from a deconv func
-        function weights = getDeconvWeight(obj, opt1, opt2)
+        function [weights, centers, x_range, y_range] = getDeconvWeight(obj, opt1, opt2)
             arguments
                 obj
                 opt1.radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
-                opt1.x_range = obj.DeconvWeight_XRange
-                opt1.y_range = obj.DeconvWeight_YRange
+                opt1.signal_xrange = obj.SignalXRange
+                opt1.signal_yrange = obj.SignalYRange
                 opt1.threshold = obj.DeconvWeight_Threshold
                 opt2.spread_sites = obj.SpreadMatrix_Sites
-                opt2.spread_center = [0, 0]
                 opt2.spread_xrange = obj.SpreadMatrix_XRange
                 opt2.spread_yrange = obj.SpreadMatrix_YRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
                 opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
             end
+            centers = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
+            weights = cell(size(centers, 1), 4);
+            x_range = opt1.signal_xrange;
+            y_range = opt1.signal_yrange;
+            if isempty(x_range) || isempty(y_range)
+                xmin = max(1, round(min(centers(:, 1))));
+                xmax = round(max(centers(:, 1)));
+                ymin = max(1, round(min(centers(:, 2))));
+                ymax = round(max(centers(:, 2)));
+                x_range = xmin : xmax;
+                y_range = ymin : ymax;
+            end
+            x_step = x_range(2) - x_range(1);
+            y_step = y_range(2) - y_range(1);
             args = namedargs2cell(opt2);
             func = obj.getDeconvFunc(args{:});
-            x_step = opt1.x_range(2) - opt1.x_range(1);
-            y_step = opt1.y_range(2) - opt1.y_range(1);
-            centers = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
-            weights = cell(1, size(centers, 1));
             for site_i = 1: size(centers, 1)
                 center = centers(site_i, :);
-                xmin = max(opt1.x_range(1), round(center(1)) - opt1.radius(1));
-                xmax = min(opt1.x_range(end), round(center(1)) + opt1.radius(1));
-                ymin = max(opt1.y_range(1), round(center(2)) - opt1.radius(end));
-                ymax = min(opt1.y_range(end), round(center(2) + opt1.radius(end)));
-                xidx = ((xmin: xmax) - opt1.x_range(1)) / x_step;
-                yidx = ((ymin: ymax) - opt1.y_range(1)) / y_step;
-                idx = xidx' + (yidx - 1) * length(opt1.x_range);
-                [YP, XP] = meshgrid((ymin:ymax) - center(2), (xmin:xmax) - center(1));
-                val = func(XP(:), YP(:));
+                xmin = max(x_range(1), round(center(1) - opt1.radius(1)));
+                xmax = min(x_range(end), round(center(1) + opt1.radius(1)));
+                ymin = max(y_range(1), round(center(2) - opt1.radius(end)));
+                ymax = min(y_range(end), round(center(2) + opt1.radius(end)));
+                xidx = ((xmin: xmax) - x_range(1)) / x_step;
+                yidx = ((ymin: ymax) - y_range(1)) / y_step;
+                % linear index of the pixels for the given pixel ranges
+                idx = xidx' + (yidx - 1) * length(x_range);
+                [YP, XP] = meshgrid((ymin:ymax), (xmin:xmax));
+                val = func(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+                % filter index that has values larger than threshold
                 keep = abs(val) > opt1.threshold;
-                weights{site_i} = [idx(keep), val(keep)];
+                weights{site_i, 1} = XP(keep);
+                weights{site_i, 2} = YP(keep);
+                weights{site_i, 3} = idx(keep);
+                weights{site_i, 4} = val(keep);
             end
         end
         
         % Generate a simulated image given the counts on the sites
-        function [reconstructed, x_range, y_range] = reconstructSignal(obj, sites, counts, opt2)
+        function [reconstructed, x_range, y_range] = reconstructSignal(obj, counts, sites, opt1, opt2)
             arguments
                 obj
-                sites
                 counts
-                opt2.spread_xrange = obj.ReconstructSignal_XRange
-                opt2.spread_yrange = obj.ReconstructSignal_YRange
+                sites = obj.SiteGrid.Sites
+                opt1.transform_matrix = []
+                opt1.transform_xrange = []
+                opt1.transform_yrange = []
+                opt2.spread_xrange = obj.SignalXRange
+                opt2.spread_yrange = obj.SignalYRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
                 opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * obj.PointSource.RayleighResolution
             end
@@ -283,7 +304,13 @@ classdef SiteCounter < BaseComputer
                 opt2.spread_yrange = ymin : ymax;
             end
             args = namedargs2cell(opt2);
-            [M, x_range, y_range] = obj.getSpreadMatrix('spread_sites', sites, 'spread_center', obj.Lattice.R, args{:});
+            if isempty(opt1.transform_matrix)
+                [M, x_range, y_range] = obj.getSpreadMatrix('spread_sites', sites, 'spread_center', obj.Lattice.R, args{:});
+            else
+                M = opt1.transform_matrix;
+                x_range = opt1.transform_xrange;
+                y_range = opt1.transform_yrange;
+            end
             reconstructed = reshape(M' * counts, length(x_range), length(y_range));
         end
     end
