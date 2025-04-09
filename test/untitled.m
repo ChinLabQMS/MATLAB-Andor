@@ -4,31 +4,43 @@ clear; clc; close all
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_dense.mat").Data;
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_sparse.mat").Data;
 % Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
-Data = load("data/2025/04 April/20250408 mod freq scan/halfplane_mod=50kHz.mat").Data;
+Data = load("data/2025/04 April/20250408 mod freq scan/dense_no_green.mat").Data;
 
 p = Preprocessor();
 Signal = p.process(Data);
 
-signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
+% signal = mean(Signal.Andor19331.Image(:, :, 1), 3);
+signal = Signal.Andor19331.Image;
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
 
 %%
-close all
-stat1 = counter.process(signal, 2, 'plot_diagnostic', 0, 'count_method', "circle_sum");
-stat2 = counter.process(signal, 2, 'plot_diagnostic', 0, 'count_method', "center_signal");
+tic
+counter.updateSiteProp(1:512, 1:1024)
+toc
 
+%%
+close all
+stat1 = counter.process(signal, 2, 'plot_diagnostic', 1, 'count_method', "circle_sum");
+stat2 = counter.process(signal, 2, 'plot_diagnostic', 1, 'count_method', "center_signal");
+stat3 = counter.process(signal, 2, 'plot_diagnostic', 1, 'count_method', "linear_inverse");
+
+%%
 figure
 histogram(stat1.LatCount, 100)
 
 figure
 histogram(stat2.LatCount, 100)
 
+figure
+histogram(stat3.LatCount, 100)
+
 %%
 close all
 figure
-scatter(stat2.LatCount(:, 1), stat2.LatCount(:, 2))
+scatter(reshape(stat3.LatCount(:, 1, :), [], 1), reshape(stat3.LatCount(:, 2, :), [], 1))
+axis("equal")
 
 %%
 figure
@@ -53,7 +65,7 @@ imagesc2(y_range, x_range, signal(x_range, y_range))
 lat.plot()
 
 %%
-[M, x_range, y_range] = counter.getSpreadMatrix();
+[M, x_range, y_range] = counter.getSpreadMatrix('spread_sparse', true);
 
 figure
 subplot(1, 2, 1)
@@ -67,11 +79,10 @@ tic
 toc
 
 %%
-x = weights{102, 1};
-y = weights{102, 2};
-idx = weights{102, 3};
-val = weights{102, 4};
-site_count = signal(idx)' * val
+counts = weights * reshape(signal(x_range, y_range), [], 1);
+
+%%
+histogram(counts, 100)
 
 %%
 figure
