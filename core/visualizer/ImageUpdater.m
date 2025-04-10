@@ -12,6 +12,10 @@ classdef ImageUpdater < AxesUpdater
         PlotLattice_TransformCropRSite = 20
         PlotLattice_TransformScaleV = 5
         PlotPSF_ScaleV = 1
+        PlotOccupied_PlotUnoccup = true
+        PlotOccupied_OccupColor = 'r'
+        PlotOccupied_UnoccupColor = 'w'
+        PlotOccupied_CircleRadius = 0.1
     end
 
     properties (SetAccess = protected)
@@ -27,28 +31,30 @@ classdef ImageUpdater < AxesUpdater
             end
         end
 
-        function updateContent(obj, Live, varargin)
+        function updateContent(obj, live, varargin)
             arguments
                 obj
-                Live
+                live
             end
             arguments (Repeating)
                 varargin
             end
             % Preserve original hold state upon exit
             c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle));
-            plotData(obj, Live)
+            plotData(obj, live)
             obj.resetAddon()
             switch obj.FuncName
                 case "None"
                 case "Lattice All"
-                    obj.plotLatticeAll(Live, varargin{:})
+                    obj.plotLatticeAll(live, varargin{:})
                 case "Transformed"
-                    obj.plotTransformed(Live, varargin{:})
+                    obj.plotTransformed(live, varargin{:})
                 case "Transformed with Lattice"
-                    obj.plotTransformedLattice(Live, varargin{:})
+                    obj.plotTransformedLattice(live, varargin{:})
                 case "PSF"
-                    obj.plotPSF(Live, varargin{:})
+                    obj.plotPSF(live, varargin{:})
+                case "Occupied Sites"
+                    obj.plotOccupied(live, varargin{:})
                 otherwise
                     obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
@@ -123,11 +129,42 @@ classdef ImageUpdater < AxesUpdater
                 obj.AddonHandle(1) = viscircles(obj.AxesHandle, centers, radius, 'LineWidth', 0.5);
                 obj.AddonHandle(2) = PS.plot(obj.AxesHandle);
                 obj.AddonHandle(3:5) = PS.plotV(obj.AxesHandle, 'scale', options.scale_V, 'add_legend', true);
-            catch
-                obj.warn2("[%s %s] Can not find last PSF fitting data. Please check if 'fitPSF' exists in SequenceTable.", obj.CameraName, obj.ImageLabel)
+            catch me
+                obj.warn2("[%s %s] Can not find last PSF fitting data (error: %s). Please check if 'FitPSF' appears in SequenceTable.", ...
+                    me.message, obj.CameraName, obj.ImageLabel)
             end
         end
-
+        
+        function plotOccupied(obj, Live, options)
+            arguments
+                obj
+                Live
+                options.plot_unoccup = obj.PlotOccupied_PlotUnoccup
+                options.occup_color = obj.PlotOccupied_OccupColor
+                options.unoccup_color = obj.PlotOccupied_UnoccupColor
+                options.radius = obj.PlotOccupied_CircleRadius
+            end
+            Lat = getLatCalib(obj, Live);
+            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+            x_shift = (Live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
+            args = namedargs2cell(options);
+            try
+                sites_info = Live.Temporary.(obj.CameraName).(obj.ImageLabel).SiteInfo;
+                occup = Live.Temporary.(obj.CameraName).(obj.ImageLabel).LatOccup;
+            catch me
+                obj.warn2("[%s %s] Can not find LatOccup data (error: %s). Please check if 'ReconstructSites' appears in SequenceTable.", ...
+                    me.message, obj.CameraName, obj.ImageLabel)
+                return
+            end
+            for j = 1: num_frames
+                center = Lat.R + [x_shift(j), 0];
+                sites_occupied = sites_info.Sites(occup(:, j), :);                
+                sites_unoccupied = sites_info.Sites(~occup(:, j), :);
+                obj.AddonHandle(1:2) = Lat.plotOccup(obj.AxesHandle, ...
+                    sites_occupied, sites_unoccupied, ...
+                    'center', center, 'filter', false, args{:});
+            end
+        end
     end
 
 end

@@ -628,8 +628,8 @@
             arguments
                 opt1.center = obj.R
                 opt1.filter = false
-                opt1.x_lim = [1, 1440]
-                opt1.y_lim = [1, 1440]
+                opt1.x_lim = []
+                opt1.y_lim = []
                 opt1.full_range = false
                 opt2.color = "r"
                 opt2.norm_radius = 0.1
@@ -651,6 +651,10 @@
             end
             obj.checkInitialized()
             opt1.remove_origin = opt2.diff_origin;
+            if (isempty(opt1.x_lim) || isempty(opt1.y_lim)) && opt1.filter
+                opt1.x_lim = xlim(ax);
+                opt1.y_lim = ylim(ax);
+            end
             args = namedargs2cell(opt1);
             coor = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
             % Use a different radius to display origin
@@ -682,6 +686,7 @@
                 opt1.filter = false
                 opt1.x_lim = [1, 1440]
                 opt1.y_lim = [1, 1440]
+                opt2.plot_unoccup = true
                 opt2.occup_color = 'r'
                 opt2.unoccup_color = 'w'
                 opt2.radius = 0.1
@@ -707,7 +712,7 @@
             h_unoccup = obj.plot(ax, unoccup, args{:}, 'diff_origin', false, ...
                     'norm_radius', opt2.radius, 'color', opt2.unoccup_color);
             if nargout == 1
-                varargout = [h_occup, h_unoccup];
+                varargout{1} = [h_occup, h_unoccup];
             end
         end
         

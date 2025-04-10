@@ -6,6 +6,7 @@ classdef SiteCounter < BaseComputer
         Process_CalibMode = "offset"
         Process_CountMethod = "linear_inverse"
         Process_ClassifyMethod = "single"
+        Process_AddDescription = true
         Process_PlotDiagnostic = false
         Process_PlotDiagnosticIndex = 1
         ProcessCalib_CropRSites = 20
@@ -36,6 +37,7 @@ classdef SiteCounter < BaseComputer
         SpreadMatrix
         SiteCircleX
         SiteCircleY
+        DeconvFunc
         DeconvWeight  % Sparse matrix to store pixel weights for each site
     end
     
@@ -84,6 +86,7 @@ classdef SiteCounter < BaseComputer
                 opt.count_method = obj.Process_CountMethod
                 opt1.classify_method = obj.Process_ClassifyMethod
                 opt1.classify_threshold = obj.ProcessClassify_SingleThreshold
+                opt2.add_description = obj.Process_AddDescription
                 opt2.plot_diagnostic = obj.Process_PlotDiagnostic
                 opt2.plot_index = obj.Process_PlotDiagnosticIndex
             end
@@ -130,14 +133,15 @@ classdef SiteCounter < BaseComputer
                     stat.LatThreshold = opt1.classify_threshold;
                     stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt1.classify_threshold);
                 case "pre-loaded"
-                case "adaptive"
-                    % thresholds = getSingleThreshold(stat.LatCount);
-                    % stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, thresholds);
-                case "local_adaptive"
-                    % thresholds = getLocalThreshold(stat.LatCount);
-                    % stat.LatOccup = getOccup_SpatialThreshold(stat.LatCount, thresholds);
+                case "gmm"
+                    % Use a two component Gaussian mixture model to fit the counts distribution
+                    [stat.LatOccup, stat.LatProb, stat.LatThreshold, stat.GMModel] = getOccup_GMMThreshold(stat.LatCount);
+                case "none"
                 otherwise
                     obj.error('Unsupported classification method: %s!', opt.classify_method)
+            end
+            if opt2.add_description && ~(opt1.classify_method == "none")
+                stat.Description = obj.describe(stat.LatOccup);
             end
             if opt2.plot_diagnostic
                 plotCountsDiagnostic(obj, stat, signal, num_frames, opt2.plot_index)
@@ -153,7 +157,7 @@ classdef SiteCounter < BaseComputer
                 opt.calib_cropRsites = obj.ProcessCalib_CropRSites
                 opt.count_method = obj.Process_CountMethod
             end
-            [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
+            [x_size, y_size, ~] = size(signal, [1, 2, 3]);
             x_range = 1: (x_size / num_frames);
             y_range = 1: y_size;
             switch opt.calib_mode
@@ -174,6 +178,9 @@ classdef SiteCounter < BaseComputer
                     obj.updateSiteProp(x_range, y_range, opt.count_method)
                 case "offset_every"
                 case "none"
+                    if isempty(obj.SignalXRange) || isempty(obj.SignalYRange)
+                        obj.updateSiteProp(x_range, y_range, opt.count_method)
+                    end
                 otherwise
                     obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
             end
@@ -193,9 +200,9 @@ classdef SiteCounter < BaseComputer
             end
             obj.SignalXRange = x_range;
             obj.SignalYRange = y_range;
-            obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
             switch count_method
                 case "circle_sum"
+                    obj.SiteCenters = obj.Lattice.convert2Real(obj.SiteGrid.Sites);
                     % Update properties related to count method "circle_sum"
                     r = obj.CountCircleSum_SiteCircleRadius;
                     [Y, X] = meshgrid(-r:r, -r:r);
@@ -205,7 +212,8 @@ classdef SiteCounter < BaseComputer
                     obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
                     obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
                 case "linear_inverse"
-                    obj.DeconvWeight = obj.getDeconvWeight();
+                    [obj.DeconvWeight, obj.SiteCenters, obj.DeconvFunc] = ...
+                        obj.getDeconvWeight();
             end
             if ~isempty(x_range) && ~isempty(y_range)
                 obj.SpreadMatrix = obj.getSpreadMatrix( ...
@@ -275,7 +283,7 @@ classdef SiteCounter < BaseComputer
         end
 
         % Generate a list of pixel weights for each site from a deconv func
-        function [weights, centers] = getDeconvWeight(obj, opt1, opt2)
+        function [weights, centers, func, pat] = getDeconvWeight(obj, opt1, opt2)
             arguments
                 obj
                 opt1.radius = obj.SpreadMatrix_PSFRadius * ...
@@ -296,12 +304,15 @@ classdef SiteCounter < BaseComputer
             y_range = opt1.signal_yrange;
             if isempty(x_range) || isempty(y_range)
                 weights = [];
+                centers = [];
+                func = [];
+                pat = [];
                 return
             end
             x_step = x_range(2) - x_range(1);
             y_step = y_range(2) - y_range(1);
             args = namedargs2cell(opt2);
-            func = obj.getDeconvFunc(args{:});
+            [func, pat] = obj.getDeconvFunc(args{:});
             num_sites = size(centers, 1);
             num_px = length(x_range) * length(y_range);
             weights = sparse(num_sites, num_px);
@@ -322,12 +333,27 @@ classdef SiteCounter < BaseComputer
                 weights(site_i, idx(keep)) = val(keep); %#ok<SPRIX>
             end
         end
+
+        function plotDeconvPattern(obj, ax, x_range, y_range)
+            arguments
+                obj
+                ax = gca()
+                x_range = obj.SpreadMatrix_XRange
+                y_range = obj.SpreadMatrix_YRange
+            end
+            if isempty(obj.DeconvFunc)
+                return
+            end
+            [Y, X] = meshgrid(y_range, x_range);
+            pat = reshape(obj.DeconvFunc(X(:), Y(:)), length(x_range), length(y_range));
+            imagesc2(ax, y_range, x_range, pat)
+        end
         
         % Generate a simulated image given the counts on the sites
         function [reconstructed, x_range, y_range] = reconstructSignal(obj, counts, sites, opt1, opt2)
             arguments
                 obj
-                counts
+                counts = []
                 sites = obj.SiteGrid.Sites
                 opt1.transform_matrix = obj.SpreadMatrix
                 opt2.spread_xrange = obj.SignalXRange
@@ -335,6 +361,10 @@ classdef SiteCounter < BaseComputer
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
                 opt2.spread_psf_radius = obj.SpreadMatrix_PSFRadius * ...
                         (obj.PointSource.RayleighResolution * obj.PointSource.InitResolutionRatio)
+            end
+            if isempty(counts)
+                counts = zeros(size(sites, 1), 1);
+                counts(ceil(size(sites, 1) / 2)) = 100;
             end
             if isempty(opt2.spread_xrange) || isempty(opt2.spread_yrange)
                 centers = obj.Lattice.convert2Real(sites);
@@ -360,32 +390,44 @@ classdef SiteCounter < BaseComputer
     end
 
     methods (Static)
+        function plotHist(counts)
+        end
+
         % Generate some statistical analysis on error and loss rates
         function description = describe(occup, options)
             arguments
                 occup
-                options.verbose = true
+                options.verbose = false
             end
             [num_sites, num_frames, num_acq] = size(occup, 1:3);
             total = reshape(sum(occup, 1), num_frames, num_acq);
-            description.TotalNumber = total;
-            description.Filling = total / num_sites;
-            description.MeanNumber = mean(total, 2);
-            description.MeanFilling = description.MeanNumber / num_sites;
-            description.N11 = nan(num_sites, num_frames, num_acq);
-            description.N10 = nan(num_sites, num_frames, num_acq);
-            description.N01 = nan(num_sites, num_frames, num_acq);
-            description.N00 = nan(num_sites, num_frames, num_acq);
+            description.N = total;
+            description.F = total / num_sites;
+            description.MeanSub.N = mean(total, 1);
+            description.MeanSub.F = description.MeanSub.N / num_sites;
+            description.MeanAcq.N = mean(total, 2);
+            description.MeanAcq.F = description.MeanAcq.N / num_sites;
+            description.MeanAll.N = mean(total, 'all');
+            description.MeanAll.F = description.MeanAll.N / num_sites;
             if num_frames ~= 1
                 early = occup(:, 2:end, :);
                 later = occup(:, 1:(end - 1), :);
-                description.N11(:, 1:end-1, :) = early & later;
-                description.N10(:, 1:end-1, :) = early & ~later;
-                description.N01(:, 1:end-1, :) = ~early & later;
-                description.N00(:, 1:end-1, :) = ~early & ~later;
-
+                description.N1 = reshape(sum(early, 1), num_frames-1, num_acq);
+                description.N2 = reshape(sum(later, 1), num_frames-1, num_acq);
+                description.N11 = reshape(sum(early & later, 1), num_frames-1, num_acq);
+                description.N10 = reshape(sum(early & ~later, 1), num_frames-1, num_acq);
+                description.N01 = reshape(sum(~early & later, 1), num_frames-1, num_acq);
+                description.N00 = reshape(sum(~early & ~later, 1), num_frames-1, num_acq);
+                description.Loss = description.N1 - description.N2;
+                description.MeanSub.LossRate = reshape(sum(description.Loss, 1) ./ sum(description.N1, 1), 1, []);
+                description.MeanSub.ErrorRate = reshape(sum(description.N10, 1) ./ sum(description.N1, 1), 1, []);
+                description.MeanAcq.LossRate = sum(description.Loss, 2) ./ sum(description.N1, 2);
+                description.MeanAcq.ErrorRate = sum(description.N10, 2) ./ sum(description.N1, 2);
+                description.MeanAll.LossRate = sum(description.Loss, 'all') ./ sum(description.N1, 'all');
+                description.MeanAll.ErrorRate = sum(description.N10, 'all') ./ sum(description.N1, 'all');
             end
-            if options.verbose                
+            if options.verbose
+                disp(description.MeanAll)
             end
         end
     end
@@ -417,15 +459,31 @@ function occup = getOccup_SingleThreshold(counts, thresholds)
     occup = counts > thresholds;
 end
 
-function occup = getOccup_SpatialThreshold(counts, thresholds)
-    occup = counts > thresholds;
-end
-
-%% Get adaptive thresholds to classify 0 and 1 from counts distribution
-function thresholds = getSingleThreshold(counts)
-end
-
-function thresholds = getLocalThreshold(counts)
+function [occup, prob, threshold, model] = getOccup_GMMThreshold(counts)
+    model = fitgmdist(counts(:), 2);
+    prob = model.posterior(counts(:));
+    if model.mu(1) > model.mu(2)
+        occup = prob(:, 1) > prob(:, 2);
+        prob = prob(:, 1);
+    else
+        occup = prob(:, 2) > prob(:, 1);
+        prob = prob(:, 2);
+    end
+    occup = reshape(occup, size(counts));
+    prob = reshape(prob, size(counts));
+    % Compute thresholds from 2-components Gaussian mixture model
+    A = model.Sigma(1)^2 - model.Sigma(2)^2;
+    B = -2*model.Sigma(1)^2 * model.mu(2) + 2*model.Sigma(2)^2 * model.mu(1);
+    D = model.Sigma(1)^2 * model.mu(2)^2 - model.Sigma(2)^2 * model.mu(1)^2 ...
+        - 2*model.Sigma(1)^2 * model.Sigma(2)^2 * log( ...
+        model.ComponentProportion(2) * model.Sigma(1) / (model.ComponentProportion(1) * model.Sigma(2)));
+    threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
+    threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
+    if (threshold1 < max(model.mu)) && (threshold1 > min(model.mu))
+        threshold = threshold1;
+    else
+        threshold = threshold2;
+    end
 end
 
 %% Utility functions

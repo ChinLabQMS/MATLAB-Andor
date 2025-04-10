@@ -2,7 +2,7 @@ classdef SiteProcessor < CombinedProcessor
 
     properties (Constant)
         SiteCounterList = ["Andor19330", "Andor19331"]
-        SiteGridParams = {}
+        SiteGridParams = {'SiteFormat', 'Hex', 'HexRadius', 20}
     end
 
     properties (SetAccess = protected)

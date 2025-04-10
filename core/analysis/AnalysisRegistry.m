@@ -37,8 +37,9 @@ classdef AnalysisRegistry < BaseObject
                            ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
         RecordMotorStatus  (@recordMotor, ...
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
-        CountSites         (@countSites, ...
-                            ["LatCount"])
+        ReconstructSites   (@reconstructSites)
+        AnalyzeOccup       (@analyzeOccup, ...
+                            ["ErrorRate", "LossRate", "AtomNumber"])
     end
 
 end
@@ -196,10 +197,49 @@ function recordMotor(live, info, options)
     end
 end
 
-function countSites(live, info, options)
+function reconstructSites(live, info, varargin, options)
+    arguments
+       live
+       info
+    end
+    arguments (Repeating)
+        varargin
+    end
+    arguments
+       options.verbose = false
+    end
+    timer = tic;
+    counter = live.SiteCounters.(info.camera);
+    stat = counter.process(live.Signal.(info.camera).(info.label), info.config.NumSubFrames, ...
+        varargin{:});
+    live.Temporary.(info.camera).(info.label).SiteInfo = stat.SiteInfo;
+    live.Temporary.(info.camera).(info.label).LatCount = stat.LatCount;
+    live.Temporary.(info.camera).(info.label).LatOccup = stat.LatOccup;
+    if options.verbose
+        live.info("[%s %s] Reconstructing sites takes %5.3f s.", info.camera, info.label, toc(timer))
+    end
+end
+
+function analyzeOccup(live, info, options)
     arguments
        live
        info
        options.verbose = false
+    end
+    timer = tic;
+    counter = live.SiteCounters.(info.camera);
+    if isfield(live.Temporary, info.camera) && isfield(live.Temporary.(info.camera), info.label) ...
+            && isfield(live.Temporary.(info.camera).(info.label), "LatOccup")
+        description = counter.describe(live.Temporary.(info.camera).(info.label).LatOccup);
+        live.Analysis.(info.camera).(info.label).ErrorRate = description.MeanAll.ErrorRate;
+        live.Analysis.(info.camera).(info.label).LossRate = description.MeanAll.LossRate;
+        live.Analysis.(info.camera).(info.label).AtomNumber = description.MeanAll.N;
+    else
+        live.Analysis.(info.camera).(info.label).ErrorRate = nan;
+        live.Analysis.(info.camera).(info.label).LossRate = nan;
+        live.Analysis.(info.camera).(info.label).AtomNumber = nan;
+    end
+    if options.verbose
+        live.info("[%s %s] Analyzing sites occupancies takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
