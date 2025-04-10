@@ -73,19 +73,19 @@ classdef SiteCounter < BaseComputer
         end
         
         % Main interface for app and analysis
-        function stat = process(obj, signal, num_frames, opt)
+        function stat = process(obj, signal, num_frames, opt, opt1, opt2)
             arguments
                 obj
                 signal
                 num_frames = 1
                 % Parameters on the entire flow
                 opt.calib_mode = obj.Process_CalibMode
-                opt.count_method = obj.Process_CountMethod
-                opt.classify_method = obj.Process_ClassifyMethod
-                opt.plot_diagnostic = obj.Process_PlotDiagnostic
-                opt.plot_index = obj.Process_PlotDiagnosticIndex
                 opt.calib_cropRsites = obj.ProcessCalib_CropRSites
-                opt.classify_threshold = obj.ProcessClassify_SingleThreshold
+                opt.count_method = obj.Process_CountMethod
+                opt1.classify_method = obj.Process_ClassifyMethod
+                opt1.classify_threshold = obj.ProcessClassify_SingleThreshold
+                opt2.plot_diagnostic = obj.Process_PlotDiagnostic
+                opt2.plot_index = obj.Process_PlotDiagnosticIndex
             end
             [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
             x_range = 1: (x_size / num_frames);
@@ -97,27 +97,8 @@ classdef SiteCounter < BaseComputer
             stat.LatCount = nan(obj.SiteGrid.NumSites, num_frames, num_acq);
             stat.LatOccup = nan(obj.SiteGrid.NumSites, num_frames, num_acq);
             % Calibrate lattice center offset, or use the existing Lat.R
-            switch opt.calib_mode
-                case {"full", "full_first_offset_every"}
-                    obj.info('Starting full calibration...')
-                    old_lat = obj.Lattice.copy();
-                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
-                    [xc, yc] = fitGaussXY(signal_sum, x_range, y_range);
-                    obj.Lattice.init([xc, yc], 'format', 'R')
-                    obj.Lattice.calibrateCropSite(signal_sum, opt.calib_cropRsites)
-                    obj.Lattice.checkDiff(old_lat, obj.Lattice)
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
-                case "offset"
-                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
-                    obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
-                case "update_range_only"
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
-                case "offset_every"
-                case "none"
-                otherwise
-                    obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
-            end
+            args = namedargs2cell(opt);
+            obj.precalibrate(signal, num_frames, args{:})
             % Get site-wise counts for each acquisition and sub-frame
             for i = 1: num_acq
                 single_shot = signal(:, :, i);
@@ -144,21 +125,57 @@ classdef SiteCounter < BaseComputer
                 end
             end
             % Classify sites as occupied/unoccupied
-            switch opt.classify_method
+            switch opt1.classify_method
                 case "single"
-                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt.classify_threshold);
+                    stat.LatThreshold = opt1.classify_threshold;
+                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt1.classify_threshold);
                 case "pre-loaded"
                 case "adaptive"
-                    thresholds = getSingleThreshold(stat.LatCount);
-                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, thresholds);
+                    % thresholds = getSingleThreshold(stat.LatCount);
+                    % stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, thresholds);
                 case "local_adaptive"
-                    thresholds = getLocalThreshold(stat.LatCount);
-                    stat.LatOccup = getOccup_SpatialThreshold(stat.LatCount, thresholds);
+                    % thresholds = getLocalThreshold(stat.LatCount);
+                    % stat.LatOccup = getOccup_SpatialThreshold(stat.LatCount, thresholds);
                 otherwise
                     obj.error('Unsupported classification method: %s!', opt.classify_method)
             end
-            if opt.plot_diagnostic
-                plotCountsDiagnostic(obj, stat, signal, num_frames, opt.plot_index)
+            if opt2.plot_diagnostic
+                plotCountsDiagnostic(obj, stat, signal, num_frames, opt2.plot_index)
+            end
+        end
+
+        function precalibrate(obj, signal, num_frames, opt)
+            arguments
+                obj
+                signal
+                num_frames
+                opt.calib_mode = obj.Process_CalibMode
+                opt.calib_cropRsites = obj.ProcessCalib_CropRSites
+                opt.count_method = obj.Process_CountMethod
+            end
+            [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
+            x_range = 1: (x_size / num_frames);
+            y_range = 1: y_size;
+            switch opt.calib_mode
+                case {"full", "full_first_offset_every"}
+                    obj.info('Starting full calibration...')
+                    old_lat = obj.Lattice.copy();
+                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
+                    [xc, yc] = fitGaussXY(signal_sum, x_range, y_range);
+                    obj.Lattice.init([xc, yc], 'format', 'R')
+                    obj.Lattice.calibrateCropSite(signal_sum, opt.calib_cropRsites)
+                    obj.Lattice.checkDiff(old_lat, obj.Lattice)
+                    obj.updateSiteProp(x_range, y_range, opt.count_method)
+                case "offset"
+                    signal_sum = getSignalSum(signal, num_frames, "first_only", false);
+                    obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
+                    obj.updateSiteProp(x_range, y_range, opt.count_method)
+                case "update_range_only"
+                    obj.updateSiteProp(x_range, y_range, opt.count_method)
+                case "offset_every"
+                case "none"
+                otherwise
+                    obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
             end
         end
         
@@ -343,6 +360,7 @@ classdef SiteCounter < BaseComputer
     end
 
     methods (Static)
+        % Generate some statistical analysis on error and loss rates
         function description = describe(occup, options)
             arguments
                 occup
@@ -354,17 +372,20 @@ classdef SiteCounter < BaseComputer
             description.Filling = total / num_sites;
             description.MeanNumber = mean(total, 2);
             description.MeanFilling = description.MeanNumber / num_sites;
+            description.N11 = nan(num_sites, num_frames, num_acq);
+            description.N10 = nan(num_sites, num_frames, num_acq);
+            description.N01 = nan(num_sites, num_frames, num_acq);
+            description.N00 = nan(num_sites, num_frames, num_acq);
             if num_frames ~= 1
-                loss = total - circshift(total, -1, 1);
-                loss_rate = loss ./ total;
-                description.LossNumber = loss(2:end, :);
-                description.LossRate = loss_rate(2:end, :);
-                description.MeanLossRate = sum(description.LossNumber, 2) ./ sum(description.TotalNumber(1: (end-1)), 2);
-            else
-                
+                early = occup(:, 2:end, :);
+                later = occup(:, 1:(end - 1), :);
+                description.N11(:, 1:end-1, :) = early & later;
+                description.N10(:, 1:end-1, :) = early & ~later;
+                description.N01(:, 1:end-1, :) = ~early & later;
+                description.N00(:, 1:end-1, :) = ~early & ~later;
+
             end
-            if options.verbose
-                
+            if options.verbose                
             end
         end
     end

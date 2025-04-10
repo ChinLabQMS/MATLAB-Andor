@@ -26,6 +26,9 @@ classdef LineUpdater < AxesUpdater
                     new = sum(data, 'all');
                 case "Variance"
                     new = var(data(:));
+                case "Upper/Lower"
+                    x_size = size(data, 1);
+                    new = sum(data(1: x_size/2, :), "all") / sum(data((x_size/2 + 1):end, :), "all");
                 otherwise
                     if isfield(data, obj.FuncName)
                         new = reshape(data.(obj.FuncName), [], 1);

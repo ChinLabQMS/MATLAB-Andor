@@ -1,7 +1,8 @@
 classdef AppConfig < BaseConfig
 
     properties (Constant)
-        BaseAnalysis = ["Signal: Max", "Signal: Sum", "Background: Max", "Noise: Variance"]
+        BaseAnalysis = ["Signal: Max", "Signal: Sum", "Background: Max", ...
+                        "Noise: Variance", "Signal: Upper/Lower"]
         SequenceName = "Full4Basic"
         TestMode = getTestMode()
         FigurePosition = getFigurePosition()

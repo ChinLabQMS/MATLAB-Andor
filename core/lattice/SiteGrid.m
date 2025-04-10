@@ -2,7 +2,7 @@ classdef SiteGrid < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
         SiteFormat = "Hex"
-        HexRadiusR = 20
+        HexRadius = 20
         HexStep = 1
         RectRadiusX = 10
         RectRadiusY = 10
@@ -16,7 +16,7 @@ classdef SiteGrid < BaseProcessor
     methods (Access = protected, Hidden)
         function init(obj)
             obj.Sites = obj.prepareSite(obj.SiteFormat, ...
-                "latr", obj.HexRadiusR, ...
+                "latr", obj.HexRadius, ...
                 "latr_step", obj.HexStep, ...
                 "latx_range", -obj.RectRadiusX: obj.RectRadiusX, ...
                 "laty_range", -obj.RectRadiusY: obj.RectRadiusY);
