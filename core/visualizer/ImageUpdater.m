@@ -131,7 +131,7 @@ classdef ImageUpdater < AxesUpdater
                 obj.AddonHandle(3:5) = PS.plotV(obj.AxesHandle, 'scale', options.scale_V, 'add_legend', true);
             catch me
                 obj.warn2("[%s %s] Can not find last PSF fitting data (error: %s). Please check if 'FitPSF' appears in SequenceTable.", ...
-                    me.message, obj.CameraName, obj.ImageLabel)
+                    obj.CameraName, obj.ImageLabel, me.message)
             end
         end
         
@@ -163,9 +163,7 @@ classdef ImageUpdater < AxesUpdater
                 h = Lat.plotOccup(obj.AxesHandle, ...
                                    sites_occupied, sites_unoccupied, ...
                                    'center', center, 'filter', false, args{:});
-                if ~isempty(h)
-                    obj.AddonHandle(end + 1 : end + length(h)) = h;
-                end
+                obj.AddonHandle(end + 1 : end + length(h)) = h;
             end
         end
     end

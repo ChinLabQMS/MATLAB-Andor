@@ -26,7 +26,7 @@ classdef AnalysisRegistry < BaseObject
     enumeration
         FitCenter          (@fitCenter, ...
                            ["XCenter", "YCenter", "XWidth", "YWidth"])
-        FitGauss           (@fitGaussXY_new, ...
+        FitGaussXY         (@fitGaussXY_new, ...
                            ["GaussXC", "GaussYC", "GaussXW", "GaussYW"], ...
                            ["SumX", "SumY"])
         CalibLatR          (@calibLatR, ...
@@ -37,7 +37,9 @@ classdef AnalysisRegistry < BaseObject
                            ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
         RecordMotorStatus  (@recordMotor, ...
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
-        ReconstructSites   (@reconstructSites)
+        ReconstructSites   (@reconstructSites, ...
+                            [], ...
+                            ["CountDistribution"])
         AnalyzeOccup       (@analyzeOccup, ...
                             ["ErrorRate", "LossRate", "AtomNumber", "MeanFilling"])
     end
@@ -206,6 +208,7 @@ function reconstructSites(live, info, varargin, options)
         varargin
     end
     arguments
+       options.hist_params = []
        options.verbose = false
     end
     timer = tic;
@@ -216,6 +219,12 @@ function reconstructSites(live, info, varargin, options)
     live.Temporary.(info.camera).(info.label).SiteInfo = stat.SiteInfo;
     live.Temporary.(info.camera).(info.label).LatCount = stat.LatCount;
     live.Temporary.(info.camera).(info.label).LatOccup = stat.LatOccup;
+    if ~isempty(options.hist_params)
+        [N, edges] = histcounts(stat.LatCount(:), options.hist_params);
+    else
+        [N, edges] = histcounts(stat.LatCount(:));
+    end
+    live.Analysis.(info.camera).(info.label).CountDistribution = {{"histogram", N, edges, stat.LatThreshold}};
     if options.verbose
         live.info("[%s %s] Reconstructing sites takes %5.3f s.", info.camera, info.label, toc(timer))
     end

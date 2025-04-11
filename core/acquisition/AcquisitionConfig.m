@@ -40,11 +40,14 @@ classdef AcquisitionConfig < BaseProcessor
         function contents = parseAnalysis2Content(obj, index_str)
             res = split(index_str, ": ");
             [camera, label] = res{:};
+            contents = string.empty;
             if isfield(obj.AnalysisOutVars, camera) && isfield(obj.AnalysisOutVars.(camera), label)
                 out_vars = obj.AnalysisOutVars.(camera).(label);
-                contents = ("Analysis: " + out_vars')';
-            else
-                contents = string.empty;
+                contents = [contents, ("Analysis: " + out_vars')'];
+            end
+            if isfield(obj.AnalysisOutData, camera) && isfield(obj.AnalysisOutData.(camera), label)
+                out_data = obj.AnalysisOutData.(camera).(label);
+                contents = [contents, ("Analysis: " + out_data')'];
             end
         end
 

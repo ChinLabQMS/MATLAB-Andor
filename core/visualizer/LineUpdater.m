@@ -7,15 +7,26 @@ classdef LineUpdater < AxesUpdater
         FuncName = "Max"
     end
 
+    properties (SetAccess = protected)
+        AddonHandle
+    end
+
     methods
         function config(obj, varargin)
             obj.clear()
             config@AxesUpdater(obj, varargin{:})
         end
+
+        function clear(obj)
+            clear@AxesUpdater(obj)
+            obj.AddonHandle = [];
+        end
     end
     
     methods (Access = protected, Hidden)
         function updateContent(obj, Live)
+            % Preserve original hold state upon exit
+            c_obj = onCleanup(@()preserveHold(ishold(obj.AxesHandle), obj.AxesHandle));
             data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
             switch obj.FuncName
                 case "Mean"
@@ -31,19 +42,42 @@ classdef LineUpdater < AxesUpdater
                     new = sum(data(1: x_size/2, :), "all") / sum(data((x_size/2 + 1):end, :), "all");
                 otherwise
                     if isfield(data, obj.FuncName)
-                        new = reshape(data.(obj.FuncName), [], 1);
+                        new = data.(obj.FuncName);
                     else
                         new = nan;
                         obj.warn2('[%s %s] Not found in live data.', obj.Content, obj.FuncName)
                     end
             end
-            if isempty(obj.GraphHandle)
-                obj.GraphHandle = plot(obj.AxesHandle, Live.RunNumber, new, "LineWidth", 2);
+            % For non-scalar data, directly plot it
+            if iscell(new)
+                obj.clear()
+                if ~iscell(new{1})
+                    obj.GraphHandle = plot(obj.AxesHandle, new{1}, "LineWidth", 2);
+                else                    
+                    switch new{1}{1}
+                        case "histogram"
+                            obj.GraphHandle = histogram(obj.AxesHandle, 'BinCounts', new{1}{2}, 'BinEdges', new{1}{3});
+                            hold(obj.AxesHandle, "on")
+                            obj.AddonHandle = xline(obj.AxesHandle, new{1}{4}, '--', 'LineWidth', 2);
+                        otherwise
+                            obj.error('Unrecognized data dimensions for line plotter!')
+                    end
+                end
             else
-                obj.GraphHandle.XData = [obj.GraphHandle.XData, Live.RunNumber];
-                obj.GraphHandle.YData = [obj.GraphHandle.YData, new];
+                % For scalar data, append it after each run
+                if isempty(obj.GraphHandle)
+                    obj.GraphHandle = plot(obj.AxesHandle, Live.RunNumber, new, "LineWidth", 2);
+                    hold(obj.AxesHandle, "on")
+                    obj.AddonHandle = plot(obj.AxesHandle, Live.RunNumber, new, "LineWidth", 2, 'LineStyle', '--');
+                else
+                    obj.GraphHandle.XData = [obj.GraphHandle.XData, Live.RunNumber];
+                    obj.GraphHandle.YData = [obj.GraphHandle.YData, new];
+                    val = obj.GraphHandle.YData;
+                    rolling_mean = mean(val(max(1, length(val) - 4) : end), 'all');
+                    obj.AddonHandle.XData = [obj.AddonHandle.XData, Live.RunNumber];
+                    obj.AddonHandle.YData = [obj.AddonHandle.YData, rolling_mean];
+                end
             end
         end
     end
-
 end

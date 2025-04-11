@@ -5,7 +5,7 @@ clear; clc; close all
 % Data = load("data/2025/02 February/20250220 gray static patterns/no_dmd_sparse.mat").Data;
 % Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
 % Data = load("data/2025/04 April/20250408 mod freq scan/sparse_no_green.mat").Data;
-Data = load("data/2025/04 April/20250410/Bx=-0.74_By=2.14_Bz=1.2_freqOP=-2.5_AMOP=5_freqREP=-1.4_AMREP=5.mat").Data;
+Data = load("data/2025/04 April/20250410 imaging parameter scan/Bx=-0.74_By=2.14_Bz=1.2_freqOP=-2.5_AMOP=5_freqREP=-1.4_AMREP=5.mat").Data;
 
 p = Preprocessor();
 Signal = p.process(Data);
@@ -39,7 +39,7 @@ xline(stat.LatThreshold)
 axis("equal")
 
 figure
-histogram(stat.LatCount(:, 1, :), 100)
+histogram(stat.LatCount(:), 100)
 xline(stat.LatThreshold)
 % yscale('log')
 
