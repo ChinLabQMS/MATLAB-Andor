@@ -11,6 +11,7 @@ classdef PointSource < BaseComputer
         FindPeaks_BinThresholdPerct = 0.15
         FindPeaks_BinConnectivity = 8
         FindPeaks_FilterAreaMin = 4
+        FindPeaks_FilterAreaMax = 10 % Multiply by RayleighResolution^2
         FindPeaks_DbscanDist = 2 % Multiply by RayleighResolution
         FindPeaks_DbscanSingleOnly = false
         FindPeaks_FilterIntensityMin = 50
@@ -111,6 +112,7 @@ classdef PointSource < BaseComputer
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
                 opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
                 opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
+                opt1.filter_area_max = obj.FindPeaks_FilterAreaMax * (obj.InitResolutionRatio * obj.RayleighResolution)^2
                 opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
                 opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
                 opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
@@ -197,6 +199,7 @@ classdef PointSource < BaseComputer
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
                 opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
                 opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
+                opt1.filter_area_max = obj.FindPeaks_FilterAreaMax * (obj.InitResolutionRatio * obj.RayleighResolution)^2
                 opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
                 opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
                 opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
@@ -256,6 +259,7 @@ classdef PointSource < BaseComputer
                 opt1.bin_threshold_perct = obj.FindPeaks_BinThresholdPerct
                 opt1.bin_connectivity = obj.FindPeaks_BinConnectivity
                 opt1.filter_area_min = obj.FindPeaks_FilterAreaMin
+                opt1.filter_area_max = obj.FindPeaks_FilterAreaMax * (obj.InitResolutionRatio * obj.RayleighResolution)^2
                 opt1.dbscan_distance = (obj.InitResolutionRatio * obj.RayleighResolution) * obj.FindPeaks_DbscanDist
                 opt1.dbscan_single_only = obj.FindPeaks_DbscanSingleOnly
                 opt1.filter_intensity_min = obj.FindPeaks_FilterIntensityMin
@@ -287,7 +291,7 @@ classdef PointSource < BaseComputer
             
                 % Filter the connected components by area to get rid of noise peaks
                 stats0 = stats;
-                stats = stats(stats.Area >= opt1.filter_area_min, :);
+                stats = stats((stats.Area >= opt1.filter_area_min) & (stats.Area <= opt1.filter_area_max), :);
             
                 % Use dbscan to find clusters of peaks
                 stats1 = stats;
@@ -822,7 +826,7 @@ function plotPeaks(id, img_data, img_bin, stats0, stats1, stats2, stats3, stats4
     imagesc2(img_bin.*img_data, 'title', sprintf('0.Discretized: %d', size(stats0, 1)))
     viscircles(stats0.WeightedCentroid, sqrt(stats0.Area)/2);
     subplot(2, 3, 2)
-    imagesc2(img_data, 'title', sprintf('1.After filtering small area: %d', size(stats1, 1)))
+    imagesc2(img_data, 'title', sprintf('1.After filtering small/big area: %d', size(stats1, 1)))
     viscircles(stats0.WeightedCentroid, sqrt(stats0.Area)/2, 'Color', 'w', 'LineWidth', 0.5);
     viscircles(stats1.WeightedCentroid, sqrt(stats1.Area)/2);
     subplot(2, 3, 3)

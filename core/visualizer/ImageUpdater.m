@@ -12,7 +12,7 @@ classdef ImageUpdater < AxesUpdater
         PlotLattice_TransformCropRSite = 20
         PlotLattice_TransformScaleV = 5
         PlotPSF_ScaleV = 1
-        PlotOccupied_PlotUnoccup = true
+        PlotOccupied_PlotUnoccup = false
         PlotOccupied_OccupColor = 'r'
         PlotOccupied_UnoccupColor = 'w'
         PlotOccupied_CircleRadius = 0.1
@@ -153,16 +153,19 @@ classdef ImageUpdater < AxesUpdater
                 occup = Live.Temporary.(obj.CameraName).(obj.ImageLabel).LatOccup;
             catch me
                 obj.warn2("[%s %s] Can not find LatOccup data (error: %s). Please check if 'ReconstructSites' appears in SequenceTable.", ...
-                    me.message, obj.CameraName, obj.ImageLabel)
+                    obj.CameraName, obj.ImageLabel, me.message)
                 return
             end
             for j = 1: num_frames
                 center = Lat.R + [x_shift(j), 0];
                 sites_occupied = sites_info.Sites(occup(:, j), :);                
                 sites_unoccupied = sites_info.Sites(~occup(:, j), :);
-                obj.AddonHandle(1:2) = Lat.plotOccup(obj.AxesHandle, ...
-                    sites_occupied, sites_unoccupied, ...
-                    'center', center, 'filter', false, args{:});
+                h = Lat.plotOccup(obj.AxesHandle, ...
+                                   sites_occupied, sites_unoccupied, ...
+                                   'center', center, 'filter', false, args{:});
+                if ~isempty(h)
+                    obj.AddonHandle(end + 1 : end + length(h)) = h;
+                end
             end
         end
     end

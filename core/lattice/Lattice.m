@@ -706,6 +706,9 @@
             else
                 obj.error("Unsupported number of input positional arguments.")
             end
+            if ~opt2.plot_unoccup
+                unoccup = zeros(0, 2);
+            end
             args = namedargs2cell(opt1);
             h_occup = obj.plot(ax, occup, args{:}, 'diff_origin', false, ...
                 'norm_radius', opt2.radius, 'color', opt2.occup_color);

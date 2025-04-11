@@ -39,7 +39,7 @@ classdef AnalysisRegistry < BaseObject
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
         ReconstructSites   (@reconstructSites)
         AnalyzeOccup       (@analyzeOccup, ...
-                            ["ErrorRate", "LossRate", "AtomNumber"])
+                            ["ErrorRate", "LossRate", "AtomNumber", "MeanFilling"])
     end
 
 end
@@ -210,7 +210,8 @@ function reconstructSites(live, info, varargin, options)
     end
     timer = tic;
     counter = live.SiteCounters.(info.camera);
-    stat = counter.process(live.Signal.(info.camera).(info.label), info.config.NumSubFrames, ...
+    stat = counter.process(live.Signal.(info.camera).(info.label), ...
+        info.config.NumSubFrames, ...
         varargin{:});
     live.Temporary.(info.camera).(info.label).SiteInfo = stat.SiteInfo;
     live.Temporary.(info.camera).(info.label).LatCount = stat.LatCount;
@@ -234,10 +235,12 @@ function analyzeOccup(live, info, options)
         live.Analysis.(info.camera).(info.label).ErrorRate = description.MeanAll.ErrorRate;
         live.Analysis.(info.camera).(info.label).LossRate = description.MeanAll.LossRate;
         live.Analysis.(info.camera).(info.label).AtomNumber = description.MeanAll.N;
+        live.Analysis.(info.camera).(info.label).MeanFilling = description.MeanAll.F;
     else
         live.Analysis.(info.camera).(info.label).ErrorRate = nan;
         live.Analysis.(info.camera).(info.label).LossRate = nan;
         live.Analysis.(info.camera).(info.label).AtomNumber = nan;
+        live.Analysis.(info.camera).(info.label).MeanFilling = nan;
     end
     if options.verbose
         live.info("[%s %s] Analyzing sites occupancies takes %5.3f s.", info.camera, info.label, toc(timer))
