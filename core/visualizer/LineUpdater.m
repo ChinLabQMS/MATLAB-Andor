@@ -60,7 +60,7 @@ classdef LineUpdater < AxesUpdater
                             hold(obj.AxesHandle, "on")
                             obj.AddonHandle = xline(obj.AxesHandle, new{1}{4}, '--', 'LineWidth', 2);
                         otherwise
-                            obj.error('Unrecognized data dimensions for line plotter!')
+                            obj.error('Unrecognized plot type for line plotter!')
                     end
                 end
             else

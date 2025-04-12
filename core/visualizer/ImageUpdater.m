@@ -16,6 +16,10 @@ classdef ImageUpdater < AxesUpdater
         PlotOccupied_OccupColor = 'r'
         PlotOccupied_UnoccupColor = 'w'
         PlotOccupied_CircleRadius = 0.1
+        PlotHopLoss_HopColor = 'r'
+        PlotHopLoss_LossColor = 'b'
+        PlotHopLoss_GoodColor = 'w'
+        PlotHopLoss_CircleRadius = 0.1
     end
 
     properties (SetAccess = protected)
@@ -55,13 +59,15 @@ classdef ImageUpdater < AxesUpdater
                     obj.plotPSF(live, varargin{:})
                 case "Occupied Sites"
                     obj.plotOccupied(live, varargin{:})
+                case "Hop/Loss Sites"
+                    obj.plotHopLoss(live, varargin{:})
                 otherwise
                     obj.error('Unrecongnized add-on name %s.', obj.FuncName)
             end
         end
 
-        function plotData(obj, Live)
-            data = Live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
+        function plotData(obj, live)
+            data = live.(obj.Content).(obj.CameraName).(obj.ImageLabel);
             [x_size, y_size] = size(data);
             if isempty(obj.GraphHandle)
                 obj.GraphHandle = imagesc(obj.AxesHandle, data);
@@ -73,41 +79,41 @@ classdef ImageUpdater < AxesUpdater
             end
         end
         
-        function plotLatticeAll(obj, Live, options)
+        function plotLatticeAll(obj, live, options)
             arguments
                 obj
-                Live
+                live
                 options.lattice_hexr = obj.PlotLattice_HexR
             end
-            Lat = getLatCalib(obj, Live);
-            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
-            x_shift = (Live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
+            Lat = getLatCalib(obj, live);
+            num_frames = live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+            x_shift = (live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
             R_shift = [x_shift', zeros(num_frames, 1)]; % shift only in X
             obj.AddonHandle = Lat.plot(obj.AxesHandle, ...
                 SiteGrid.prepareSite('Hex', "latr", options.lattice_hexr), ...
                 'center', Lat.R + R_shift, 'filter', false);
         end
 
-        function plotTransformed(obj, Live, options)
+        function plotTransformed(obj, live, options)
             arguments
                 obj
-                Live
+                live
                 options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
             end
-            [transformed, x_range, y_range] = getTransformed(obj, Live, options.transform_cropRsite);
+            [transformed, x_range, y_range] = getTransformed(obj, live, options.transform_cropRsite);
             hold(obj.AxesHandle, "on")
             obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
         end
         
-        function plotTransformedLattice(obj, Live, options)
+        function plotTransformedLattice(obj, live, options)
             arguments
                 obj
-                Live
+                live
                 options.lattice_hexr = obj.PlotLattice_HexR
                 options.transform_cropRsite = obj.PlotLattice_TransformCropRSite
                 options.transform_scaleV = obj.PlotLattice_TransformScaleV
             end
-            [transformed, x_range, y_range, Lat2] = getTransformed(obj, Live, options.transform_cropRsite);
+            [transformed, x_range, y_range, Lat2] = getTransformed(obj, live, options.transform_cropRsite);
             hold(obj.AxesHandle, "on")
             obj.AddonHandle = imagesc(obj.AxesHandle, y_range, x_range, transformed);
             obj.AddonHandle(2) = Lat2.plot(obj.AxesHandle, ...
@@ -115,14 +121,14 @@ classdef ImageUpdater < AxesUpdater
             obj.AddonHandle(3:4) = Lat2.plotV(obj.AxesHandle, 'scale', options.transform_scaleV, 'add_legend', false);
         end
         
-        function plotPSF(obj, Live, options)
+        function plotPSF(obj, live, options)
             arguments
                 obj
-                Live
+                live
                 options.scale_V = obj.PlotPSF_ScaleV
             end
             try
-                PS = Live.PSFCalib.(obj.CameraName);
+                PS = live.PSFCalib.(obj.CameraName);
                 centers = PS.DataLastStats.RefinedCentroid;
                 radius = PS.DataLastStats.MaxRefinedWidth;
                 hold(obj.AxesHandle, "on")
@@ -135,36 +141,77 @@ classdef ImageUpdater < AxesUpdater
             end
         end
         
-        function plotOccupied(obj, Live, options)
+        function plotOccupied(obj, live, options)
             arguments
                 obj
-                Live
+                live
                 options.plot_unoccup = obj.PlotOccupied_PlotUnoccup
                 options.occup_color = obj.PlotOccupied_OccupColor
                 options.unoccup_color = obj.PlotOccupied_UnoccupColor
                 options.radius = obj.PlotOccupied_CircleRadius
             end
-            Lat = getLatCalib(obj, Live);
-            num_frames = Live.CameraManager.(obj.CameraName).Config.NumSubFrames;
-            x_shift = (Live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
+            Lat = getLatCalib(obj, live);
+            num_frames = live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+            x_shift = (live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
             args = namedargs2cell(options);
-            try
-                sites_info = Live.Temporary.(obj.CameraName).(obj.ImageLabel).SiteInfo;
-                occup = Live.Temporary.(obj.CameraName).(obj.ImageLabel).LatOccup;
-            catch me
-                obj.warn2("[%s %s] Can not find LatOccup data (error: %s). Please check if 'ReconstructSites' appears in SequenceTable.", ...
-                    obj.CameraName, obj.ImageLabel, me.message)
+            if isfield(live.Temporary, obj.CameraName) && isfield(live.Temporary.(obj.CameraName), obj.ImageLabel) ...
+                && isfield(live.Temporary.(obj.CameraName).(obj.ImageLabel), "SiteStat")
+                stat = live.Temporary.(obj.CameraName).(obj.ImageLabel).SiteStat;
+            else
+                obj.warn2("[%s %s] Unable to find SiteStat in live data. Please check if 'ReconstructSites' and 'AnalyzeOccup' appears in SequenceTable.", ...
+                    obj.CameraName, obj.ImageLabel)
                 return
             end
             for j = 1: num_frames
                 center = Lat.R + [x_shift(j), 0];
-                sites_occupied = sites_info.Sites(occup(:, j), :);                
-                sites_unoccupied = sites_info.Sites(~occup(:, j), :);
+                sites_occupied = stat.SiteInfo.Sites(stat.LatOccup(:, j), :);                
+                sites_unoccupied = stat.SiteInfo.Sites(~stat.LatOccup(:, j), :);
                 h = Lat.plotOccup(obj.AxesHandle, ...
                                    sites_occupied, sites_unoccupied, ...
                                    'center', center, 'filter', false, args{:});
                 obj.AddonHandle(end + 1 : end + length(h)) = h;
             end
+        end
+
+        function plotHopLoss(obj, live, options)
+            arguments
+                obj
+                live
+                options.hop_color = obj.PlotHopLoss_HopColor
+                options.loss_color = obj.PlotHopLoss_LossColor
+                options.good_color = obj.PlotHopLoss_GoodColor
+                options.radius = obj.PlotHopLoss_CircleRadius
+            end
+            Lat = getLatCalib(obj, live);
+            num_frames = live.CameraManager.(obj.CameraName).Config.NumSubFrames;
+            x_shift = (live.CameraManager.(obj.CameraName).Config.XPixels / num_frames) * (0: (num_frames - 1));
+            if isfield(live.Temporary, obj.CameraName) && isfield(live.Temporary.(obj.CameraName), obj.ImageLabel) ...
+                && isfield(live.Temporary.(obj.CameraName).(obj.ImageLabel), "SiteStat")
+                stat = live.Temporary.(obj.CameraName).(obj.ImageLabel).SiteStat;
+            else
+                obj.warn2("[%s %s] Unable to find SiteStat in live data. Please check if 'ReconstructSites' and 'AnalyzeOccup' appears in SequenceTable.", ...
+                    obj.CameraName, obj.ImageLabel)
+                return
+            end
+            for j = 1: (num_frames - 1)
+                center = Lat.R + [x_shift(j), 0];
+                sites11 = stat.SiteInfo.Sites(stat.LatOccup(:, j) & stat.LatOccup(:, j + 1), :);
+                sites10 = stat.SiteInfo.Sites(~stat.LatOccup(:, j) & stat.LatOccup(:, j + 1), :);
+                sites01 = stat.SiteInfo.Sites(stat.LatOccup(:, j) & ~stat.LatOccup(:, j + 1), :);
+                h = [Lat.plot(obj.AxesHandle, sites11, 'center', center, 'diff_origin', false, ...
+                              'norm_radius', options.radius, 'color', options.good_color), ...
+                     Lat.plot(obj.AxesHandle, sites10, 'center', center, 'diff_origin', false, ...
+                              'norm_radius', options.radius, 'color', options.loss_color), ...
+                     Lat.plot(obj.AxesHandle, sites01, 'center', center, 'diff_origin', false, ...
+                              'norm_radius', options.radius, 'color', options.hop_color)];
+                obj.AddonHandle(end + 1 : end + length(h)) = h;
+            end
+            center = Lat.R + [x_shift(end), 0];
+            sites = stat.SiteInfo.Sites(stat.LatOccup(:, end), :);
+            h = Lat.plot(obj.AxesHandle, ...
+                sites, 'center', center, 'diff_origin', false, ...
+                'norm_radius', options.radius, 'color', options.good_color);
+            obj.AddonHandle(end + 1 : end + length(h)) = h;
         end
     end
 

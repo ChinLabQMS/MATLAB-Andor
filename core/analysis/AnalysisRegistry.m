@@ -37,11 +37,10 @@ classdef AnalysisRegistry < BaseObject
                            ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
         RecordMotorStatus  (@recordMotor, ...
                            ["Picomotor1", "Picomotor2", "Picomotor3", "Picomotor4"])
-        ReconstructSites   (@reconstructSites, ...
-                            [], ...
-                            ["CountDistribution"])
+        ReconstructSites   (@reconstructSites)
         AnalyzeOccup       (@analyzeOccup, ...
-                            ["ErrorRate", "LossRate", "AtomNumber", "MeanFilling"])
+                            ["ErrorRate", "LossRate", "AtomNumber", "MeanFilling"], ...
+                            ["CountDistribution"])
     end
 
 end
@@ -207,24 +206,15 @@ function reconstructSites(live, info, varargin, options)
     arguments (Repeating)
         varargin
     end
-    arguments
-       options.hist_params = []
+    arguments       
        options.verbose = false
     end
     timer = tic;
     counter = live.SiteCounters.(info.camera);
-    stat = counter.process(live.Signal.(info.camera).(info.label), ...
+    live.Temporary.(info.camera).(info.label).SiteStat = counter.process( ...
+        live.Signal.(info.camera).(info.label), ...
         info.config.NumSubFrames, ...
         varargin{:});
-    live.Temporary.(info.camera).(info.label).SiteInfo = stat.SiteInfo;
-    live.Temporary.(info.camera).(info.label).LatCount = stat.LatCount;
-    live.Temporary.(info.camera).(info.label).LatOccup = stat.LatOccup;
-    if ~isempty(options.hist_params)
-        [N, edges] = histcounts(stat.LatCount(:), options.hist_params);
-    else
-        [N, edges] = histcounts(stat.LatCount(:));
-    end
-    live.Analysis.(info.camera).(info.label).CountDistribution = {{"histogram", N, edges, stat.LatThreshold}};
     if options.verbose
         live.info("[%s %s] Reconstructing sites takes %5.3f s.", info.camera, info.label, toc(timer))
     end
@@ -234,13 +224,25 @@ function analyzeOccup(live, info, options)
     arguments
        live
        info
+       options.hist_params = []
        options.verbose = false
     end
     timer = tic;
-    counter = live.SiteCounters.(info.camera);
     if isfield(live.Temporary, info.camera) && isfield(live.Temporary.(info.camera), info.label) ...
-            && isfield(live.Temporary.(info.camera).(info.label), "LatOccup")
-        description = counter.describe(live.Temporary.(info.camera).(info.label).LatOccup);
+        && isfield(live.Temporary.(info.camera).(info.label), "SiteStat")
+        stat = live.Temporary.(info.camera).(info.label).SiteStat;
+    else
+        obj.warn2("[%s %s] Unable to find SiteStat in live data. Please check if 'ReconstructSites' appears in SequenceTable.", ...
+            info.camera, info.label)
+    end
+    if ~isempty(options.hist_params)
+        [N, edges] = histcounts(stat.LatCount(:), options.hist_params);
+    else
+        [N, edges] = histcounts(stat.LatCount(:));
+    end
+    live.Analysis.(info.camera).(info.label).CountDistribution = {{"histogram", N, edges, stat.LatThreshold}};
+    if isfield(stat, "LatOccup")
+        description = SiteCounter.describe(stat.LatOccup);
         live.Analysis.(info.camera).(info.label).ErrorRate = description.MeanAll.ErrorRate;
         live.Analysis.(info.camera).(info.label).LossRate = description.MeanAll.LossRate;
         live.Analysis.(info.camera).(info.label).AtomNumber = description.MeanAll.N;
@@ -250,6 +252,8 @@ function analyzeOccup(live, info, options)
         live.Analysis.(info.camera).(info.label).LossRate = nan;
         live.Analysis.(info.camera).(info.label).AtomNumber = nan;
         live.Analysis.(info.camera).(info.label).MeanFilling = nan;
+        obj.warn2("[%s %s] Unable to find LatOccup in live data. Please check if 'ReconstructSites' appears in SequenceTable and has classify_method set.", ...
+            info.camera, info.label)
     end
     if options.verbose
         live.info("[%s %s] Analyzing sites occupancies takes %5.3f s.", info.camera, info.label, toc(timer))

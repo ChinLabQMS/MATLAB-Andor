@@ -19,8 +19,6 @@ classdef SiteCounter < BaseComputer
         SpreadMatrix_EdgePSFVal_WarnThreshold = 0.05
         SpreadMatrix_PSFRadius = 2.6
         SpreadMatrix_Sparse = true
-        DeconvWeight_XRange = 1: 1024
-        DeconvWeight_YRange = 1: 1024
         DeconvWeight_Threshold = 0.01
     end
 
@@ -39,6 +37,7 @@ classdef SiteCounter < BaseComputer
         SiteCircleY
         DeconvFunc
         DeconvWeight  % Sparse matrix to store pixel weights for each site
+        LastLatticeR % Record the center of lattice when updating weights
     end
     
     methods
@@ -71,6 +70,7 @@ classdef SiteCounter < BaseComputer
                 obj.PointSource = ps;
             end
             obj.SiteGrid = grid;
+            obj.updateDeconvFunc()
             obj.updateSiteProp()
         end
         
@@ -180,6 +180,8 @@ classdef SiteCounter < BaseComputer
                 case "none"
                     if isempty(obj.SignalXRange) || isempty(obj.SignalYRange)
                         obj.updateSiteProp(x_range, y_range, opt.count_method)
+                    elseif norm(obj.Lattice.R - obj.LastLatticeR) / obj.Lattice.V_norm > 0.2
+                        obj.warn2('Lattice center has shifted, please update deconvolution weights.')
                     end
                 otherwise
                     obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
@@ -212,8 +214,7 @@ classdef SiteCounter < BaseComputer
                     obj.SiteCircleX = round(obj.SiteCenters(:, 1) + X');
                     obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
                 case "linear_inverse"
-                    [obj.DeconvWeight, obj.SiteCenters, obj.DeconvFunc] = ...
-                        obj.getDeconvWeight();
+                    [obj.DeconvWeight, obj.SiteCenters] = obj.getDeconvWeight();
             end
             if ~isempty(x_range) && ~isempty(y_range)
                 obj.SpreadMatrix = obj.getSpreadMatrix( ...
@@ -223,6 +224,7 @@ classdef SiteCounter < BaseComputer
                     "spread_yrange", y_range,  ...
                     "spread_sparse", true);
             end
+            obj.LastLatticeR = obj.Lattice.R;
         end
         
         % Generate a spread matrix of size (num_sites, num_pixels)
@@ -281,9 +283,14 @@ classdef SiteCounter < BaseComputer
             [Y, X] = meshgrid(y_range, x_range);
             func = @(x, y) interp2(Y, X, pat, y, x, "linear", 0);
         end
+        
+        % Update the stored DeconvFunc handle
+        function updateDeconvFunc(obj, varargin)
+            obj.DeconvFunc = obj.getDeconvFunc(varargin{:});
+        end
 
         % Generate a list of pixel weights for each site from a deconv func
-        function [weights, centers, func, pat] = getDeconvWeight(obj, opt1, opt2)
+        function [weights, centers] = getDeconvWeight(obj, opt1, opt2)
             arguments
                 obj
                 opt1.radius = obj.SpreadMatrix_PSFRadius * ...
@@ -305,14 +312,14 @@ classdef SiteCounter < BaseComputer
             if isempty(x_range) || isempty(y_range)
                 weights = [];
                 centers = [];
-                func = [];
-                pat = [];
                 return
             end
             x_step = x_range(2) - x_range(1);
             y_step = y_range(2) - y_range(1);
             args = namedargs2cell(opt2);
-            [func, pat] = obj.getDeconvFunc(args{:});
+            if ~isempty(obj.DeconvFunc)
+                obj.updateDeconvFunc(args{:})
+            end
             num_sites = size(centers, 1);
             num_px = length(x_range) * length(y_range);
             weights = sparse(num_sites, num_px);
@@ -327,14 +334,14 @@ classdef SiteCounter < BaseComputer
                 % linear index of the pixels for the given pixel ranges
                 idx = xidx' + (yidx - 1) * length(x_range);
                 [YP, XP] = meshgrid((ymin:ymax), (xmin:xmax));
-                val = func(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+                val = obj.DeconvFunc(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
                 % filter index that has values larger than threshold
                 keep = abs(val) > opt1.threshold;
                 weights(site_i, idx(keep)) = val(keep); %#ok<SPRIX>
             end
         end
 
-        function plotDeconvPattern(obj, ax, x_range, y_range)
+        function plotDeconvFunc(obj, ax, x_range, y_range)
             arguments
                 obj
                 ax = gca()
@@ -390,9 +397,6 @@ classdef SiteCounter < BaseComputer
     end
 
     methods (Static)
-        function plotHist(counts)
-        end
-
         % Generate some statistical analysis on error and loss rates
         function description = describe(occup, options)
             arguments

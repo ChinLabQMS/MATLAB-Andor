@@ -711,7 +711,7 @@
             end
             args = namedargs2cell(opt1);
             h_occup = obj.plot(ax, occup, args{:}, 'diff_origin', false, ...
-                'norm_radius', opt2.radius, 'color', opt2.occup_color);
+                    'norm_radius', opt2.radius, 'color', opt2.occup_color);
             h_unoccup = obj.plot(ax, unoccup, args{:}, 'diff_origin', false, ...
                     'norm_radius', opt2.radius, 'color', opt2.unoccup_color);
             if nargout == 1
