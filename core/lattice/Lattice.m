@@ -66,6 +66,7 @@
         V3
         V_norm
         Magnification
+        PixelPerUm
     end
     
     methods
@@ -652,8 +653,8 @@
             obj.checkInitialized()
             opt1.remove_origin = opt2.diff_origin;
             if (isempty(opt1.x_lim) || isempty(opt1.y_lim)) && opt1.filter
-                opt1.x_lim = xlim(ax);
-                opt1.y_lim = ylim(ax);
+                opt1.x_lim = ylim(ax);
+                opt1.y_lim = xlim(ax);
             end
             args = namedargs2cell(opt1);
             coor = reshape(permute(obj.convert2Real(sites, args{:}), [3, 1, 2]), [], 2);
@@ -761,12 +762,13 @@
             radius = opt2.fill_radius * obj.V_norm;
             if opt2.add_background
                 bg = zeros(opt1.x_lim(2) - opt1.x_lim(1), opt1.y_lim(2) - opt1.y_lim(1));
-                imagesc2(ax, opt1.y_lim(1):opt1.y_lim(2), opt1.x_lim(1):opt1.x_lim(2), bg);
+                imagesc(ax, opt1.y_lim(1):opt1.y_lim(2), opt1.x_lim(1):opt1.x_lim(2), bg);
+                axis('image')
             end
             if opt2.fill_sites
                 viscircles2(ax, coor(:, 2:-1:1), radius, ...
                     'Color', 'r', 'EnhanceVisibility', false, ...
-                    'LineWidth', 0, 'Filled', true, 'FillColor', counts);
+                    'Filled', true, 'FillColor', counts);
             end
             hold(ax, "on")
             scatter(ax, coor(:, 2), coor(:, 1), opt2.scatter_radius, counts, "filled");
@@ -910,6 +912,10 @@
 
         function val = get.Magnification(obj)
             val = (obj.V_norm * obj.PixelSize) / obj.RealSpacing;
+        end
+
+        function val = get.PixelPerUm(obj)
+            val = obj.V_norm / obj.RealSpacing;
         end
 
         function s = struct(obj, fields)

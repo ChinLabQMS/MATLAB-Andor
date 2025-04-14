@@ -5,7 +5,7 @@ classdef SiteCounter < BaseComputer
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
         Process_CalibMode = "offset"
         Process_CountMethod = "linear_inverse"
-        Process_ClassifyMethod = "single"
+        Process_ClassifyMethod = "gmm"
         Process_AddDescription = true
         Process_PlotDiagnostic = false
         Process_PlotDiagnosticIndex = 1
@@ -281,7 +281,7 @@ classdef SiteCounter < BaseComputer
             num_sites = size(M, 1);
             pat = full(reshape(Minv(ceil(num_sites / 2), :), length(x_range), length(y_range)));
             [Y, X] = meshgrid(y_range, x_range);
-            func = @(x, y) interp2(Y, X, pat, y, x, "linear", 0);
+            func = @(x, y) interp2(Y, X, pat, y, x, "nearest", 0);
         end
         
         % Update the stored DeconvFunc handle
@@ -311,7 +311,6 @@ classdef SiteCounter < BaseComputer
             y_range = opt1.signal_yrange;
             if isempty(x_range) || isempty(y_range)
                 weights = [];
-                centers = [];
                 return
             end
             x_step = x_range(2) - x_range(1);
@@ -429,6 +428,8 @@ classdef SiteCounter < BaseComputer
                 description.MeanAcq.ErrorRate = sum(description.N10, 2) ./ sum(description.N1, 2);
                 description.MeanAll.LossRate = sum(description.Loss, 'all') ./ sum(description.N1, 'all');
                 description.MeanAll.ErrorRate = sum(description.N10, 'all') ./ sum(description.N1, 'all');
+                description.MeanAll.LossRateSTD = std(description.MeanSub.LossRate(:));
+                description.MeanAll.ErrorRateSTD = std(description.MeanSub.ErrorRate(:));
             end
             if options.verbose
                 disp(description.MeanAll)
@@ -476,11 +477,11 @@ function [occup, prob, threshold, model] = getOccup_GMMThreshold(counts)
     occup = reshape(occup, size(counts));
     prob = reshape(prob, size(counts));
     % Compute thresholds from 2-components Gaussian mixture model
-    A = model.Sigma(1)^2 - model.Sigma(2)^2;
-    B = -2*model.Sigma(1)^2 * model.mu(2) + 2*model.Sigma(2)^2 * model.mu(1);
-    D = model.Sigma(1)^2 * model.mu(2)^2 - model.Sigma(2)^2 * model.mu(1)^2 ...
-        - 2*model.Sigma(1)^2 * model.Sigma(2)^2 * log( ...
-        model.ComponentProportion(2) * model.Sigma(1) / (model.ComponentProportion(1) * model.Sigma(2)));
+    A = model.Sigma(1) - model.Sigma(2);
+    B = -2*model.Sigma(1) * model.mu(2) + 2*model.Sigma(2) * model.mu(1);
+    D = model.Sigma(1) * model.mu(2)^2 - model.Sigma(2) * model.mu(1)^2 ...
+        - 2*model.Sigma(1) * model.Sigma(2) * log( ...
+        model.ComponentProportion(2) * sqrt(model.Sigma(1)) / (model.ComponentProportion(1) * sqrt(model.Sigma(2))));
     threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
     threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
     if (threshold1 < max(model.mu)) && (threshold1 > min(model.mu))
