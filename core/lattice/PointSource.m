@@ -468,8 +468,7 @@ classdef PointSource < BaseComputer
                     sum_count = sum(fit_data(:)) * obj.DataXRangeStep * obj.DataYRangeStep;
             end
             obj.DataSumCount = obj.DataSumCount*old_weight + sum_count*new_weight;
-            [Y, X] = meshgrid(y_range, x_range);
-            obj.PSF = @(x, y) interp2(Y, X, obj.DataPSF, y, x, "nearest", 0);
+            obj.PSF = griddedInterpolant({x_range, y_range}, obj.DataPSF, 'nearest', 'none');
             obj.PSFNormalized = normalizePSF(obj.PSF, opt3.normalize_cutoff, opt3.normalize_nstep);
             if opt3.update_ratio
                 obj.InitResolutionRatio = max(obj.GaussGOF.eigen_widths) / obj.RayleighResolutionGaussSigma;
@@ -762,7 +761,7 @@ function psf_norm = normalizePSF(psf, cutoff_radius, num_step)
     psf_norm = @(x, y) funcPSF(x, y);
     function val = funcPSF(x, y)
         val = (psf(x, y) - offset) / amp;
-        val((x.^2 + y.^2 >= cutoff_radius^2) | (val < 0)) = 0;
+        val((x.^2 + y.^2 >= cutoff_radius^2) | (val < 0) | (isnan(val))) = 0;
     end
 end
 
