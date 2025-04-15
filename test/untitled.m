@@ -6,7 +6,8 @@ clear; clc; close all
 % Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
 % Data = load("data/2025/04 April/20250408 mod freq scan/sparse_no_green.mat").Data;
 % Data = load("data/2025/04 April/20250411/counter_not_working_somehow.mat").Data;
-Data = load("data/2025/04 April/20250411/dense_calibration2.mat").Data;
+Data = load("data/2025/04 April/20250411/dense_no_green.mat").Data;
+
 %%
 p = Preprocessor();
 Signal = p.process(Data);
@@ -15,7 +16,7 @@ signal = Signal.Andor19331.Image;
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
-counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 12)
+counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 8)
 
 %%
 figure
@@ -25,13 +26,7 @@ clim([0, 100])
 
 %%
 tic
-counter.precalibrate(signal, 2)
-toc
-
-%%
-tic
-stat = counter.process(signal, 2, 'plot_diagnostic', 0, ...
-    'calib_mode', 'none', 'classify_method', 'gmm');
+stat = counter.process(signal, 2, 'plot_diagnostic', 0);
 toc
 
 %%
@@ -44,6 +39,5 @@ axis("equal")
 figure
 histogram(stat.LatCount(:, :, 1), 100)
 xline(stat.LatThreshold)
-% yscale('log')
 
 desc = counter.describe(stat.LatOccup, 'verbose', true);

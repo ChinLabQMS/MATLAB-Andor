@@ -13,11 +13,6 @@ classdef SiteGrid < BaseProcessor
         NumSites
     end
 
-    methods
-        function [idx, num_sites] = selectBox(obj, options)
-        end
-    end
-
     methods (Access = protected, Hidden)
         function init(obj)
             obj.Sites = obj.prepareSite(obj.SiteFormat, ...

@@ -41,6 +41,7 @@ classdef AnalysisRegistry < BaseObject
         AnalyzeOccup       (@analyzeOccup, ...
                             ["ErrorRate", "LossRate", "AtomNumber", "MeanFilling"], ...
                             ["CountDistribution"])
+        UpdateDeconvWeight (@updateDeconvWeight)
     end
 
 end
@@ -257,5 +258,22 @@ function analyzeOccup(live, info, options)
     end
     if options.verbose
         live.info("[%s %s] Analyzing sites occupancies takes %5.3f s.", info.camera, info.label, toc(timer))
+    end
+end
+
+function updateDeconvWeight(live, info, options)
+    arguments
+       live
+       info
+       options.verbose = false
+    end
+    timer = tic;
+    counter = live.SiteCounters.(info.camera);
+    x_size = info.config.XPixels;
+    y_size = info.config.YPixels;
+    num_frames = info.config.NumSubFrames;
+    counter.updateDeconvWeight(1: (x_size / num_frames), 1: y_size)
+    if options.verbose
+        live.info("[%s %s] Update deconvolution weights takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end

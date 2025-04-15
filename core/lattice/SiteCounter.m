@@ -71,7 +71,7 @@ classdef SiteCounter < BaseComputer
             end
             obj.SiteGrid = grid;
             obj.updateDeconvFunc()
-            obj.updateSiteProp()
+            obj.updateDeconvWeight()
         end
         
         % Main interface for app and analysis
@@ -109,7 +109,7 @@ classdef SiteCounter < BaseComputer
                     case {"offset_every", "full_first_offset_every"}
                         signal_sum = getSignalSum(single_shot, num_frames, 'first_only', false);
                         obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
-                        obj.updateSiteProp(x_range, y_range, opt.count_method)
+                        obj.updateDeconvWeight(x_range, y_range, opt.count_method)
                 end
                 x_range_all = x_range + ((x_size/num_frames) .* (0: (num_frames -1)))';
                 for j = 1: num_frames
@@ -132,7 +132,6 @@ classdef SiteCounter < BaseComputer
                 case "single"
                     stat.LatThreshold = opt1.classify_threshold;
                     stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt1.classify_threshold);
-                case "pre-loaded"
                 case "gmm"
                     % Use a two component Gaussian mixture model to fit the counts distribution
                     [stat.LatOccup, stat.LatProb, stat.LatThreshold, stat.GMModel] = getOccup_GMMThreshold(stat.LatCount);
@@ -169,17 +168,15 @@ classdef SiteCounter < BaseComputer
                     obj.Lattice.init([xc, yc], 'format', 'R')
                     obj.Lattice.calibrateCropSite(signal_sum, opt.calib_cropRsites)
                     obj.Lattice.checkDiff(old_lat, obj.Lattice)
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
+                    obj.updateDeconvWeight(x_range, y_range, opt.count_method)
                 case "offset"
                     signal_sum = getSignalSum(signal, num_frames, "first_only", false);
                     obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
-                case "update_range_only"
-                    obj.updateSiteProp(x_range, y_range, opt.count_method)
+                    obj.updateDeconvWeight(x_range, y_range, opt.count_method)
                 case "offset_every"
                 case "none"
                     if isempty(obj.SignalXRange) || isempty(obj.SignalYRange)
-                        obj.updateSiteProp(x_range, y_range, opt.count_method)
+                        obj.updateDeconvWeight(x_range, y_range, opt.count_method)
                     elseif norm(obj.Lattice.R - obj.LastLatticeR) / obj.Lattice.V_norm > 0.2
                         obj.warn2('Lattice center has shifted, please update deconvolution weights.')
                     end
@@ -190,7 +187,7 @@ classdef SiteCounter < BaseComputer
         
         % Update the class properties to a new calibration (Lat or PS)
         % depending on the counting methods
-        function updateSiteProp(obj, x_range, y_range, count_method)
+        function updateDeconvWeight(obj, x_range, y_range, count_method)
             arguments
                 obj 
                 x_range = []
@@ -215,14 +212,6 @@ classdef SiteCounter < BaseComputer
                     obj.SiteCircleY = round(obj.SiteCenters(:, 2) + Y');
                 case "linear_inverse"
                     [obj.DeconvWeight, obj.SiteCenters] = obj.getDeconvWeight();
-            end
-            if ~isempty(x_range) && ~isempty(y_range)
-                obj.SpreadMatrix = obj.getSpreadMatrix( ...
-                    "spread_center", obj.Lattice.R, ...
-                    "spread_sites", obj.SiteGrid.Sites, ...
-                    "spread_xrange", x_range, ...
-                    "spread_yrange", y_range,  ...
-                    "spread_sparse", true);
             end
             obj.LastLatticeR = obj.Lattice.R;
         end
@@ -249,17 +238,19 @@ classdef SiteCounter < BaseComputer
             num_px = length(x_range) * length(y_range);
             x_step = x_range(2) - x_range(1);
             y_step = y_range(2) - y_range(1);
-            if opt2.spread_sparse
-                M = sparse(num_sites, num_px);
-            else
+            if ~opt2.spread_sparse
                 M = zeros(num_sites, num_px);
             end
             if PS.PSFNormalized(opt2.spread_psf_radius, ...
                                 opt2.spread_psf_radius) > opt2.spread_psf_warn_threshold
                 obj.warn('PSF value at edge is significant: %.2f, please consider setting a different radius.')
-            end            
+            end
+            V = Lat.V;
+            rows_all = cell(num_sites, 1);
+            cols_all = cell(num_sites, 1);
+            vals_all = cell(num_sites, 1);
             for site_i = 1: num_sites
-                center = opt2.spread_sites(site_i, :) * Lat.V + opt2.spread_center;
+                center = opt2.spread_sites(site_i, :) * V + opt2.spread_center;
                 center_xidx = (center(1) - x_range(1)) / x_step + 1;
                 center_yidx = (center(2) - y_range(1)) / y_step + 1;
                 min_xidx = max(1, round(center_xidx - opt2.spread_psf_radius / x_step));
@@ -268,9 +259,21 @@ classdef SiteCounter < BaseComputer
                 max_yidx = min(length(y_range), round(center_yidx + opt2.spread_psf_radius / y_step));
                 xidx = min_xidx : max_xidx;
                 yidx = min_yidx : max_yidx;
-                idx = xidx' + (yidx - 1) * length(x_range);
+                px_idx = xidx' + (yidx - 1) * length(x_range);
                 [YP,XP] = meshgrid(y_range(yidx), x_range(xidx));
-                M(site_i, idx) = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+                psf_vals = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
+                num_vals = numel(px_idx);
+                rows_all{site_i} = repmat(site_i, num_vals, 1);
+                cols_all{site_i} = px_idx(:);
+                vals_all{site_i} = psf_vals(:);
+            end
+            rows = vertcat(rows_all{:});
+            cols = vertcat(cols_all{:});
+            vals = vertcat(vals_all{:});
+            if opt2.spread_sparse
+                M = sparse(rows, cols, vals, num_sites, num_px);
+            else
+                M(rows, cols) = vals;
             end
         end
         
@@ -280,8 +283,7 @@ classdef SiteCounter < BaseComputer
             Minv = (M * M') \ M;
             num_sites = size(M, 1);
             pat = full(reshape(Minv(ceil(num_sites / 2), :), length(x_range), length(y_range)));
-            [Y, X] = meshgrid(y_range, x_range);
-            func = @(x, y) interp2(Y, X, pat, y, x, "nearest", 0);
+            func = griddedInterpolant({x_range, y_range}, pat, "nearest");
         end
         
         % Update the stored DeconvFunc handle
@@ -321,7 +323,9 @@ classdef SiteCounter < BaseComputer
             end
             num_sites = size(centers, 1);
             num_px = length(x_range) * length(y_range);
-            weights = sparse(num_sites, num_px);
+            rows_all = cell(num_sites, 1);
+            cols_all = cell(num_sites, 1);
+            vals_all = cell(num_sites, 1);
             for site_i = 1: size(centers, 1)
                 center = centers(site_i, :);
                 xmin = max(x_range(1), round(center(1) - opt1.radius(1)));
@@ -336,8 +340,15 @@ classdef SiteCounter < BaseComputer
                 val = obj.DeconvFunc(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
                 % filter index that has values larger than threshold
                 keep = abs(val) > opt1.threshold;
-                weights(site_i, idx(keep)) = val(keep); %#ok<SPRIX>
+                num_vals = sum(keep, 'all');
+                rows_all{site_i} = repmat(site_i, num_vals, 1);
+                cols_all{site_i} = idx(keep);
+                vals_all{site_i} = val(keep);
             end
+            rows = vertcat(rows_all{:});
+            cols = vertcat(cols_all{:});
+            vals = vertcat(vals_all{:});
+            weights = sparse(rows, cols, vals, num_sites, num_px);
         end
 
         function plotDeconvFunc(obj, ax, x_range, y_range)
@@ -361,7 +372,7 @@ classdef SiteCounter < BaseComputer
                 obj
                 counts = []
                 sites = obj.SiteGrid.Sites
-                opt1.transform_matrix = obj.SpreadMatrix
+                opt1.transform_matrix = []
                 opt2.spread_xrange = obj.SignalXRange
                 opt2.spread_yrange = obj.SignalYRange
                 opt2.spread_psf_warn_threshold = obj.SpreadMatrix_EdgePSFVal_WarnThreshold
@@ -436,27 +447,28 @@ classdef SiteCounter < BaseComputer
             end
         end
     end
-end
-
-%% Functions to extract site counts from signal image
-function counts = getCount_CenterSignal(obj, signal, x_range, y_range)
-    site_centers = round(obj.SiteCenters);
-    index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
-    counts = signal(index);
-end
-
-function counts = getCount_CircleSum(obj, signal, x_range, y_range)
-    index = obj.SiteCircleX - x_range(1) + (obj.SiteCircleY - y_range(1)) * length(x_range);
-    counts = sum(reshape(signal(index), size(obj.SiteCircleX)), 2);
-end
-
-function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
-    if isempty(obj.DeconvWeight)
-        counts = [];
-        obj.warn2('No deconvolution weights found, can not extract counts.')
-        return
+    
+    % Functions to extract site counts from signal image
+    methods (Access = protected)
+        function counts = getCount_CenterSignal(obj, signal, x_range, y_range)
+            site_centers = round(obj.SiteCenters);
+            index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
+            counts = signal(index);
+        end
+        
+        function counts = getCount_CircleSum(obj, signal, x_range, y_range)
+            index = obj.SiteCircleX - x_range(1) + (obj.SiteCircleY - y_range(1)) * length(x_range);
+            counts = sum(reshape(signal(index), size(obj.SiteCircleX)), 2);
+        end
+        
+        function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
+            if isempty(obj.DeconvWeight) || (length(x_range) * length(y_range) ~= size(obj.DeconvWeight, 2))
+                obj.updateDeconvWeight(x_range, y_range, 'linear_inverse')
+                obj.warn('Unable to find deconv weights, update to current calibration')
+            end
+            counts = obj.DeconvWeight * reshape(signal(x_range, y_range), [], 1);
+        end
     end
-    counts = obj.DeconvWeight * reshape(signal(x_range, y_range), [], 1);
 end
 
 %% Functions to extract occupancy from counts

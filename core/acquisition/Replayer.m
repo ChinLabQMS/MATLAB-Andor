@@ -28,7 +28,7 @@ classdef Replayer < BaseSequencer & DataProcessor
             obj.CameraManager.config(obj.Raw)
             obj.DataStorage.config(obj.Raw, "config_cameras", false, "config_acq", false)
             obj.initSequence()
-            obj.info("Data loaded from: %s, sequence initialized.", path)
+            obj.info("Data loaded from: '%s', sequence initialized.", path)
         end
         
         % Override the start acquisition command, do not operate cameras

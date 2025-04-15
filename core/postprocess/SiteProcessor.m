@@ -7,15 +7,24 @@ classdef SiteProcessor < CombinedProcessor
 
     properties (SetAccess = protected)
         SiteCounters
-        SiteGridHandle
+        SiteGridShared
+    end
+
+    methods
+        function configGrid(obj, varargin)
+            obj.SiteGridShared.config(varargin{:})
+            for camera = obj.SiteCounterList
+                obj.SiteCounters.(camera).updateDeconvWeight()
+            end
+        end
     end
 
     methods (Access = protected, Hidden)
         function init(obj)
             init@CombinedProcessor(obj)
-            obj.SiteGridHandle = SiteGrid(obj.SiteGridParams{:});
+            obj.SiteGridShared = SiteGrid(obj.SiteGridParams{:});
             for camera = obj.SiteCounterList
-                obj.SiteCounters.(camera) = SiteCounter(camera, obj.LatCalib.(camera), obj.PSFCalib.(camera), obj.SiteGridHandle);
+                obj.SiteCounters.(camera) = SiteCounter(camera, obj.LatCalib.(camera), obj.PSFCalib.(camera), obj.SiteGridShared);
             end
         end
     end
