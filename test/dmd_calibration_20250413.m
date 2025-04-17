@@ -2,19 +2,20 @@ clear; clc; close all
 
 % Data = load("data/2025/04 April/20250411/dense_calibration2.mat").Data;
 % Data = load("data/2025/04 April/20250411/dmd_mod=80kHz_10ms_LatV3.mat").Data;
-
+%%
 p = Preprocessor();
 Signal = p.process(Data);
 
 signal = Signal.Andor19331.Image;
 mean_signal = mean(signal, 3);
-counter = SiteCounter("Andor19331");
+counter = SiteCounter("Andor19331", load('calibration/dated_LatCalib/LatCalib_20250414.mat').Andor19331);
 counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 15)
 
 %% Image of averaged signal and single shot
+close all
 % Cropped region
-x_range = 130: 330;
-y_range = 525: 725;
+x_range = 160: 300;
+y_range = 545: 685;
 % Scale bar
 scalebar_length = 5; % um
 scalebar_lengthpx = scalebar_length * counter.Lattice.PixelPerUm;
@@ -57,7 +58,7 @@ axis("image")
 counter.Lattice.plot()
 
 figure
-counter.Lattice.plotCounts(stat.SiteInfo.Sites, loss)
+counter.Lattice.plotCounts(stat.SiteInfo.Sites, loss, 'scatter_radius', 1)
 colorbar()
 clim([0, 1])
 xticks([])

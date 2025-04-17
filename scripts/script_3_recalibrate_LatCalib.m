@@ -17,7 +17,7 @@
 clear; clc; close all
 p = LatCalibrator( ...
     "LatCalibFilePath", "calibration/LatCalib.mat", ... 
-    "DataPath", "data/2025/04 April/20250414/calibration_w_iris3.mat", ...
+    "DataPath", "data/2025/04 April/20250416/dense_calibration_lower_cropped.mat", ...
     "LatCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "LatImageLabel", ["Image", "Image", "Lattice_935"], ...
     "ProjectorList", "DMD");
@@ -35,7 +35,7 @@ p.recalibrate( ...
     "plot_diagnosticR", 1, ...
     "plot_diagnosticO", 1)
 
-%% Cross-calibrate Zelux and DMD with atom signal on Andor19330
+%% Cross-calibrate Zelux and DMD with atom signal on Andor19331
 % Please make sure that the projected signal is hash cross pattern
 % Turn on debug mode such that only diagnostic plots are generated, the
 % actual lattice parameters are not updated
@@ -46,7 +46,7 @@ p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 20), 'debug', 
 % Or directly run the calibration algorithm with debug mode off if the
 % initial center is close
 close all
-p.LatCalib.Zelux.init([807.724, 514.641], 'format', 'R')
+p.LatCalib.Zelux.init([750.967, 444.954], 'format', 'R')
 p.calibrateProjector('sites', SiteGrid.prepareSite('Hex', 'latr', 3, 'latr_step', 0.1), 'debug', false)
 
 %% Plot an example shot of transformed images

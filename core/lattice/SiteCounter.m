@@ -3,7 +3,7 @@ classdef SiteCounter < BaseComputer
     properties (Constant)
         LatCalib_DefaultPath = "calibration/LatCalib.mat"
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
-        Process_CalibMode = "offset"
+        Process_CalibMode = "offset_every"
         Process_CountMethod = "linear_inverse"
         Process_ClassifyMethod = "gmm"
         Process_AddDescription = true
@@ -131,10 +131,10 @@ classdef SiteCounter < BaseComputer
             switch opt1.classify_method
                 case "single"
                     stat.LatThreshold = opt1.classify_threshold;
-                    stat.LatOccup = getOccup_SingleThreshold(stat.LatCount, opt1.classify_threshold);
+                    stat.LatOccup = getOccup_SingleThreshold(obj, stat.LatCount, opt1.classify_threshold);
                 case "gmm"
                     % Use a two component Gaussian mixture model to fit the counts distribution
-                    [stat.LatOccup, stat.LatProb, stat.LatThreshold, stat.GMModel] = getOccup_GMMThreshold(stat.LatCount);
+                    [stat.LatOccup, stat.LatProb, stat.LatThreshold, stat.GMModel] = getOccup_GMMThreshold(obj, stat.LatCount);
                 case "none"
                 otherwise
                     obj.error('Unsupported classification method: %s!', opt.classify_method)
@@ -146,7 +146,8 @@ classdef SiteCounter < BaseComputer
                 plotCountsDiagnostic(obj, stat, signal, num_frames, opt2.plot_index)
             end
         end
-
+        
+        % Pre-calibrate the lattice site centers
         function precalibrate(obj, signal, num_frames, opt)
             arguments
                 obj
@@ -342,8 +343,8 @@ classdef SiteCounter < BaseComputer
                 keep = abs(val) > opt1.threshold;
                 num_vals = sum(keep, 'all');
                 rows_all{site_i} = repmat(site_i, num_vals, 1);
-                cols_all{site_i} = idx(keep);
-                vals_all{site_i} = val(keep);
+                cols_all{site_i} = reshape(idx(keep), [], 1);
+                vals_all{site_i} = reshape(val(keep), [], 1);
             end
             rows = vertcat(rows_all{:});
             cols = vertcat(cols_all{:});
@@ -423,7 +424,7 @@ classdef SiteCounter < BaseComputer
             description.MeanAcq.F = description.MeanAcq.N / num_sites;
             description.MeanAll.N = mean(total, 'all');
             description.MeanAll.F = description.MeanAll.N / num_sites;
-            if num_frames ~= 1
+            if num_frames > 1
                 early = occup(:, 2:end, :);
                 later = occup(:, 1:(end - 1), :);
                 description.N1 = reshape(sum(early, 1), num_frames-1, num_acq);
@@ -441,6 +442,22 @@ classdef SiteCounter < BaseComputer
                 description.MeanAll.ErrorRate = sum(description.N10, 'all') ./ sum(description.N1, 'all');
                 description.MeanAll.LossRateSTD = std(description.MeanSub.LossRate(:));
                 description.MeanAll.ErrorRateSTD = std(description.MeanSub.ErrorRate(:));
+            else
+                description.N1 = nan;
+                description.N2 = nan;
+                description.N11 = nan;
+                description.N10 = nan;
+                description.N01 = nan;
+                description.N00 = nan;
+                description.Loss = nan;
+                description.MeanSub.LossRate = nan;
+                description.MeanSub.ErrorRate = nan;
+                description.MeanAcq.LossRate = nan;
+                description.MeanAcq.ErrorRate = nan;
+                description.MeanAll.LossRate = nan;
+                description.MeanAll.ErrorRate = nan;
+                description.MeanAll.LossRateSTD = nan;
+                description.MeanAll.ErrorRateSTD = nan;
             end
             if options.verbose
                 disp(description.MeanAll)
@@ -469,37 +486,47 @@ classdef SiteCounter < BaseComputer
             counts = obj.DeconvWeight * reshape(signal(x_range, y_range), [], 1);
         end
     end
-end
-
-%% Functions to extract occupancy from counts
-function occup = getOccup_SingleThreshold(counts, thresholds)
-    occup = counts > thresholds;
-end
-
-function [occup, prob, threshold, model] = getOccup_GMMThreshold(counts)
-    model = fitgmdist(counts(:), 2);
-    prob = model.posterior(counts(:));
-    if model.mu(1) > model.mu(2)
-        occup = prob(:, 1) > prob(:, 2);
-        prob = prob(:, 1);
-    else
-        occup = prob(:, 2) > prob(:, 1);
-        prob = prob(:, 2);
-    end
-    occup = reshape(occup, size(counts));
-    prob = reshape(prob, size(counts));
-    % Compute thresholds from 2-components Gaussian mixture model
-    A = model.Sigma(1) - model.Sigma(2);
-    B = -2*model.Sigma(1) * model.mu(2) + 2*model.Sigma(2) * model.mu(1);
-    D = model.Sigma(1) * model.mu(2)^2 - model.Sigma(2) * model.mu(1)^2 ...
-        - 2*model.Sigma(1) * model.Sigma(2) * log( ...
-        model.ComponentProportion(2) * sqrt(model.Sigma(1)) / (model.ComponentProportion(1) * sqrt(model.Sigma(2))));
-    threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
-    threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
-    if (threshold1 < max(model.mu)) && (threshold1 > min(model.mu))
-        threshold = threshold1;
-    else
-        threshold = threshold2;
+    
+    % Functions to extract occupancy from counts
+    methods (Access = protected)
+        function occup = getOccup_SingleThreshold(~, counts, thresholds)
+            occup = counts > thresholds;
+        end
+        
+        function [occup, prob, threshold, model] = getOccup_GMMThreshold(obj, counts)
+            try
+                model = fitgmdist(counts(:), 2);
+            catch
+                obj.warn2('GMM fails, roll back to single fixed threshold: %d', obj.ProcessClassify_SingleThreshold)
+                occup = getOccup_SingleThreshold(obj, counts, obj.ProcessClassify_SingleThreshold);
+                prob = nan;
+                model = nan;
+                return
+            end
+            prob = model.posterior(counts(:));
+            if model.mu(1) > model.mu(2)
+                occup = prob(:, 1) > prob(:, 2);
+                prob = prob(:, 1);
+            else
+                occup = prob(:, 2) > prob(:, 1);
+                prob = prob(:, 2);
+            end
+            occup = reshape(occup, size(counts));
+            prob = reshape(prob, size(counts));
+            % Compute thresholds from 2-components Gaussian mixture model
+            A = model.Sigma(1) - model.Sigma(2);
+            B = -2*model.Sigma(1) * model.mu(2) + 2*model.Sigma(2) * model.mu(1);
+            D = model.Sigma(1) * model.mu(2)^2 - model.Sigma(2) * model.mu(1)^2 ...
+                - 2*model.Sigma(1) * model.Sigma(2) * log( ...
+                model.ComponentProportion(2) * sqrt(model.Sigma(1)) / (model.ComponentProportion(1) * sqrt(model.Sigma(2))));
+            threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
+            threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
+            if (threshold1 < max(model.mu)) && (threshold1 > min(model.mu))
+                threshold = threshold1;
+            else
+                threshold = threshold2;
+            end
+        end
     end
 end
 

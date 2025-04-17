@@ -13,21 +13,25 @@ p = Preprocessor();
 Signal = p.process(Data);
 
 signal = Signal.Andor19331.Image;
+%%
+figure
+imagesc2(mean(signal, 3))
+Andor19331.plot()
+% clim([0, 60])
+% counter.Lattice.plot()
+
+%%
+figure
+imagesc2(signal(:, :, 10))
+clim([0, 60])
+counter.Lattice.plot()
+
+%%
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
 counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 8)
-
-%%
-figure
-imagesc2(mean(signal, 3))
-clim([0, 100])
-% counter.Lattice.plot()
-
-%%
-tic
 stat = counter.process(signal, 2, 'plot_diagnostic', 0);
-toc
 
 %%
 close all
