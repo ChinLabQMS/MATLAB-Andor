@@ -3,6 +3,7 @@ p = Preprocessor();
 
 % Good dataset with <5% error rate
 Data = load("data/2025/04 April/20250411/dense_no_green.mat").Data;
+% Data = load("data/2025/04 April/20250414/sparse_no_green.mat").Data;
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
 grid = SiteGrid("SiteFormat", "Hex", "HexRadius", 12);
@@ -12,14 +13,14 @@ counter2 = SiteCounter("Andor19330", [], [], grid);
 %%
 counter.Lattice.init([245, 645], 'format', 'R')
 tic
-stat = counter.process(signal, 2, 'plot_diagnostic', 0, 'classify_threshold', 1300, ...
-    'calib_mode', 'offset', 'classify_method', 'single');
+stat = counter.process(signal, 2, 'plot_diagnostic', 0, ...
+    'classify_method', 'single', 'classify_threshold', 1400);
 toc
 
 %% Plot deconvolution kernel
 figure('Position', [500, 500, 250, 250])
 counter.plotDeconvFunc()
-lat.plot('center',[0,0], 'filter', true, 'diff_origin', false, 'norm_radius', 0.02, 'line_width', 1.5, 'color', 'w')
+counter.Lattice.plot('center',[0,0], 'filter', true, 'diff_origin', false, 'norm_radius', 0.02, 'line_width', 1.5, 'color', 'w')
 xlim([-15, 15])
 ylim([-15, 15])
 xticks([])
@@ -33,7 +34,7 @@ x_range = 20: 420;
 y_range = 430:830;
 % Scale bar
 scalebar_length = 20; % um
-scalebar_lengthpx = scalebar_length * lat.PixelPerUm;
+scalebar_lengthpx = scalebar_length * counter.Lattice.PixelPerUm;
 scalebar_x = x_range(end) - 15;
 scalebar_y = y_range(1) + 10;
 % Small box
@@ -45,7 +46,7 @@ box_xrange = box_x : box_x + box_h - 1;
 box_yrange = box_y : box_y + box_w - 1;
 % Scalebar on small box
 scalebar2_length = 1;
-scalebar2_lengthpx = scalebar2_length * lat.PixelPerUm;
+scalebar2_lengthpx = scalebar2_length * counter.Lattice.PixelPerUm;
 scalebar2_x = box_xrange(end) - 3;
 scalebar2_y = box_yrange(1) + 3;
 
@@ -69,7 +70,7 @@ axis('image')
 xticks([])
 yticks([])
 clim([10, 170])
-lat.plot('filter', false, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'k')
+counter.Lattice.plot('filter', false, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'k')
 xlim([box_yrange(1), box_yrange(end)])
 ylim([box_xrange(1), box_xrange(end)])
 line([scalebar2_y, scalebar2_y + scalebar2_lengthpx], [scalebar2_x, scalebar2_x], 'Color', 'w', 'LineWidth', 4)
@@ -86,12 +87,13 @@ x_range = 165: 325;
 y_range = 560: 720;
 % Scale bar
 scalebar_length = 5; % um
-scalebar_lengthpx = scalebar_length * lat.PixelPerUm;
+scalebar_lengthpx = scalebar_length * counter.Lattice.PixelPerUm;
 scalebar_x = x_range(end) - 15;
 scalebar_y = y_range(1) + 10;
 
 occup1 = reshape(stat.LatOccup(:, 2, index), [], 1);
 occup2 = reshape(stat.LatOccup(:, 1, index), [], 1);
+sites11 = stat.SiteInfo.Sites(occup1 & occup2, :);
 sites10 = stat.SiteInfo.Sites(occup1 & ~occup2, :);
 sites01 = stat.SiteInfo.Sites(~occup1 & occup2, :);
 
@@ -106,9 +108,8 @@ line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Co
 text(scalebar_y + scalebar_lengthpx + 20, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
-lat.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'b', 'line_width', 1.5)
-lat.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
-% lat.plot(stat.SiteInfo.Sites)
+% counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
+% counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
 
 subplot(1, 2, 2)
 imagesc(y_range, x_range, signal(x_range + 512, y_range, index))
@@ -120,8 +121,8 @@ line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Co
 text(scalebar_y + scalebar_lengthpx + 20, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
-lat.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'b', 'line_width', 1.5)
-lat.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
+% counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
+% counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
 
 %% Show reconstructed occupancy in the small box
 
@@ -242,3 +243,30 @@ xticks([])
 yticks([])
 counter2.Lattice.plot('filter', true, 'center', [0, 0], ...
     'diff_origin', false, 'color', 'w', 'line_width', 2, 'norm_radius', 0.03)
+
+%% Draw sparse images
+Data = load("data/2025/04 April/20250414/sparse_no_green.mat").Data;
+Signal = p.process(Data);
+signal = Signal.Andor19331.Image;
+
+% Cropped region
+x_range = 70: 370;
+y_range = 480: 780;
+% Scale bar
+scalebar_length = 20; % um
+scalebar_lengthpx = scalebar_length * counter.Lattice.PixelPerUm;
+scalebar_x = x_range(end) - 15;
+scalebar_y = y_range(1) + 10;
+
+figure
+imagesc(y_range, x_range, signal(x_range, y_range, 3))
+axis("image")
+xticks([])
+yticks([])
+% cb = colorbar('westoutside');
+% set(cb, 'FontSize', 14);
+clim([10, 140])
+line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Color', 'w', 'LineWidth', 3)
+text(scalebar_y + scalebar_lengthpx + 30, scalebar_x - 1.5, ...
+    [num2str(scalebar_length) ' \mum'], ...
+    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
