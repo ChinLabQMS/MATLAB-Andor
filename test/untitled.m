@@ -16,7 +16,7 @@ signal = Signal.Andor19331.Image;
 %%
 figure
 imagesc2(mean(signal, 3))
-Andor19331.plot()
+% Andor19331.plot()
 % clim([0, 60])
 % counter.Lattice.plot()
 

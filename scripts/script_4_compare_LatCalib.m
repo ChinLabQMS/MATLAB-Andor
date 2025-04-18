@@ -1,7 +1,7 @@
 %% Load calibration files, 1 is old, 2 is new
 clear; clc; close all
-calib1 = load("calibration/dated_LatCalib/LatCalib_20250416_152401.mat");
-calib2 = load("calibration/dated_LatCalib/LatCalib_20250416_172801.mat");
+calib1 = load("calibration/dated_LatCalib/LatCalib_20250416_172801.mat");
+calib2 = load("calibration/dated_LatCalib/LatCalib_20250417.mat");
 
 %% Check the lattice calibrations of each camera, old
 clc

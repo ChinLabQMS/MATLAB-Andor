@@ -348,7 +348,9 @@ classdef LatCalibrator < DataProcessor & LatProcessor
                 "calib_R", [false, true], "sites", opt.sites, ...
                 "plot_diagnosticO", opt.plot_diagnostic, "verbose", opt.verbose, "debug", opt.debug)
             % Cross calibrate projector space lattice to camera space
+            LatProjInit = LatProj.copy();
             LatProj.calibrateProjector2Camera(LatCam)
+            LatProj.checkDiff(LatProjInit, LatProj)
         end
         
         % Re-calibrate the lattice vectors and centers to mean image

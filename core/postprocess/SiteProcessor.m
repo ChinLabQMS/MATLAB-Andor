@@ -1,31 +1,25 @@
 classdef SiteProcessor < CombinedProcessor
 
-    properties (Constant)
+    properties (SetAccess = {?BaseObject})
         SiteCounterList = ["Andor19330", "Andor19331"]
-        SiteGridParams = {'SiteFormat', 'Hex', 'HexRadius', 12}
+        SiteGridParams = {'SiteFormat', 'Hex', 'HexRadius', 12; 
+                          'SiteFormat', 'Hex', 'HexRadius', 12}
     end
 
     properties (SetAccess = protected)
         SiteCounters
-        SiteGridShared
-    end
-
-    methods
-        function configGrid(obj, varargin)
-            obj.SiteGridShared.config(varargin{:})
-            for camera = obj.SiteCounterList
-                obj.SiteCounters.(camera).updateDeconvWeight()
-            end
-        end
     end
 
     methods (Access = protected, Hidden)
         function init(obj)
             init@CombinedProcessor(obj)
-            obj.SiteGridShared = SiteGrid(obj.SiteGridParams{:});
-            for camera = obj.SiteCounterList
-                obj.SiteCounters.(camera) = SiteCounter(camera, obj.LatCalib.(camera), obj.PSFCalib.(camera), obj.SiteGridShared);
+            for i = 1: length(obj.SiteCounterList)
+                camera = obj.SiteCounterList(i);
+                obj.SiteCounters.(camera) = SiteCounter(camera, obj.LatCalib.(camera), obj.PSFCalib.(camera));
+                grid_params = obj.SiteGridParams(i, :);
+                obj.SiteCounters.(camera).configGrid(grid_params{:})
             end
+            obj.info("SiteProcessor is initialized with loaded LatCalib and PSFCalib.")
         end
     end
 end

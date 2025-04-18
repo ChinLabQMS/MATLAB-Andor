@@ -73,6 +73,12 @@ classdef SiteCounter < BaseComputer
             obj.updateDeconvFunc()
             obj.updateDeconvWeight()
         end
+
+        % Configure the counting grid and update deconvolution weights
+        function configGrid(obj, varargin)
+            obj.SiteGrid.config(varargin{:})
+            obj.updateDeconvWeight()
+        end
         
         % Main interface for app and analysis
         function stat = process(obj, signal, num_frames, opt, opt1, opt2)

@@ -17,36 +17,37 @@ classdef LiveData < BaseObject
 
     properties (SetAccess = immutable)
         CameraManager
+        Analyzer
+    end
+    
+    % Shortcut to access properties of Analyzer
+    properties (Dependent)
         LatCalib
         PSFCalib
         SiteCounters
     end
 
     methods
-        function obj = LiveData(cameras, lat_calib, psf_calib, counters)
+        function obj = LiveData(cameras, analyzer)
             arguments
                 cameras = CameraManager()
-                lat_calib = []
-                psf_calib = []
-                counters = []
+                analyzer = Analyzer()
             end
             obj.CameraManager = cameras;
-            obj.LatCalib = lat_calib;
-            obj.PSFCalib = psf_calib;
-            obj.SiteCounters = counters;
+            obj.Analyzer = analyzer;
             obj.reset()
         end
 
         function reset(obj)
-            obj.LastData = [];
-            obj.RunNumber = 0;
-            obj.BadFrameDetected = false;
             obj.Raw = [];
             obj.Signal = [];
             obj.Background = [];
             obj.Noise = [];
             obj.Analysis = [];
             obj.Temporary = [];
+            obj.RunNumber = 0;
+            obj.BadFrameDetected = false;
+            obj.LastData = [];
         end
 
         function init(obj)
@@ -66,6 +67,18 @@ classdef LiveData < BaseObject
             s.CameraManager = obj.CameraManager;
             s.LatCalib = obj.LatCalib;
             s.PSFCalib = obj.PSFCalib;
+        end
+
+        function s = get.LatCalib(obj)
+            s = obj.Analyzer.LatCalib;
+        end
+
+        function s = get.PSFCalib(obj)
+            s = obj.Analyzer.PSFCalib;
+        end
+
+        function s = get.SiteCounters(obj)
+            s = obj.Analyzer.SiteCounters;
         end
     end
 
