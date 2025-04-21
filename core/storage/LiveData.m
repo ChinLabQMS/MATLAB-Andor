@@ -17,6 +17,7 @@ classdef LiveData < BaseObject
 
     properties (SetAccess = immutable)
         CameraManager
+        Preprocessor
         Analyzer
     end
     
@@ -28,12 +29,14 @@ classdef LiveData < BaseObject
     end
 
     methods
-        function obj = LiveData(cameras, analyzer)
+        function obj = LiveData(cameras, preprocessor, analyzer)
             arguments
                 cameras = CameraManager()
+                preprocessor = Preprocessor()
                 analyzer = Analyzer()
             end
             obj.CameraManager = cameras;
+            obj.Preprocessor = preprocessor;
             obj.Analyzer = analyzer;
             obj.reset()
         end
@@ -65,8 +68,11 @@ classdef LiveData < BaseObject
         function s = struct(obj)
             s = struct@BaseObject(obj, obj.VisibleProp);
             s.CameraManager = obj.CameraManager;
+            s.Preprocessor = obj.Preprocessor;
+            s.Analyzer = obj.Analyzer;
             s.LatCalib = obj.LatCalib;
             s.PSFCalib = obj.PSFCalib;
+            s.SiteCounters = obj.SiteCounters;
         end
 
         function s = get.LatCalib(obj)

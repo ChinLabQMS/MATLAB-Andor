@@ -13,7 +13,7 @@ classdef Camera < BaseRunner
 
     properties (Access = private)
         AcquisitionStartTime
-        ExampleLocation = "data/2025/04 April/20250410 imaging parameter scan/dense_gap=1005ms.mat"
+        ExampleLocation = "data/2025/04 April/20250411/dense_no_green.mat"
         ExampleImage
         CurrentIndex = 0
     end

@@ -33,7 +33,7 @@ classdef AnalysisRegistry < BaseObject
                            ["LatX", "LatY", "LatXDrift", "LatYDrift"])
         CalibLatO          (@calibLatO, ...
                            ["LatX", "LatY", "LatXDrift", "LatYDrift"])
-        FlagDriftedFrame  (@flagDriftedFrame)
+        Preprocess         (@preprocess)
         FitPSF             (@fitPSF, ...
                            ["PSFGaussXWid", "PSFGaussYWid", "StrehlRatioAiry", "NumIsolatedPeaks"])
         RecordMotorStatus  (@recordMotor, ...
@@ -166,43 +166,25 @@ function calibLatO(live, info, varargin, options)
     end
 end
 
-% If the lattice drift is significantly different from drift
-% on a reference camera, flag the current acquisition as bad frame
-function flagDriftedFrame(live, info, options)
+function preprocess(live, info, options)
     arguments
         live
         info
-    end
-    arguments
-        options.ref_camera = "Zelux"
-        options.ref_label = "Lattice_935"
-        options.threshold = 0.1
         options.verbose = false
     end
     timer = tic;
-    if isfield(live.Analysis, (info.camera)) && isfield(live.Analysis.(info.camera), info.label) && ...
-       isfield(live.Analysis.(info.camera).(info.label), "LatXDrift") && ...
-       isfield(live.Analysis, options.ref_camera) && isfield(live.Analysis.(options.ref_camera), options.ref_label) && ...
-       isfield(live.Analysis.(options.ref_camera).(options.ref_label), "LatXDrift")
-        data1 = live.Analysis.(info.camera).(info.label);
-        data2 = live.Analysis.(options.ref_camera).(options.ref_label);
-        LatDrift1 = [data1.LatXDrift, data1.LatYDrift];
-        LatDrift2 = [data2.LatXDrift, data2.LatYDrift];
-        diff = LatDrift2 - LatDrift1;
-        if norm(diff) > options.threshold
-            live.warn2("[%s %s] Bad calibration detected, rollback to previous lattice center. Difference in lattice center is %.2f sites.", ...
-                info.camera, info.label, norm(diff))
-            old_R = live.Temporary.(info.camera).(info.label).LastLatR;
-            live.LatCalib.(info.camera).init(old_R, 'format', 'R')
-        end
-    else
-        live.warn2('Unable to find the LatR drift data in live, please check if CalibLatO/CalibLatR appears in SequenceTable.')
-    end
+    raw = live.Raw.(info.camera).(info.label);
+    args = namedargs2cell(info);
+    [signal, background, noise] = live.Preprocessor.process(raw, args{:}, 'fast_mode', 0);
+    live.Signal.(info.camera).(info.label) = signal;
+    live.Background.(info.camera).(info.label) = background;
+    live.Noise.(info.camera).(info.label) = noise;
     if options.verbose
-        live.info("[%s %s] Flagging drifted frame takes %5.3f s.", info.camera, info.label, toc(timer))
+        live.info("[%s %s] Fitting BkgLeakage takes %5.3f s.", info.camera, info.label, toc(timer))
     end
 end
 
+% Fit the PSF from live image
 function fitPSF(live, info, varargin, options)
     arguments
         live
@@ -238,6 +220,7 @@ function fitPSF(live, info, varargin, options)
     end
 end
 
+% Record the motor position on each axis
 function recordMotor(live, info, options)
     arguments
        live
@@ -255,6 +238,7 @@ function recordMotor(live, info, options)
     end
 end
 
+% Reconstruct the site counts and occupancy
 function reconstructSites(live, info, varargin, options)
     arguments
        live
@@ -277,6 +261,7 @@ function reconstructSites(live, info, varargin, options)
     end
 end
 
+% Analyze occupancy to get error/loss statistics and counts histogram
 function analyzeOccup(live, info, options)
     arguments
        live
@@ -317,6 +302,7 @@ function analyzeOccup(live, info, options)
     end
 end
 
+% Update deconvolution weights to current calibration
 function updateDeconvWeight(live, info, options)
     arguments
        live

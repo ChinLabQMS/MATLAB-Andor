@@ -55,7 +55,7 @@ classdef PicomotorDriver < BaseManager
                         obj.info('Device attached is %s', dev_info);
                     end
                 else
-                    obj.info('Device connected.')
+                    obj.info('No USB Assembly found, connected to dummy driver.')
                 end
                 obj.Initialized = true;
             end

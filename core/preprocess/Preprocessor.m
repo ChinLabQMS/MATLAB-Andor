@@ -3,7 +3,6 @@ classdef Preprocessor < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
         BackgroundFilePath = 'calibration/BkgStat_20241025.mat'
-        BackgroundLeakageFilePath = 'calibration/BkgLeakage.mat'
     end
 
     properties (Constant)
@@ -34,12 +33,6 @@ classdef Preprocessor < BaseProcessor
             obj.BackgroundFilePath = path;
         end
         
-        % Load a file that contains leakage counts on CCD from a recent dataset
-        function set.BackgroundLeakageFilePath(obj, path)
-            obj.loadBackgroundLeakageFile(path)
-            obj.BackgroundLeakageFilePath = path;
-        end
-        
         % Main entry in the app interface
         % Process with fast mode off to record an offset, which will be
         % used if fast mode is turned on
@@ -53,28 +46,6 @@ classdef Preprocessor < BaseProcessor
             else
                 obj.error("Unreconginized input format.")
             end
-        end
-
-        function updateLeakage(obj, Data, varargin)
-            obj.process(Data, varargin{:}, 'fast_mode', 0)
-        end
-
-        function saveLeakage(obj, filename, most_recent_filename)
-            arguments
-                obj
-                filename = sprintf("calibration/BkgLeakage_%s", datetime("now", "Format","uuuuMMdd"))
-                most_recent_filename = "calibration/BkgLeakage.mat"
-            end
-            if filename.endsWith('.mat')
-                filename = filename.extractBefore('.mat');
-            end
-            if isfile(filename + ".mat")
-                filename = filename + sprintf("_%s", datetime("now", "Format", "HHmmss"));
-            end
-            leakage = obj.Leakage;
-            save(filename, "-struct", "leakage")
-            save(most_recent_filename, "-struct", "leakage")
-            obj.info("Background leakage data saved as '%s' and '%s'.", filename, most_recent_filename)
         end
     end
 
@@ -110,14 +81,17 @@ classdef Preprocessor < BaseProcessor
             args1 = namedargs2cell(opt1);
             signal = subtractBackground(obj, raw, info, args1{:});
             if ~opt.fast_mode
+                % Normal mode, perform linear plane fitting on the edge 
+                % pixels to reduce background offset
                 args2 = namedargs2cell(opt2);
                 args3 = namedargs2cell(opt3);
                 signal = removeOutlier(obj, signal, info, args2{:});
-                [signal, leakage, ~, noise] = correctOffset(obj, signal, info, args3{:});
+                [signal, leakage, noise] = correctOffset(obj, signal, info, args3{:});
                 obj.Leakage.(info.camera).(info.label) = leakage;
             else
+                % Fast mode, direct subtract current recorded leakage
                 args4 = namedargs2cell(opt4);
-                [signal, leakage, ~, noise] = correctOffsetFast(obj, signal, info, args4{:}, ...
+                [signal, leakage, noise] = correctOffsetFast(obj, signal, info, args4{:}, ...
                     'region_width', opt3.region_width);
             end
             if opt.verbose
@@ -214,7 +188,7 @@ classdef Preprocessor < BaseProcessor
         end
         
         % Fit a plane on the background pixels to remove the offsets
-        function [signal, leakage, variance, noise] = correctOffset(obj, raw, info, opt3)
+        function [signal, leakage, noise, variance] = correctOffset(obj, raw, info, opt3)
             arguments
                 obj
                 raw
@@ -225,7 +199,8 @@ classdef Preprocessor < BaseProcessor
                 opt3.warn_var_thres
             end
             assert(all(isfield(info, ["camera", "label", "config"])))
-            [leakage, variance, noise] = cancelOffset(raw, info.config.NumSubFrames, opt3.region_width, 0); 
+            [leakage, variance, noise] = cancelOffset(raw, info.config.NumSubFrames, ...
+                                                      opt3.region_width, 0); 
             signal = raw - leakage;
             if opt3.warning
                 if any(abs(leakage) > opt3.warn_offset_thres)
@@ -240,7 +215,7 @@ classdef Preprocessor < BaseProcessor
         end
         
         % Bypass the fitting plane to get an offset with a pre-loaded data
-        function [signal, leakage, variance, noise] = correctOffsetFast(obj, raw, info, opt4)
+        function [signal, leakage, noise, variance] = correctOffsetFast(obj, raw, info, opt4)
             arguments
                 obj
                 raw
@@ -250,16 +225,17 @@ classdef Preprocessor < BaseProcessor
             end
             try
                 signal = raw - obj.Leakage.(info.camera).(info.label);
-            catch
+            catch me
                 signal = raw;
-                obj.warn("Background offset (leakage) is not fully calibrated.")
+                obj.warn2("Background offset (leakage) is not found in calibration, error: %s", me.message)
             end
             if opt4.output_diagnostic
-                [leakage, variance, noise] = cancelOffset(signal, info.Config.NumSubFrames, opt4.region_width, 1);
+                [leakage, variance, noise] = cancelOffset(signal, info.Config.NumSubFrames, ...
+                                                          opt4.region_width, 1);
             else
                 leakage = [];
-                variance = [];
                 noise = [];
+                variance = [];
             end
         end
     end

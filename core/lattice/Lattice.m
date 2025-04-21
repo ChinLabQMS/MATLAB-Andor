@@ -857,6 +857,11 @@
         % Convert FFT phase to lattice center R
         function R = convertFFTPhase2R(obj, signal, x_range, y_range)
             obj.checkInitialized()
+            if isempty(signal)
+                R = obj.R;
+                obj.warn2('No data within ROI for calibrating lattice phase!')
+                return
+            end
             % Extract lattice center coordinates from phase at FFT peak
             [Y, X] = meshgrid(y_range, x_range);
             phase_vec = zeros(1,2);

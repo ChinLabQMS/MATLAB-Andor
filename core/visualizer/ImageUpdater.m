@@ -12,13 +12,13 @@ classdef ImageUpdater < AxesUpdater
         PlotLattice_TransformCropRSite = 20
         PlotLattice_TransformScaleV = 5
         PlotPSF_ScaleV = 1
-        PlotOccupied_PlotUnoccup = false
-        PlotOccupied_OccupColor = 'r'
-        PlotOccupied_UnoccupColor = 'w'
+        PlotOccupied_PlotUnoccup = true
+        PlotOccupied_OccupColor = 'y'
+        PlotOccupied_UnoccupColor = 'b'
         PlotOccupied_CircleRadius = 0.1
-        PlotHopLoss_HopColor = 'r'
-        PlotHopLoss_LossColor = 'b'
-        PlotHopLoss_GoodColor = 'w'
+        PlotHopLoss_HopColor = 'b'
+        PlotHopLoss_LossColor = 'r'
+        PlotHopLoss_GoodColor = 'y'
         PlotHopLoss_CircleRadius = 0.1
     end
 

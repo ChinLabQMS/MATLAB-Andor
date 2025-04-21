@@ -3,14 +3,13 @@ classdef SiteCounter < BaseComputer
     properties (Constant)
         LatCalib_DefaultPath = "calibration/LatCalib.mat"
         PSFCalib_DefaultPath = "calibration/PSFCalib.mat"
-        Process_CalibMode = "offset_every"
+        Process_CalibMode = "offset"
         Process_CountMethod = "linear_inverse"
         Process_ClassifyMethod = "gmm"
         Process_AddDescription = true
-        Process_PlotDiagnostic = false
-        Process_PlotDiagnosticIndex = 1
         ProcessCalib_CropRSites = 20
-        ProcessClassify_SingleThreshold = 1200
+        GetOccup_FixedThreshold = 1200
+        GetOccup_GMM_LowFillSigma = 4
         CountCircleSum_SiteCircleRadius = 2
         SpreadMatrix_Center = [0, 0]
         SpreadMatrix_Sites = SiteGrid.prepareSite('Hex', 'latr', 2)
@@ -23,21 +22,20 @@ classdef SiteCounter < BaseComputer
     end
 
     properties (SetAccess = immutable)
-        SiteGrid
-        PointSource
         Lattice
+        PointSource
+        SiteGrid        
     end
 
     properties (SetAccess = protected)
-        SignalXRange = []
-        SignalYRange = []
+        SignalXRange
+        SignalYRange
         SiteCenters
-        SpreadMatrix
         SiteCircleX
         SiteCircleY
         DeconvFunc
-        DeconvWeight  % Sparse matrix to store pixel weights for each site
-        LastLatticeR % Record the center of lattice when updating weights
+        DeconvWeight        % Sparse matrix to store pixel weights for each site
+        LastLatticeR        % Record the center of lattice when updating weights
     end
     
     methods
@@ -46,7 +44,7 @@ classdef SiteCounter < BaseComputer
                 id = "Andor19330"
                 lat = []
                 ps = []
-                grid = SiteGrid()
+                grid = []
             end
             obj@BaseComputer(id)
             if isempty(lat)
@@ -69,7 +67,11 @@ classdef SiteCounter < BaseComputer
             else
                 obj.PointSource = ps;
             end
-            obj.SiteGrid = grid;
+            if isempty(grid)
+                obj.SiteGrid = SiteGrid(obj.Lattice);
+            else
+                obj.SiteGrid = grid;
+            end
             obj.updateDeconvFunc()
             obj.updateDeconvWeight()
         end
@@ -91,10 +93,9 @@ classdef SiteCounter < BaseComputer
                 opt.calib_cropRsites = obj.ProcessCalib_CropRSites
                 opt.count_method = obj.Process_CountMethod
                 opt1.classify_method = obj.Process_ClassifyMethod
-                opt1.classify_threshold = obj.ProcessClassify_SingleThreshold
+                opt1.fixed_thresholds = obj.GetOccup_FixedThreshold
+                opt1.low_filling_sigma = obj.GetOccup_GMM_LowFillSigma
                 opt2.add_description = obj.Process_AddDescription
-                opt2.plot_diagnostic = obj.Process_PlotDiagnostic
-                opt2.plot_index = obj.Process_PlotDiagnosticIndex
             end
             [x_size, y_size, num_acq] = size(signal, [1, 2, 3]);
             x_range = 1: (x_size / num_frames);
@@ -135,21 +136,22 @@ classdef SiteCounter < BaseComputer
             end
             % Classify sites as occupied/unoccupied
             switch opt1.classify_method
-                case "single"
-                    stat.LatThreshold = opt1.classify_threshold;
-                    stat.LatOccup = getOccup_SingleThreshold(obj, stat.LatCount, opt1.classify_threshold);
+                case "fixed"
+                    [stat.LatOccup, stat.LatThreshold] = getOccup_FixedThreshold(obj, ...
+                        stat.LatCount, ...
+                        "fixed_thresholds", opt1.fixed_thresholds);
                 case "gmm"
                     % Use a two component Gaussian mixture model to fit the counts distribution
-                    [stat.LatOccup, stat.LatProb, stat.LatThreshold, stat.GMModel] = getOccup_GMMThreshold(obj, stat.LatCount);
+                    [stat.LatOccup, stat.LatThreshold, stat.GMModel] = getOccup_GMMSingleThreshold(obj, ...
+                        stat.LatCount, ...
+                        "fixed_thresholds", opt1.fixed_thresholds, ...
+                        "low_filling_sigma", opt1.low_filling_sigma);
                 case "none"
                 otherwise
                     obj.error('Unsupported classification method: %s!', opt.classify_method)
             end
             if opt2.add_description && ~(opt1.classify_method == "none")
                 stat.Description = obj.describe(stat.LatOccup);
-            end
-            if opt2.plot_diagnostic
-                plotCountsDiagnostic(obj, stat, signal, num_frames, opt2.plot_index)
             end
         end
         
@@ -181,12 +183,12 @@ classdef SiteCounter < BaseComputer
                     obj.Lattice.calibrateRCropSite(signal_sum, opt.calib_cropRsites)
                     obj.updateDeconvWeight(x_range, y_range, opt.count_method)
                 case "offset_every"
-                case "none"
-                    if isempty(obj.SignalXRange) || isempty(obj.SignalYRange)
+                case "offset_shift"
+                    if norm(obj.Lattice.R - obj.LastLatticeR) / obj.Lattice.V_norm > 0.1
                         obj.updateDeconvWeight(x_range, y_range, opt.count_method)
-                    elseif norm(obj.Lattice.R - obj.LastLatticeR) / obj.Lattice.V_norm > 0.2
-                        obj.warn2('Lattice center has shifted, please update deconvolution weights.')
+                        obj.warn2('Lattice center has shifted, deconvolution weights are updated.')
                     end
+                case "none"
                 otherwise
                     obj.error("Unsupported calibration mode: %s!", opt.calib_mode)
             end
@@ -271,8 +273,8 @@ classdef SiteCounter < BaseComputer
                 psf_vals = PS.PSFNormalized(XP(:) - center(1), YP(:) - center(2)) * x_step * y_step;
                 num_vals = numel(px_idx);
                 rows_all{site_i} = repmat(site_i, num_vals, 1);
-                cols_all{site_i} = px_idx(:);
-                vals_all{site_i} = psf_vals(:);
+                cols_all{site_i} = reshape(px_idx, [], 1);
+                vals_all{site_i} = reshape(psf_vals, [], 1);
             end
             rows = vertcat(rows_all{:});
             cols = vertcat(cols_all{:});
@@ -413,6 +415,94 @@ classdef SiteCounter < BaseComputer
         end
     end
 
+    % Functions to extract site counts from signal image
+    methods (Access = protected)
+        function counts = getCount_CenterSignal(obj, signal, x_range, y_range)
+            site_centers = round(obj.SiteCenters);
+            index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
+            counts = signal(index);
+        end
+        
+        function counts = getCount_CircleSum(obj, signal, x_range, y_range)
+            index = obj.SiteCircleX - x_range(1) + (obj.SiteCircleY - y_range(1)) * length(x_range);
+            counts = sum(reshape(signal(index), size(obj.SiteCircleX)), 2);
+        end
+        
+        function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
+            if isempty(obj.DeconvWeight) || (length(x_range) * length(y_range) ~= size(obj.DeconvWeight, 2))
+                obj.updateDeconvWeight(x_range, y_range, 'linear_inverse')
+                obj.warn('Unable to find deconv weights with current signal dimensions, update to current calibration')
+            end
+            counts = obj.DeconvWeight * reshape(signal(x_range, y_range), [], 1);
+        end
+    end
+    
+    % Functions to extract occupancy from counts
+    methods (Access = protected)
+        % Fixed thresholds
+        function [occup, thresholds] = getOccup_FixedThreshold(obj, counts, options)
+            arguments
+                obj
+                counts
+                options.fixed_thresholds = obj.GetOccup_FixedThreshold
+            end
+            thresholds = options.fixed_thresholds;
+            occup = counts > thresholds;
+        end
+        
+        % Adaptive threshold by fitting a 2-components Gaussian mixture
+        % model to the counts distribution
+        function [occup, thresholds, gm] = getOccup_GMMSingleThreshold(obj, counts, options)
+            arguments
+                obj
+                counts
+                options.fixed_thresholds = obj.GetOccup_FixedThreshold
+                options.low_filling_sigma = obj.GetOccup_GMM_LowFillSigma
+            end
+            try
+                model = fitgmdist(counts(:), 2);
+                if ~model.Converged
+                    error('Model fails to converge.')
+                end
+            catch me
+                obj.warn2('Gaussian mixture model fitting fails: %s',  me.message)
+                obj.info('Rollback to fixed threshold: %d', options.fixed_thresholds)
+                [occup, thresholds] = getOccup_FixedThreshold(obj, counts, ...
+                    'fixed_thresholds', options.fixed_thresholds);
+                gm = nan;
+                return
+            end
+            if model.mu(1) > model.mu(2)
+                mu = model.mu([2, 1]);
+                Sigma = model.Sigma([2, 1]);
+                p = model.ComponentProportion([2, 1]);
+            else
+                mu = model.mu;
+                Sigma = model.Sigma;
+                p = model.ComponentProportion;
+            end
+            gm = gmdistribution(mu, Sigma, p);
+            if p(2) < 0.05
+                % Handle sparse filling
+               thresholds = mu(1) + sqrt(Sigma(1)) * options.low_filling_sigma;
+            else
+                % Compute thresholds from 2-components Gaussian mixture model
+                A = Sigma(1) - Sigma(2);
+                B = -2*Sigma(1)*mu(2) + 2*Sigma(2)*mu(1);
+                D = Sigma(1)*mu(2)^2 - Sigma(2)*mu(1)^2 - 2*Sigma(1)*Sigma(2)*log( ...
+                    p(2)*sqrt(Sigma(1)) / (p(1)*sqrt(Sigma(2))));
+                threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
+                threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
+                if (threshold1 < mu(2)) && (threshold1 > mu(1))
+                    thresholds = threshold1;
+                else
+                    thresholds = threshold2;
+                end
+            end
+            occup = counts > thresholds;
+        end
+    end
+
     methods (Static)
         % Generate some statistical analysis on error and loss rates
         function description = describe(occup, options)
@@ -470,109 +560,4 @@ classdef SiteCounter < BaseComputer
             end
         end
     end
-    
-    % Functions to extract site counts from signal image
-    methods (Access = protected)
-        function counts = getCount_CenterSignal(obj, signal, x_range, y_range)
-            site_centers = round(obj.SiteCenters);
-            index = site_centers(:, 1) - x_range(1) + (site_centers(:, 2) - y_range(1)) * length(x_range);
-            counts = signal(index);
-        end
-        
-        function counts = getCount_CircleSum(obj, signal, x_range, y_range)
-            index = obj.SiteCircleX - x_range(1) + (obj.SiteCircleY - y_range(1)) * length(x_range);
-            counts = sum(reshape(signal(index), size(obj.SiteCircleX)), 2);
-        end
-        
-        function counts = getCount_LinearInverse(obj, signal, x_range, y_range)
-            if isempty(obj.DeconvWeight) || (length(x_range) * length(y_range) ~= size(obj.DeconvWeight, 2))
-                obj.updateDeconvWeight(x_range, y_range, 'linear_inverse')
-                obj.warn('Unable to find deconv weights, update to current calibration')
-            end
-            counts = obj.DeconvWeight * reshape(signal(x_range, y_range), [], 1);
-        end
-    end
-    
-    % Functions to extract occupancy from counts
-    methods (Access = protected)
-        function occup = getOccup_SingleThreshold(~, counts, thresholds)
-            occup = counts > thresholds;
-        end
-        
-        function [occup, prob, threshold, model] = getOccup_GMMThreshold(obj, counts)
-            try
-                model = fitgmdist(counts(:), 2);
-            catch
-                obj.warn2('GMM fails, roll back to single fixed threshold: %d', obj.ProcessClassify_SingleThreshold)
-                occup = getOccup_SingleThreshold(obj, counts, obj.ProcessClassify_SingleThreshold);
-                prob = nan;
-                model = nan;
-                return
-            end
-            prob = model.posterior(counts(:));
-            if model.mu(1) > model.mu(2)
-                occup = prob(:, 1) > prob(:, 2);
-                prob = prob(:, 1);
-            else
-                occup = prob(:, 2) > prob(:, 1);
-                prob = prob(:, 2);
-            end
-            occup = reshape(occup, size(counts));
-            prob = reshape(prob, size(counts));
-            % Compute thresholds from 2-components Gaussian mixture model
-            A = model.Sigma(1) - model.Sigma(2);
-            B = -2*model.Sigma(1) * model.mu(2) + 2*model.Sigma(2) * model.mu(1);
-            D = model.Sigma(1) * model.mu(2)^2 - model.Sigma(2) * model.mu(1)^2 ...
-                - 2*model.Sigma(1) * model.Sigma(2) * log( ...
-                model.ComponentProportion(2) * sqrt(model.Sigma(1)) / (model.ComponentProportion(1) * sqrt(model.Sigma(2))));
-            threshold1 = (-B + sqrt(B^2 - 4*A*D)) / (2*A);
-            threshold2 = (-B - sqrt(B^2 - 4*A*D)) / (2*A);
-            if (threshold1 < max(model.mu)) && (threshold1 > min(model.mu))
-                threshold = threshold1;
-            else
-                threshold = threshold2;
-            end
-        end
-    end
-end
-
-%% Utility functions
-function plotCountsDiagnostic(obj, stat, signal, num_frames, index)
-    signal = signal(:, :, index);
-    lat = obj.Lattice;
-    sites = stat.SiteInfo.Sites;
-    counts = stat.LatCount(:, :, index);
-    occup = stat.LatOccup(:, :, index);
-    [x_size, y_size] = size(signal);
-    centers = lat.R + (0: (num_frames - 1))' .* [(x_size / num_frames), 0];
-    figure('Name', 'Diagnostic plots for counts reconstruction')
-    subplot(1, 3, 1)
-    imagesc2(signal)
-    for j = 1: num_frames
-        lat.plotOccup(sites(occup(:, j), :), sites(~occup(:, j), :), ...
-            'center', centers(j, :), 'filter', true, ...
-            'x_lim', [0, x_size], 'y_lim', [0, y_size])
-    end
-    lat.plotV('center', centers)
-    title('Signal')
-    subplot(1, 3, 2)
-    simulated = zeros(x_size, y_size);
-    for j = 1: num_frames
-        x_range = (1: (x_size / num_frames)) + (j - 1) * (x_size / num_frames);
-        simulated(x_range, 1: y_size) = obj.reconstructSignal(counts(:, j));
-    end
-    imagesc2(simulated)
-    subplot(1, 3, 3)
-    lat.plotCounts(stat.SiteInfo.Sites, counts(:, 1), ...
-            'center', centers(1, :), 'filter', true, ...
-            'x_lim', [0, x_size], 'y_lim', [0, y_size], ...
-            'add_background', true, 'fill_sites', false)
-    for j = 2: num_frames
-        lat.plotCounts(stat.SiteInfo.Sites, stat.LatCount(:, j, index), ...
-            'center', centers(j, :), 'filter', true, ...
-            'x_lim', [0, x_size], 'y_lim', [0, y_size], ...
-            'add_background', false, 'fill_sites', false)
-    end
-    lat.plotV('center', centers)
-    title('Counts')
 end

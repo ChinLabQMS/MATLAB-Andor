@@ -342,15 +342,15 @@ classdef LatCalibrator < DataProcessor & LatProcessor
             atom_signal = mean(obj.Signal.(opt.camera2).(opt.label2), 3);
             % Calibrate projector VR on camera space with hash pattern
             LatCam.calibrateProjectorVRHash(cam_signal, 'plot_diagnostic', true)
+            LatCamInit = LatCam.copy();
             % Cross calibrate lattice origin with atom signal
             LatCam.calibrateOCropSite(LatAtom, cam_signal, atom_signal, opt.crop_R_site, ...
                 "inverse_match", true, "covert_to_signal", false, ...
                 "calib_R", [false, true], "sites", opt.sites, ...
                 "plot_diagnosticO", opt.plot_diagnostic, "verbose", opt.verbose, "debug", opt.debug)
+            Lattice.checkDiff(LatCamInit, LatCam)
             % Cross calibrate projector space lattice to camera space
-            LatProjInit = LatProj.copy();
             LatProj.calibrateProjector2Camera(LatCam)
-            LatProj.checkDiff(LatProjInit, LatProj)
         end
         
         % Re-calibrate the lattice vectors and centers to mean image

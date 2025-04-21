@@ -11,27 +11,27 @@ Data = load("data/2025/04 April/20250411/dense_no_green.mat").Data;
 %%
 p = Preprocessor();
 Signal = p.process(Data);
-
 signal = Signal.Andor19331.Image;
-%%
-figure
-imagesc2(mean(signal, 3))
-% Andor19331.plot()
-% clim([0, 60])
-% counter.Lattice.plot()
-
-%%
-figure
-imagesc2(signal(:, :, 10))
-clim([0, 60])
-counter.Lattice.plot()
 
 %%
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
-counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 8)
-stat = counter.process(signal, 2, 'plot_diagnostic', 0);
+counter.configGrid("SiteFormat", "Hex", "HexRadius", 8)
+tic
+stat = counter.process(signal, 2, 'calib_mode', 'offset');
+toc
+%%
+figure
+imagesc2(mean(signal, 3))
+counter.Lattice.plot()
+% clim([0, 60])
+% counter.Lattice.plot(SiteGrid.prepareSite("MaskedRect", "mask_Lattice", counter.Lattice))
+
+%%
+figure
+imagesc2(signal(:, :, 10))
+counter.Lattice.plot()
 
 %%
 close all
