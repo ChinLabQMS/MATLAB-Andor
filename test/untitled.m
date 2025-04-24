@@ -13,7 +13,7 @@ p = Preprocessor();
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
 
-%%
+
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
@@ -21,7 +21,7 @@ counter.configGrid("SiteFormat", "Hex", "HexRadius", 8)
 tic
 stat = counter.process(signal, 2, 'calib_mode', 'offset');
 toc
-%%
+
 figure
 imagesc2(mean(signal, 3))
 counter.Lattice.plot()
