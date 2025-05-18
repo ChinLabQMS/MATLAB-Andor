@@ -3,14 +3,14 @@ clear; clc; close all
 Lat = load("calibration/LatCalib.mat").Andor19331;
 p = Preprocessor();
 Signal = arrayfun(@p.process, ...
-        [load("data/2025/02 Feburary/20250218/DMD=0in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.2in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.3in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.4in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.5in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.6in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=0.7in_angled_cross_width=10.mat").Data;
-        load("data/2025/02 Feburary/20250218/DMD=1in_angled_cross_width=10.mat").Data;
+        [load("data/2025/02 February/20250218 DMD focus scan/DMD=0in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.2in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.3in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.4in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.5in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.6in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=0.7in_angled_cross_width=10.mat").Data;
+        load("data/2025/02 February/20250218 DMD focus scan/DMD=1in_angled_cross_width=10.mat").Data;
         ]);
 
 mean_image = arrayfun(@(x) mean(x.Andor19331.Image, 3), Signal, 'UniformOutput', false);

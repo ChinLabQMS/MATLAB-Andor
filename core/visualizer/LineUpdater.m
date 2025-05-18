@@ -56,9 +56,13 @@ classdef LineUpdater < AxesUpdater
                 else                    
                     switch new{1}{1}
                         case "histogram"
-                            obj.GraphHandle = histogram(obj.AxesHandle, 'BinCounts', new{1}{2}, 'BinEdges', new{1}{3});
-                            hold(obj.AxesHandle, "on")
-                            obj.AddonHandle = xline(obj.AxesHandle, new{1}{4}, '--', 'LineWidth', 2);
+                            try
+                                obj.GraphHandle = histogram(obj.AxesHandle, 'BinCounts', new{1}{2}, 'BinEdges', new{1}{3});
+                                hold(obj.AxesHandle, "on")
+                                obj.AddonHandle = xline(obj.AxesHandle, new{1}{4}, '--', 'LineWidth', 2);
+                            catch me
+                                obj.warn2('Error occurs during plotting: %s.', me.message)
+                            end
                         otherwise
                             obj.error('Unrecognized plot type for line plotter!')
                     end

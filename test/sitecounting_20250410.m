@@ -6,7 +6,8 @@ clear; clc; close all
 % Data = load("data/2025/02 February/20250225 modulation frequency scan/no_532.mat").Data;
 % Data = load("data/2025/04 April/20250408 mod freq scan/sparse_no_green.mat").Data;
 %Data = load("data/2025/04 April/20250409 optimize imaging/sparse_freqOP=-2.6_Bx=-0.79_By=2.08_Bz=1.4_OPAM=1.mat").Data;
-Data = load("data/2025/04 April/20250410/rsc1_bz=1.4_4.mat").Data;
+%Data = load("data/2025/04 April/20250410/rsc1_bz=1.4_4.mat").Data;
+Data = load("data/2025/04 April/20250429/startof20250429.mat").Data;
 
 p = Preprocessor();
 Signal = p.process(Data);
@@ -29,8 +30,11 @@ toc
 %%
 tic
 stat = counter.process(signal, 2, 'plot_diagnostic', 0, ...
-                       'classify_threshold', 1100, ...
+                       'classify_method', 1100, ...
                        'calib_mode', 'none', 'classify_method', 'single');
+% stat = counter.process(signal, 2, 'plot_diagnostic', 0, ...
+%                        'classify_threshold', 1100, ...
+%                        'calib_mode', 'none', 'classify_method', 'single');
 toc
 
 %%
