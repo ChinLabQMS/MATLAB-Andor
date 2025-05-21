@@ -13,7 +13,6 @@ p = Preprocessor();
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
 
-
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;

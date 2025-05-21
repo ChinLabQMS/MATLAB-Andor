@@ -370,11 +370,12 @@ classdef Projector < BaseRunner
     end
 
     methods (Static)
-        function info = getDisplayInformation(format)
+        function [info, display_idx] = getDisplayInformation(format)
             arguments
                 format = "table"
             end
             info = PatternWindowMex("getDisplayModes");
+            display_idx = PatternWindowMex("getDisplayIndex");
             switch format
                 case "struct"
                 case "table"
@@ -390,6 +391,7 @@ classdef Projector < BaseRunner
                 otherwise
                     error('Unknown format for display information!')
             end
+            clear('PatternWindowMex')
         end
 
         function rgb = Pattern2RGB(pattern)
