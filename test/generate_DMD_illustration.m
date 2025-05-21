@@ -1,32 +1,28 @@
 clear
 clc
 
-XRange = 1:60;
-YRange = 1:60;
+XRange = 1:20;
+YRange = 1:40;
 
-XStep = 30;
+XStep = 10;
 % YStep = repelem(20,24);
-YStep = 20:43;
-R1 = 3;
-R2 = 5;
+YStep = 9:32;
+R1 = 5;
+R2 = inf;
 
 [YIndex,XIndex] = meshgrid(YRange,XRange);
-dmd_image = zeros(length(XRange),length(YRange),24);
-rgb_image = zeros(length(XRange),length(YRange),3);
+dmd_image = ones(length(XRange),length(YRange),24);
+rgb_image = ones(length(XRange),length(YRange),3);
 
 i = 0;
 for X = XStep
     for Y = YStep
         i = i+1;
-
         Mask = (XIndex-X).^2+(YIndex-Y).^2>R1^2 ...
             & (XIndex-X).^2+(YIndex-Y).^2<R2^2;
-        
         sample_image = false(length(XRange),length(YRange));
         sample_image(Mask) = true;
-
-        dmd_image(:,:,i) = sample_image;
-        
+        dmd_image(:,:,i) = sample_image;        
     end
 end
 for x = XRange
@@ -38,13 +34,34 @@ for x = XRange
 end
 
 %%
-figure(WindowState="fullscreen")
+close all
+figure
 imshow(rgb_image)
-% imshow(dmd_image(:,:,24))
+% imshow(dmd_image(:,:,17))
 daspect([1 1 1])
 
+% Get image size
+[rows, cols] = size(rgb_image, [1, 2]);
+
+% Draw vertical grid lines
+for c = 0:cols
+    x = [c + 0.5, c + 0.5];
+    y = [0.5, rows + 0.5];
+    line(x, y, 'Color', 'k', 'LineWidth', 0.5);
+end
+
+% Draw horizontal grid lines
+for r = 0:rows
+    x = [0.5, cols + 0.5];
+    y = [r + 0.5, r + 0.5];
+    line(x, y, 'Color', 'k', 'LineWidth', 0.5);
+end
+
 %%
-figure(WindowState="fullscreen")
+
+
+%%
+figure
 p = imshow(dmd_image(:,:,1));
 daspect([1 1 1])
 for i = 2:24

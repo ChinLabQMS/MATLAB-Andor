@@ -68,7 +68,7 @@ classdef SiteCounter < BaseComputer
                 obj.PointSource = ps;
             end
             if isempty(grid)
-                obj.SiteGrid = SiteGrid(obj.Lattice);
+                obj.SiteGrid = SiteGrid('Lattice', obj.Lattice);
             else
                 obj.SiteGrid = grid;
             end
@@ -282,14 +282,16 @@ classdef SiteCounter < BaseComputer
             if opt2.spread_sparse
                 M = sparse(rows, cols, vals, num_sites, num_px);
             else
-                M(rows, cols) = vals;
+                idx = rows + (cols - 1) * num_sites;
+                M(idx) = vals;
             end
         end
         
         % Generate a function handle to de-convolution pattern
         function [func, pat, x_range, y_range] = getDeconvFunc(obj, varargin)
-            [M, x_range, y_range] = obj.getSpreadMatrix(varargin{:}, 'spread_center', [0, 0]);
-            Minv = (M * M') \ M;
+            [M, x_range, y_range] = obj.getSpreadMatrix(varargin{:}, ...
+                'spread_center', [0, 0], 'spread_sparse', false);
+            Minv = pinv(M)';
             num_sites = size(M, 1);
             pat = full(reshape(Minv(ceil(num_sites / 2), :), length(x_range), length(y_range)));
             func = griddedInterpolant({x_range, y_range}, pat, "nearest");

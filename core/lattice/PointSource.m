@@ -547,6 +547,28 @@ classdef PointSource < BaseComputer
             end
         end
 
+        function plotAzimuthalPSF(obj, ax, opt1, opt2)
+            arguments
+                obj
+                ax = gca()
+                opt1.scale_x = 1
+                opt1.scale_y = 1
+                opt2.bin_radial = 0.1
+                opt2.half_range = true
+            end
+            args = namedargs2cell(opt2);
+            [psf_v, psf_r] = getAzimuthalAverage(obj.DataPSF, [0,0], ...
+                obj.DataXRange, obj.DataYRange, args{:});
+            psf_v = psf_v / max(psf_v) * opt1.scale_y;
+            scaled_r = opt1.scale_x * psf_r;
+            % Preserve original hold state upon exit
+            c_obj = onCleanup(@()preserveHold(ishold(ax), ax));
+            plot(ax, scaled_r, psf_v, 'LineWidth', 2)
+            hold on
+            plot(ax, scaled_r, obj.IdealPSFAiry(psf_r(:), 0)/obj.IdealPSFAiry(0,0)*opt1.scale_y, ...
+                'LineStyle', '--', 'LineWidth', 2)
+        end
+
         function plotPSF(obj, opt)
             arguments
                 obj

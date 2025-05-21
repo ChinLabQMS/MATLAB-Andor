@@ -19,7 +19,7 @@ p = PSFCalibrator( ...
 %% Check signals, should be sparse point source in all images
 p.plotSignal()
 
-%% Process single image, to check whether the filtering parameters are good
+%% (Optional) Process single image, to check whether the filtering parameters are good
 % Input format: 
 %  - camera_name
 %  - index_range (empty to process all shots)
@@ -33,13 +33,13 @@ p.fit('Andor19330', 1, 1.3, 'plot_diagnostic', 1)
 % p.PSFCalib.Andor19330.plotPSF()
 p.PSFCalib.Andor19330
 
-%% Andor19331
+%% (Optional) Andor19331
 close all
 p.fit('Andor19331', 1, 1.3, 'plot_diagnostic', 1)
 % p.PSFCalib.Andor19331.plotPSF()
 p.PSFCalib.Andor19331
 
-%% Zelux
+%% (Optional) Zelux
 close all
 p.fit('Zelux', 1, 1.5,'bin_threshold_max', 10, 'filter_intensity_min', 10, 'plot_diagnostic', 1)
 % p.PSFCalib.Zelux.plotPSF()

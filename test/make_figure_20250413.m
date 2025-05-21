@@ -6,25 +6,25 @@ Data = load("data/2025/04 April/20250411/dense_no_green.mat").Data;
 % Data = load("data/2025/04 April/20250414/sparse_no_green.mat").Data;
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
-grid = SiteGrid("SiteFormat", "Hex", "HexRadius", 12);
+grid = SiteGrid("SiteFormat", "Hex", "HexRadius", 8);
 counter = SiteCounter("Andor19331", [], [], grid);
 counter2 = SiteCounter("Andor19330", [], [], grid);
 
 %%
 counter.Lattice.init([245, 645], 'format', 'R')
 tic
-stat = counter.process(signal, 2, 'plot_diagnostic', 0, ...
-    'classify_method', 'single', 'classify_threshold', 1400);
+stat = counter.process(signal, 2);
 toc
 
 %% Plot deconvolution kernel
 figure('Position', [500, 500, 250, 250])
-counter.plotDeconvFunc()
-counter.Lattice.plot('center',[0,0], 'filter', true, 'diff_origin', false, 'norm_radius', 0.02, 'line_width', 1.5, 'color', 'w')
+counter2.plotDeconvFunc()
+counter2.Lattice.plot('center',[0,0], 'filter', true, 'diff_origin', false, 'norm_radius', 0.02, 'line_width', 1.5, 'color', 'w')
 xlim([-15, 15])
 ylim([-15, 15])
 xticks([])
 yticks([])
+title('Lower CCD')
 
 %% Draw a sample image with scalebar and zoom in box
 close all
@@ -57,11 +57,11 @@ cb = colorbar('westoutside');
 xticks([])
 yticks([])
 set(cb, 'FontSize', 14);
-clim([10, 170])
+clim([15, 170])
 line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Color', 'w', 'LineWidth', 3)
 text(scalebar_y + scalebar_lengthpx + 30, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
-    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
+    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 14, 'FontWeight','bold');
 rectangle('Position', [box_y, box_x, box_w, box_h], 'LineWidth', 0.75, 'EdgeColor', 'w')
 
 figure('Position', [500, 500, 300, 300])
@@ -69,14 +69,14 @@ imagesc(box_yrange, box_xrange, signal(box_xrange, box_yrange))
 axis('image')
 xticks([])
 yticks([])
-clim([10, 170])
+clim([15, 170])
 counter.Lattice.plot('filter', false, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'k')
 xlim([box_yrange(1), box_yrange(end)])
 ylim([box_xrange(1), box_xrange(end)])
 line([scalebar2_y, scalebar2_y + scalebar2_lengthpx], [scalebar2_x, scalebar2_x], 'Color', 'w', 'LineWidth', 4)
 text(scalebar2_y + scalebar2_lengthpx + 5, scalebar2_x - 0.5, ...
     [num2str(scalebar2_length) ' \mum'], ...
-    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight', 'bold');
+    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 14, 'FontWeight', 'bold');
 
 %% Show IMG1 and IMG2
 
@@ -99,6 +99,19 @@ sites01 = stat.SiteInfo.Sites(~occup1 & occup2, :);
 
 figure('Position', [500, 500, 800, 400])
 subplot(1, 2, 1)
+imagesc(y_range, x_range, signal(x_range+512, y_range, index))
+axis("image")
+xticks([])
+yticks([])
+clim([10, 170])
+line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Color', 'w', 'LineWidth', 3)
+text(scalebar_y + scalebar_lengthpx + 20, scalebar_x - 1.5, ...
+    [num2str(scalebar_length) ' \mum'], ...
+    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
+counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
+counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
+
+subplot(1, 2, 2)
 imagesc(y_range, x_range, signal(x_range, y_range, index))
 axis("image")
 xticks([])
@@ -108,21 +121,8 @@ line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Co
 text(scalebar_y + scalebar_lengthpx + 20, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
-% counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
-% counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
-
-subplot(1, 2, 2)
-imagesc(y_range, x_range, signal(x_range + 512, y_range, index))
-axis("image")
-xticks([])
-yticks([])
-clim([10, 170])
-line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Color', 'w', 'LineWidth', 3)
-text(scalebar_y + scalebar_lengthpx + 20, scalebar_x - 1.5, ...
-    [num2str(scalebar_length) ' \mum'], ...
-    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
-% counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
-% counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
+counter.Lattice.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'w', 'line_width', 1.5)
+counter.Lattice.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
 
 %% Show reconstructed occupancy in the small box
 
@@ -130,7 +130,7 @@ occup = reshape(stat.LatOccup(:, 1, 1), [], 1);
 
 figure('Position', [500, 500, 300, 300])
 imagesc(box_yrange, box_xrange, signal(box_xrange, box_yrange))
-lat.plotOccup(stat.SiteInfo.Sites(occup, :), zeros(0, 2), 'radius', 0.5, 'occup_color', 'w')
+counter.Lattice.plotOccup(stat.SiteInfo.Sites(occup, :), zeros(0, 2), 'radius', 0.5, 'occup_color', 'w')
 axis('image')
 xticks([])
 yticks([])
@@ -139,7 +139,7 @@ xlim([box_yrange(1), box_yrange(end)])
 ylim([box_xrange(1), box_xrange(end)])
 
 figure('Position', [500, 500, 300, 300])
-lat.plotCounts(stat.SiteInfo.Sites, double(occup), 'scatter_radius', 5)
+counter.Lattice.plotCounts(stat.SiteInfo.Sites, double(occup), 'scatter_radius', 5)
 xlim([box_yrange(1), box_yrange(end)])
 ylim([box_xrange(1), box_xrange(end)])
 xticks([])
@@ -166,20 +166,64 @@ ylabel('Occurrence')
 xlabel('Counts')
 
 %% Plot both upper and lower images
+% Cross calibrate the frames
 index = 3;
 
 upper = Signal.Andor19331.Image(:, :, index);
 lower = Signal.Andor19330.Image(:, :, index);
 
-[upper_box, upper_x, upper_y] = prepareBox(upper, counter.Lattice.R, 100);
-[lower_box, lower_x, lower_y] = prepareBox(lower, counter2.Lattice.R, 100);
+[upper_box, upper_x, upper_y] = prepareBox(upper, counter.Lattice.R, 50);
+[lower_box, lower_x, lower_y] = prepareBox(lower, counter2.Lattice.R, 50);
+
+% counter2.Lattice.init([206, 430], 'format', 'R_only')
+% counter2.Lattice.calibrateR(lower_box, lower_x, lower_y)
 
 counter.Lattice.calibrateR(upper_box, upper_x, upper_y)
-counter2.Lattice.calibrateO(counter.Lattice, lower_box, upper_box, lower_x, lower_y, upper_x, upper_y)
+counter.updateDeconvWeight()
+% counter2.Lattice.calibrateO(counter.Lattice, lower_box, upper_box, lower_x, lower_y, upper_x, upper_y)
 
 %%
-stat_upper = counter.process(Signal.Andor19331.Image, 2, 'calib_mode', 'update_range_only');
-stat_lower = counter2.process(Signal.Andor19330.Image, 2, 'calib_mode', 'update_range_only');
+figure
+imagesc(lower_y, lower_x, lower_box)
+daspect([1 1 1])
+xticks([])
+yticks([])
+counter2.Lattice.plot(SiteGrid.prepareSite('Hex', 'latr', 8), 'diff_origin', false, 'color', 'r', 'norm_radius', 0.05, 'line_width',2)
+
+counter2.Lattice.calibrateO(counter.Lattice, lower_box, upper_box, lower_x, lower_y, upper_x, upper_y, ...
+    "debug", true, "plot_diagnosticO", 1, "sites", SiteGrid.prepareSite('Hex', 'latr', 8))
+xlim([lower_y(1), lower_y(end)])
+ylim([lower_x(1), lower_x(end)])
+counter2.updateDeconvWeight()
+%%
+lower_upper = counter2.Lattice.transformSignal(counter.Lattice, upper_x, upper_y, lower_box, lower_x, lower_y);
+
+figure
+subplot(1, 3, 1)
+imagesc(upper_y, upper_x, upper_box)
+daspect([1 1 1])
+counter.Lattice.plotV('add_legend', 0, 'scale', 2, 'color1', 'k', 'color2', 'r')
+xticks([])
+yticks([])
+% title('Upper CCD signal')
+subplot(1, 3, 2)
+imagesc(lower_y, lower_x, lower_box)
+daspect([1 1 1])
+counter2.Lattice.plotV('add_legend', 0, 'scale', 2, 'color1', 'k', 'color2', 'r')
+xticks([])
+yticks([])
+% title('Lower CCD signal')
+subplot(1, 3, 3)
+imagesc(upper_y, upper_x, lower_upper)
+daspect([1 1 1])
+counter.Lattice.plotV('add_legend', 0, 'scale', 2, 'color1', 'k', 'color2', 'r')
+xticks([])
+yticks([])
+% title('Lower CCD signal (transformed)')
+
+%%
+stat_upper = counter.process(Signal.Andor19331.Image, 2, 'calib_mode', 'none');
+stat_lower = counter2.process(Signal.Andor19330.Image, 2, 'calib_mode', 'none');
 
 %%
 figure
@@ -210,6 +254,7 @@ text(-3, 12, '5 \mum', ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
 lat_transformed.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'b', 'line_width', 1.5)
 lat_transformed.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
+title('Upper CCD')
 
 subplot(1, 2, 2)
 imagesc(trans_y, trans_x, lower_transformed)
@@ -224,6 +269,7 @@ text(-3, 12, '5 \mum', ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
 lat_transformed.plot(sites01, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'b', 'line_width', 1.5)
 lat_transformed.plot(sites10, 'diff_origin', false, 'norm_radius', 0.5, 'color', 'r', 'line_width', 1.5)
+title('Lower CCD')
 
 %% Plot PSF of upper and lower cameras
 
@@ -234,7 +280,10 @@ axis("image")
 xticks([])
 yticks([])
 counter.Lattice.plot('filter', true, 'center', [0, 0], ...
-    'diff_origin', false, 'color', 'w', 'line_width', 2, 'norm_radius', 0.03)
+    'diff_origin', false, 'color', 'w', 'line_width', 1, 'norm_radius', 0.02)
+cb = colorbar();
+cb.Ticks = [];
+title('Upper CCD PSF', 'FontSize', 16)
 
 subplot(1, 2, 2)
 imagesc(counter2.PointSource.DataYRange, counter2.PointSource.DataXRange, counter2.PointSource.DataPSF)
@@ -242,7 +291,58 @@ axis("image")
 xticks([])
 yticks([])
 counter2.Lattice.plot('filter', true, 'center', [0, 0], ...
-    'diff_origin', false, 'color', 'w', 'line_width', 2, 'norm_radius', 0.03)
+    'diff_origin', false, 'color', 'w', 'line_width', 1, 'norm_radius', 0.02)
+cb = colorbar();
+cb.Ticks = [];
+title('Lower CCD PSF', 'FontSize', 16)
+
+%% PSF curves
+figure
+subplot(1, 2, 1)
+counter.PointSource.plotAzimuthalPSF('scale_x', 1/counter.Lattice.V_norm*0.8815)
+xlabel('Radial distance (\mum)', 'FontSize', 16)
+ylabel('Norm. amplitude', 'FontSize', 16)
+title('Upper CCD')
+xlim([-1.5, 1.5])
+ax = gca();
+ax.FontSize = 16;
+
+subplot(1, 2, 2)
+counter2.PointSource.plotAzimuthalPSF('scale_x', 1/counter.Lattice.V_norm*0.8815)
+xlabel('Radial distance (\mum)', 'FontSize', 16)
+ylabel('Norm. amplitude', 'FontSize', 16)
+title('Lower CCD')
+xlim([-1.5, 1.5])
+ax = gca();
+ax.FontSize = 16;
+
+%% FFT illustration
+sample = signal(:,:,1);
+sample(sample < 60) = 0;
+
+x_range = 100: 400;
+y_range = 500: 800;
+
+figure
+subplot(1,2,1)
+imagesc(signal(x_range, y_range, 1))
+xticks([])
+yticks([])
+daspect([1 1 1])
+subplot(1,2,2)
+imagesc(sample(x_range, y_range))
+xticks([])
+yticks([])
+daspect([1 1 1])
+
+%%
+fft_sample = abs(fftshift(fft2(sample(x_range, y_range))));
+figure
+imagesc(log(fft_sample))
+daspect([1 1 1])
+xticks([])
+yticks([])
+clim([7, inf])
 
 %% Draw sparse images
 Data = load("data/2025/04 April/20250414/sparse_no_green.mat").Data;
@@ -263,10 +363,10 @@ imagesc(y_range, x_range, signal(x_range, y_range, 3))
 axis("image")
 xticks([])
 yticks([])
-% cb = colorbar('westoutside');
-% set(cb, 'FontSize', 14);
+cb = colorbar('westoutside');
+set(cb, 'FontSize', 14);
 clim([10, 140])
 line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Color', 'w', 'LineWidth', 3)
 text(scalebar_y + scalebar_lengthpx + 30, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
-    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 12, 'FontWeight','bold');
+    'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 16, 'FontWeight','bold');

@@ -1,6 +1,7 @@
 classdef SiteGrid < BaseProcessor
 
     properties (SetAccess = {?BaseObject})
+        Lattice
         SiteFormat = "Hex"
         HexRadius = 20
         HexStep = 1
@@ -15,19 +16,6 @@ classdef SiteGrid < BaseProcessor
     properties (SetAccess = protected)
         Sites
         NumSites
-    end
-
-    properties (SetAccess = immutable)
-        Lattice
-    end
-
-    methods
-        function obj = SiteGrid(lat)
-            arguments
-                lat = []
-            end
-            obj.Lattice = lat;
-        end
     end
 
     methods (Access = protected, Hidden)

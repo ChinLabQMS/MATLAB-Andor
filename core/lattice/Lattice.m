@@ -18,7 +18,7 @@
         CalibV_WarnLatNormThres = 0.001
         CalibV_WarnRSquared = 0.5
         CalibV_PlotDiagnostic = false
-        CalibO_InverseMatch = false
+        CalibO_InverseMatch = 0
         CalibO_ConvertToSignal = true
         CalibO_CalibR = true
         CalibO_CalibR_Bootstrap = false
@@ -244,7 +244,8 @@
             end
             % If the image is not directly from imaging lattice, do filtering
             if optionsR.binarize
-                signal_new = filterSignal(signal, optionsR.binarize_thres_perct, optionsR.min_binarize_thres);
+                signal_new = filterSignal(signal, optionsR.binarize_thres_perct, ...
+                                          optionsR.min_binarize_thres);
             else
                 signal_new = signal;
             end
@@ -495,14 +496,24 @@
                 obj.R = score.Center(i, :);
                 if options.covert_to_signal
                     transformed = Lat2.transformSignal(obj, x_range, y_range, signal2, x_range2, y_range2);
-                    d = pdist2(signal(:)', transformed(:)', options.metric);
+                    vec1 = signal(:)';
+                    vec2 = transformed(:)';
                 else
                     transformed = obj.transformSignal(Lat2, x_range2, y_range2, signal, x_range, y_range);
-                    d = pdist2(signal2(:)', transformed(:)', options.metric);
+                    vec1 = signal2(:)';
+                    vec2 = transformed(:)';
                 end
-                if options.inverse_match
-                    score.SignalDist(i) = -d;
+                if options.inverse_match > 0
+                    if options.inverse_match == 1
+                        d = pdist2(max(vec1) - vec1, vec2, options.metric);
+                    elseif options.inverse_match == 2                        
+                        d = pdist2(vec1, max(vec2) - vec2, options.metric);
+                    else
+                        obj.error('Unrecognized value for parameter inverse_match!')
+                    end
+                    score.SignalDist(i) = d;
                 else
+                    d = pdist2(vec1, vec2, options.metric);
                     score.SignalDist(i) = d;
                 end
                 if score.SignalDist(i) < best_score
@@ -783,6 +794,8 @@
                 options.center = obj.R
                 options.scale = 1
                 options.add_legend = true
+                options.color1 = 'r'
+                options.color2 = 'm'
             end
             obj.checkInitialized()
             c_obj = onCleanup(@()preserveHold(ishold(ax), ax)); % Preserve original hold state
@@ -791,12 +804,12 @@
                 repmat(options.scale * options.vector(1, 2), size(options.center, 1), 1), ...
                 repmat(options.scale * options.vector(1, 1), size(options.center, 1), 1), ...
                 'off', 'LineWidth', 2, 'DisplayName', sprintf("%s: V1", obj.ID), ...
-                'MaxHeadSize', 10, 'Color', 'r');
+                'MaxHeadSize', 10, 'Color', options.color1);
             h(2) = quiver(ax, options.center(:, 2), options.center(:, 1), ...
                 repmat(options.scale * options.vector(2, 2), size(options.center, 1), 1), ...
                 repmat(options.scale * options.vector(2, 1), size(options.center, 1), 1), ...
                 'off', 'LineWidth', 2, 'DisplayName', sprintf("%s: V2", obj.ID), ...
-                'MaxHeadSize', 10, 'Color', 'm');
+                'MaxHeadSize', 10, 'Color', options.color2);
             if options.add_legend
                 legend(ax, 'Interpreter', 'none')
             end
