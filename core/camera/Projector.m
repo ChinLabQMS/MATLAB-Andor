@@ -19,10 +19,6 @@ classdef Projector < BaseRunner
         StaticPatternReal
         StaticPatternRealRGB
         StaticPatternPath
-        PatternCanvas
-        PatternCanvasRGB
-        RealCanvas
-        RealCanvasRGB
         NumLoadedPatternsInMemory
     end
 
@@ -92,7 +88,8 @@ classdef Projector < BaseRunner
                         % Flag the bad projection
                         live.BadFrameDetected = true;
                     end
-                case "Dynamic"
+                case "DynamicBlackTweezers"
+                    
                     obj.warn2("Not implemented yet!")
             end
         end
@@ -129,62 +126,6 @@ classdef Projector < BaseRunner
             if nargout == 1
                 varargout{1} = output;
             end
-        end
-        
-        % Display the current pattern canvas on window
-        function varargout = displayPatternCanvas(obj)
-            output = obj.MexHandle("displayPatternCanvas", false);
-            if nargout == 1
-                varargout{1} = output;
-            end
-        end
-        
-        % Drawing a line along vector V (1x2), passing through R (1x2)
-        function drawLineAlongVector(obj, V, R, options)
-            arguments
-                obj 
-                V
-                R
-                options.line_color = 0xFFFFFFFF
-                options.line_width = 5
-            end
-            A = -V(2);
-            B = V(1);
-            C =  V(2) * (R(1) - 1) - V(1) * (R(2) - 1);
-            obj.MexHandle("drawLineOnReal", A, B, C, options.line_width, options.line_color)
-        end
-        
-        % Drawing a star pattern along three lattice vector
-        function drawAndSaveLatStarPattern(obj, Lat, options)
-            arguments
-                obj 
-                Lat
-                options.template_color = 0xFF000000
-                options.line_color = 0xFFAAAAAA
-                options.line_width = 5
-            end
-            obj.MexHandle("resetPattern", options.template_color)
-            obj.drawLineAlongVector(Lat.V1, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
-            obj.drawLineAlongVector(Lat.V2, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
-            obj.drawLineAlongVector(Lat.V3, Lat.R, 'line_color', options.line_color, 'line_width', options.line_width)
-            obj.MexHandle("selectAndSavePatternAsBMP", false)
-        end
-
-        function drawCirclesOnSite(obj, Lat, sites, options)
-            arguments
-                obj
-                Lat
-                sites
-                options.radius = 5
-                options.draw_color = 0xFFAAAAAA
-                options.template_color = 0xFF000000
-            end
-            real_coor = Lat.convert2Real(sites) - [1, 1];
-            obj.MexHandle("resetPattern", options.template_color)
-            for i = 1: size(real_coor, 1)
-                obj.MexHandle("drawCircleOnReal", real_coor(i, 1), real_coor(i, 2), options.radius, options.draw_color)
-            end
-            obj.MexHandle("selectAndSavePatternAsBMP", false)
         end
         
         % Set the index of the display to position window
@@ -271,25 +212,6 @@ classdef Projector < BaseRunner
             axis(ax2, "image")
         end
 
-        function plot3(obj, ax1, ax2)
-            arguments
-                obj
-                ax1 = []
-                ax2 = []
-            end
-            if isempty(ax1) && isempty(ax2)
-                figure
-                ax1 = subplot(1, 2, 1);
-                ax2 = subplot(1, 2, 2);
-            end
-            imagesc(ax1, obj.PatternCanvasRGB)
-            title(ax1, 'Pattern Canvas')
-            axis(ax1, "image")
-            imagesc(ax2, obj.RealCanvasRGB)
-            title(ax2, 'Pattern Canvas (real space)')
-            axis(ax2, "image")
-        end
-
         function checkWindowState(obj)
             if ~obj.IsWindowCreated
                 obj.open()
@@ -340,22 +262,6 @@ classdef Projector < BaseRunner
         
         function val = get.StaticPatternPath(obj)
             val = string(obj.MexHandle("getStaticPatternPath"));
-        end
-
-        function val = get.PatternCanvas(obj)
-            val = obj.MexHandle("getPatternCanvas");
-        end
-
-        function val = get.PatternCanvasRGB(obj)
-            val = obj.MexHandle("getPatternCanvasRGB");
-        end
-
-        function val = get.RealCanvas(obj)
-            val = obj.MexHandle("getRealCanvas");
-        end
-
-        function val = get.RealCanvasRGB(obj)
-            val = obj.MexHandle("getRealCanvasRGB");
         end
 
         function val = get.NumLoadedPatternsInMemory(obj)
