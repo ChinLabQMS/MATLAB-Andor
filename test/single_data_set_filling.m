@@ -21,13 +21,15 @@ clear; clc; close all
 %Data = load("data/2025/05 May/20250515/width10stripes_greenbeforeandduringimg1.mat").Data;
 %Data = load("data/2025/05 May/20250515/width10stripes_greenbeforeandduringimg1_again.mat").Data;
 %Data = load("data/2025/05 May/20250515/tryinggreenduringnormalsp.mat").Data;
-Data = load("data/2025/05 May/20250516/vec2_width5_offset=-2.mat").Data;
+%Data = load("data/2025/05 May/20250521/vec2_width5_offset=-2.mat").Data;
+Data = load("data/2025/05 May/20250522/calibrated_transport_r=20_with_iris_-5to4.6site_alongv3.mat").Data;
+
 %%
 p = Preprocessor();
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
 
-
+%%
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
@@ -39,7 +41,7 @@ toc
 figure
 imagesc2(mean(signal, 3))
 counter.Lattice.plot()
-title("offset = -2px")
+% title("offset = -2px")
 % clim([0, 60])
 % counter.Lattice.plot(SiteGrid.prepareSite("MaskedRect", "mask_Lattice", counter.Lattice))
 
@@ -75,3 +77,17 @@ shot2fillavg = sum(shot2fill)/size(shot2fill,3);
 bothfillavg = (shot1fillavg+shot2fillavg)/2;
 
 %% error and loss
+loss = (shot2tot-shot1tot)/size(stat.LatOccup,1);
+meanloss = mean(loss,3);
+
+shots=20;
+sites = 217
+error = zeros(1,shots);
+
+for i = 1:shots
+    before = stat.LatOccup(:,1,i);
+    after = stat.LatOccup(:,2,i);
+    numChanges = sum(before ~= after);
+    %numLost = sum(before==1 & after ==0);
+    error(i)=numChanges/sites;
+end

@@ -12,7 +12,7 @@
 
 clear; clc; close all
 p = PSFCalibrator( ...
-    "DataPath", "data/2025/04 April/20250414/sparse_no_green.mat", ...
+    "DataPath", "data/2025/06 June/20250602/psf.mat", ...
     "PSFCameraList", ["Andor19330", "Andor19331", "Zelux"], ...
     "PSFImageLabel", ["Image", "Image", "Pattern_532"]);
 
@@ -41,7 +41,7 @@ p.PSFCalib.Andor19331
 
 %% (Optional) Zelux
 close all
-p.fit('Zelux', 1, 1.5,'bin_threshold_max', 10, 'filter_intensity_min', 10, 'plot_diagnostic', 1)
+p.fit('Zelux', 1, 2,'bin_threshold_max', 30, 'filter_intensity_min', 10, 'plot_diagnostic', 1)
 % p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux
 
@@ -61,7 +61,7 @@ p.PSFCalib.Andor19331
 
 %% Zelux
 close all
-p.fit('Zelux', [], 1.5, 'bin_threshold_max', 10, 'filter_intensity_min', 10, 'verbose', 1)
+p.fit('Zelux', [], 2, 'bin_threshold_max', 30, 'filter_intensity_min', 10, 'verbose', 1)
 p.PSFCalib.Zelux.plotWidthDist()
 p.PSFCalib.Zelux.plotPSF()
 p.PSFCalib.Zelux

@@ -143,7 +143,7 @@ ylim([0, inf])
 xlim([-1.05, -0.1])
 
 %% Bz pictures
-Bz = 0.0;
+Bz = 1.2;
 Bz_val = (Bz - 4.73) * 74.6 / 350;
 filename = sprintf('data/2025/04 April/20250410 imaging parameter scan/Bx=-0.79_By=2.08_Bz=%.1f_freqOP=-2.55_AMOP=5_freqREP=-1.4_AMREP=5.mat', Bz);
 Data = load(filename).Data;
@@ -159,7 +159,7 @@ y_range = 440:890;
 figure
 imagesc(signal(x_range, y_range, 1))
 daspect([1 1 1])
-clim([10, inf])
+clim([-10, inf])
 xticks([])
 yticks([])
 cb = colorbar();

@@ -227,7 +227,8 @@ classdef Preprocessor < BaseProcessor
                 signal = raw - obj.Leakage.(info.camera).(info.label);
             catch me
                 signal = raw;
-                obj.warn2("Background offset (leakage) is not found in calibration, error: %s", me.message)
+                obj.warn2("[%s %s] Background offset (leakage) is not found in calibration, error: %s", ...
+                    info.camera, info.label, me.message)
             end
             if opt4.output_diagnostic
                 [leakage, variance, noise] = cancelOffset(signal, info.Config.NumSubFrames, ...

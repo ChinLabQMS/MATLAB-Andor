@@ -8,7 +8,7 @@ clear; clc; close all
 %Data = load("data/2025/04 April/20250409 optimize imaging/sparse_freqOP=-2.6_Bx=-0.79_By=2.08_Bz=1.4_OPAM=1.mat").Data;
 %Data = load("data/2025/04 April/20250410/rsc1_bz=1.4_4.mat").Data;
 Data = load("data/2025/04 April/20250429/startof20250429.mat").Data;
-
+%%
 p = Preprocessor();
 Signal = p.process(Data);
 
@@ -21,6 +21,10 @@ counter.SiteGrid.config("SiteFormat", "Hex", "HexRadius", 25)
 
 max_signal = maxk(reshape(signal, [], size(signal, 3)), 10, 1);
 disp(mean(max_signal(:)))
+
+%%
+figure
+imagesc2(mean(signal, 3))
 
 %%
 tic

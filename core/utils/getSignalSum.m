@@ -3,6 +3,7 @@ arguments
     signal 
     num_frames 
     options.first_only = false
+    options.last_only = false
 end
     signal = mean(signal, 3);
     [x_size, y_size] = size(signal, [1, 2]);
@@ -11,6 +12,8 @@ end
     y_range = 1: y_size;
     if options.first_only
         signal_sum = signal(x_range, y_range);
+    elseif options.last_only
+        signal_sum = signal(x_range + (num_frames - 1) * x_frame, y_range);
     else
         signal_sum = zeros(x_frame, y_size);
         for i = 1:num_frames

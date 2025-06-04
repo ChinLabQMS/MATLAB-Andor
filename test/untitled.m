@@ -21,16 +21,22 @@ tic
 stat = counter.process(signal, 2, 'calib_mode', 'offset');
 toc
 
+%%
 figure
 imagesc2(mean(signal, 3))
 counter.Lattice.plot()
-% clim([0, 60])
+counter.Lattice.plotV()
+% clim([0, 120])
 % counter.Lattice.plot(SiteGrid.prepareSite("MaskedRect", "mask_Lattice", counter.Lattice))
 
 %%
 figure
-imagesc2(signal(:, :, 10))
+imagesc2(signal(:, :, 1))
 counter.Lattice.plot()
+
+%%
+figure
+imagesc2(mean(Signal.Zelux.Pattern_532, 3))
 
 %%
 close all

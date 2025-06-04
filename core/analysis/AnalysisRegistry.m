@@ -146,7 +146,7 @@ function calibLatO(live, info, varargin, options)
     end
     timer = tic;
     ref_signal = getSignalSum(live.Signal.(options.ref_camera).(options.ref_label), ...
-        live.CameraManager.(options.ref_camera).Config.NumSubFrames, "first_only", true);
+        live.CameraManager.(options.ref_camera).Config.NumSubFrames, "last_only", true);
     signal = getSignalSum(live.Signal.(info.camera).(info.label), ...
         info.config.NumSubFrames, "first_only", true);
     Lat = live.LatCalib.(info.camera);

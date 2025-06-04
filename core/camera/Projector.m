@@ -71,13 +71,16 @@ classdef Projector < BaseRunner
         function project(obj, live, options)
             arguments
                 obj
-                live = []  % Live data from acquisitor
+                live = []  % Live data from Acquisitor
                 options.mode = "SolidColor"
                 options.red = 0
                 options.green = 0
                 options.blue = 0
                 options.pattern_index = 0
                 options.pattern_delay = 0
+                options.live_camera = "Andor19330"
+                options.live_label = "Image"
+                options.black_tweezer_radius = 6
             end
             switch options.mode
                 case "SolidColor"
@@ -89,9 +92,28 @@ classdef Projector < BaseRunner
                         live.BadFrameDetected = true;
                     end
                 case "DynamicBlackTweezers"
-                    
-                    obj.warn2("Not implemented yet!")
+                    if isfield(live.Temporary, options.live_camera) && ...
+                       isfield(live.Temporary.(options.live_camera), options.live_label) && ...
+                       isfield(live.Temporary.(options.live_camera).(options.live_label), "SiteStat")
+                        stat = live.Temporary.(options.live_camera).(options.live_label).SiteStat;
+                        sites = stat.SiteInfo.Sites(stat.LatOccup, :);
+                        coord = live.LatCalib.DMD.convert2Real(sites);
+                        obj.MexHandle("generateBlackTweezerPattern", coord, ...
+                            options.black_tweezer_radius, [0,0], 1, 0, true) % [-0.717,-0.776]
+                        obj.MexHandle("displayDynamicMemoryAll", 0, false, true)
+                        obj.MexHandle("clearDynamicMemory")
+                    else
+                        live.BadFrameDetected = true;
+                    end                    
             end
+        end
+
+        function projectBlackTweezerPattern(obj, ...
+                coord, radius, shift, ...
+                num_buffers, num_moving_frames, delay)
+            obj.MexHandle("generateBlackTweezerPattern", coord, radius, shift, num_buffers, num_moving_frames, true)
+            obj.MexHandle("displayDynamicMemoryAll", delay, false, true)
+            obj.MexHandle("clearDynamicMemory")
         end
         
         % Project a static pattern (external BMP) on projector
@@ -168,6 +190,14 @@ classdef Projector < BaseRunner
             val = obj.MexHandle("getPatternMemoryRealRGB", index);
         end
 
+        function val = getDynamicMemoryRGB(obj, index)
+            val = obj.MexHandle("getDynamicMemoryRGB", index);
+        end
+
+        function val = getDynamicMemoryRealRGB(obj, index)
+            val = obj.MexHandle("getDynamicMemoryRealRGB", index);
+        end
+
         function plot(obj, ax1, ax2)
             arguments
                 obj
@@ -204,6 +234,31 @@ classdef Projector < BaseRunner
             end
             pattern1 = obj.getPatternMemoryRGB(index);
             pattern2 = obj.getPatternMemoryRealRGB(index);
+            imagesc(ax1, pattern1)
+            title(ax1, sprintf('Dynamic pattern: %d', index))
+            axis(ax1, "image")
+            imagesc(ax2, pattern2)
+            title(ax2, sprintf('Dynamic pattern (real space): %d', index))
+            axis(ax2, "image")
+        end
+
+        function plot3(obj, index, ax1, ax2)
+            arguments
+                obj
+                index = 0
+                ax1 = []
+                ax2 = []
+            end
+            if isempty(index)
+                return
+            end
+            if isempty(ax1) && isempty(ax2)
+                figure
+                ax1 = subplot(1, 2, 1);
+                ax2 = subplot(1, 2, 2);
+            end
+            pattern1 = obj.getDynamicMemoryRGB(index);
+            pattern2 = obj.getDynamicMemoryRealRGB(index);
             imagesc(ax1, pattern1)
             title(ax1, sprintf('Dynamic pattern: %d', index))
             axis(ax1, "image")
