@@ -5,15 +5,16 @@
 %% Create a Calibrator object
 clear; clc; close all
 p = CombinedCalibrator( ...
+    "LatCalibFilePath", "calibration/dated_LatCalib/LatCalib_20250321.mat", ...
     "DataPath", "data/2025/03 March/20250311 big dataset to track drift/dense_big.mat");
     % "DataPath", "data/2024/12 December/20241205/sparse_with_532_r=2_big.mat");
 
-%% Generate drift report table
+%% Generate drift report table by calibrating lattice phases
 % Lattice phase shift
 res = p.trackLat();
 
 %% Zelux PSF shift drift report
-res.ZeluxPSF = p.trackPSF();
+res.ZeluxPSF = p.trackPeaks();
 
 %% Track drift in lattice frame over time
 
@@ -30,10 +31,12 @@ for i = 1: length(names)
     val = res.(name).LatR1 - res.(name).LatR1(ref_index) + shiftv(i);
     errorbar(val, res.(name).LatR1_Std)
 end
-xlabel("Run Number")
+xlabel("Run Number", 'FontSize', 16)
 grid on
-legend(names, 'Location', 'eastoutside', 'Interpreter', 'none')
-ylabel('LatR1')
+legend(names, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
+ylabel('LatR1', 'FontSize', 16)
+ax = gca();
+ax.FontSize = 16;
 
 subplot(2, 1, 2)
 hold on
@@ -44,8 +47,10 @@ for i = 1: length(names)
 end
 xlabel("Run Number")
 grid on
-legend(names, 'Location', 'eastoutside', 'Interpreter', 'none')
-ylabel('LatR2')
+legend(names, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
+ylabel('LatR2', 'FontSize', 16)
+ax = gca();
+ax.FontSize = 16;
 
 %% Correlation analysis
 

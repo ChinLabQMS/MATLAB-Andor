@@ -4,6 +4,7 @@ p = Preprocessor();
 % Good dataset with <5% error rate
 Data = load("data/2025/04 April/20250411/dense_no_green.mat").Data;
 % Data = load("data/2025/04 April/20250414/sparse_no_green.mat").Data;
+% Data = load("data/2025/05 May/20250521/dense_no_green.mat").Data;
 Signal = p.process(Data);
 signal = Signal.Andor19331.Image;
 grid = SiteGrid("SiteFormat", "Hex", "HexRadius", 8);
@@ -370,3 +371,11 @@ line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Co
 text(scalebar_y + scalebar_lengthpx + 30, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 16, 'FontWeight','bold');
+
+%%
+data = readmatrix("data/2025/05 May/20250520/timing_test.csv");
+xrange = 1000:3000;
+
+%%
+plot(data(xrange, 1), data(xrange, 2))
+
