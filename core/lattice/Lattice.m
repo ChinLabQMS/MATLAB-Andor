@@ -544,7 +544,7 @@
             end
             if options.plot_diagnosticO
                 plotSimilarityMap(x_range, y_range, score, best)
-                obj.plotV()
+                % obj.plotV()
                 if ~options.debug
                     plotTransformation(obj, Lat2, R_init, signal, signal2, best_transformed, ...
                         x_range, y_range, x_range2, y_range2, options.covert_to_signal)
@@ -732,6 +732,8 @@
         end
         
         % Plot a count distribution
+        % Format: plotCounts(ax, sites, counts)
+        %         plotCounts(sites, counts)
         function plotCounts(obj, varargin, opt1, opt2)
             arguments
                 obj

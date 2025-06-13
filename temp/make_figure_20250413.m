@@ -234,7 +234,7 @@ histogram(stat_lower.LatCount, 200)
 subplot(2, 1, 2)
 histogram(stat_upper.LatCount, 200)
 
-%%
+%% Error and loss
 [upper_transformed] = counter.Lattice.transformSignalStandard(upper);
 [lower_transformed, trans_x, trans_y, lat_transformed] = counter2.Lattice.transformSignalStandard(lower);
 
@@ -371,11 +371,3 @@ line([scalebar_y, scalebar_y + scalebar_lengthpx], [scalebar_x, scalebar_x], 'Co
 text(scalebar_y + scalebar_lengthpx + 30, scalebar_x - 1.5, ...
     [num2str(scalebar_length) ' \mum'], ...
     'Color', 'w', 'HorizontalAlignment', 'center', 'FontSize', 16, 'FontWeight','bold');
-
-%%
-data = readmatrix("data/2025/05 May/20250520/timing_test.csv");
-xrange = 1000:3000;
-
-%%
-plot(data(xrange, 1), data(xrange, 2))
-

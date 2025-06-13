@@ -16,25 +16,47 @@ res = p.trackLat();
 %% Zelux PSF shift drift report
 res.ZeluxPSF = p.trackPeaks();
 
+%%
+for dev = string(fields(res))'
+    if ismember(dev, ["Andor19330", "Andor19331", "Zelux"])
+        R = [res.(dev).R1_Sub(:), res.(dev).R2_Sub(:)];
+        NormR = R / p.LatCalib.(dev).V * [0, 1; -1/2*sqrt(3), -1/2];
+        NormR1 = reshape(NormR(:, 1), [], 4);
+        NormR2 = reshape(NormR(:, 2), [], 4);
+    else
+        R = [res.(dev).R1_Peak(:), res.(dev).R2_Peak(:)];
+        NormR = R / p.LatCalib.Zelux.V * [0, 1; -1/2*sqrt(3), -1/2];
+        NormR1 = reshape(NormR(:, 1), [], 10);
+        NormR2 = reshape(NormR(:, 2), [], 10);
+    end
+    res.(dev).NormR1 = mean(NormR1, 2);
+    res.(dev).NormR2 = mean(NormR2, 2);
+    res.(dev).NormR1_Std = std(NormR1, 0, 2);
+    res.(dev).NormR2_Std = std(NormR2, 0, 2);
+end
+
 %% Track drift in lattice frame over time
 
 names = ["Andor19331", "Andor19330", "Zelux", "ZeluxPSF"];
+legends = ["Upper CCD (lattice)", "Lower CCD (lattice)", "Zelux (lattice)", "Zelux (tweezer)"];
 shiftv = [0, -1, -2, -3];  % offset on the line plots
 
 ref_index = 10;
 
-figure
+figure("Position",[50, 50, 1200, 1000])
 subplot(2, 1, 1)
 hold on
 for i = 1: length(names)
     name = names(i);
-    val = res.(name).LatR1 - res.(name).LatR1(ref_index) + shiftv(i);
+    % val = res.(name).LatR1 - res.(name).LatR1(ref_index) + shiftv(i);
+    val = res.(name).NormR1 - res.(name).NormR1(ref_index) + shiftv(i);
     errorbar(val, res.(name).LatR1_Std)
 end
-xlabel("Run Number", 'FontSize', 16)
+xlabel("run number", 'FontSize', 16)
 grid on
-legend(names, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
-ylabel('LatR1', 'FontSize', 16)
+box on
+legend(legends, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
+ylabel('drift x (site)', 'FontSize', 16)
 ax = gca();
 ax.FontSize = 16;
 
@@ -42,13 +64,15 @@ subplot(2, 1, 2)
 hold on
 for i = 1: length(names)
     name = names(i);
-    val = res.(name).LatR2 - res.(name).LatR2(ref_index) + shiftv(i);
+    % val = res.(name).LatR2 - res.(name).LatR2(ref_index) + shiftv(i);
+    val = res.(name).NormR2 - res.(name).NormR2(ref_index) + shiftv(i);
     errorbar(val, res.(name).LatR2_Std)
 end
-xlabel("Run Number")
+xlabel("run number")
 grid on
-legend(names, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
-ylabel('LatR2', 'FontSize', 16)
+box on
+legend(legends, 'Location', 'eastoutside', 'Interpreter', 'none', 'FontSize', 16)
+ylabel('drift y (site)', 'FontSize', 16)
 ax = gca();
 ax.FontSize = 16;
 

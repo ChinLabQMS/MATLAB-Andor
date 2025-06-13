@@ -16,26 +16,48 @@ signal = Signal.Andor19331.Image;
 counter = SiteCounter("Andor19331");
 ps = counter.PointSource;
 lat = counter.Lattice;
-counter.configGrid("SiteFormat", "Hex", "HexRadius", 8)
+counter.configGrid("SiteFormat", "Hex", "HexRadius", 20)
 tic
-stat = counter.process(signal, 2, 'calib_mode', 'offset');
+stat = counter.process(signal, 2, 'calib_mode', 'offset', 'classify_method', 'fixed', 'fixed_thresholds', 450);
 toc
+
+%%
+prob = mean(stat.LatOccup, 3);
+prob = prob(:, 2);
+
+counter.Lattice.plotCounts(stat.SiteInfo.Sites, prob)
+counter.Lattice.plot(SiteGrid.prepareSite('Hex', 'latr', 20, 'latr_step', 5), ...
+    'norm_radius', 1.5, 'diff_origin', 0)
+xlim([500, 760])
+ylim([120, 380])
+title('Loading probability')
+colorbar
 
 %%
 figure
 imagesc2(mean(signal, 3))
-counter.Lattice.plot()
-counter.Lattice.plotV()
+% counter.Lattice.plot()
+% counter.Lattice.plotV()
 % clim([0, 120])
-% counter.Lattice.plot(SiteGrid.prepareSite("MaskedRect", "mask_Lattice", counter.Lattice))
+xlim([500, 760])
+ylim([120, 380] + 512)
+counter.Lattice.plot(SiteGrid.prepareSite('Hex', 'latr', 20, 'latr_step', 5), ...
+    'norm_radius', 1.5, 'diff_origin', 0, 'center', counter.Lattice.R + [512, 0])
 
 %%
 figure
-imagesc2(signal(:, :, 1))
-counter.Lattice.plot()
+imagesc2(signal(:, :, 12))
+xlim([500, 760])
+ylim([120, 380] + 512)
+% counter.Lattice.plot()
+counter.Lattice.plot(SiteGrid.prepareSite('Hex', 'latr', 20, 'latr_step', 5), ...
+    'norm_radius', 1.5, 'diff_origin', 0, 'center', counter.Lattice.R + [512, 0])
 
 %%
 figure
+subplot(1, 2, 1)
+imagesc2(mean(Signal.Zelux.Pattern_532, 3))
+subplot(1, 2, 2)
 imagesc2(mean(Signal.Zelux.Pattern_532, 3))
 
 %%
@@ -50,3 +72,5 @@ histogram(stat.LatCount(:, :, 1), 100)
 xline(stat.LatThreshold)
 
 desc = counter.describe(stat.LatOccup, 'verbose', true);
+
+%%
