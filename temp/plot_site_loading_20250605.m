@@ -6,6 +6,10 @@ DataPath = "data/2025/06 June/20250603/prep8_LS_off_Sprout=2.5V_rampdown_sites_s
 PatternPath = "data/2025/06 June/20250603/template/circle_array_python_r=5_step=5_inverted.bmp";
 LatCalibFilePath = "calibration/dated_LatCalib/LatCalib_20250603.mat";
 
+DataPath = "C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2025\06 June\20250603\prep8_LS_off_mod=2ms_Sprout=2.5V_rampdown_sites_step=5_r=5.mat";
+PatternPath = "C:\Users\qmspc\Documents\MATLAB\MATLAB-Andor\data\2025\06 June\20250603\template\circle_array_python_r=5_step=5_inverted.bmp"
+LatCalibFilePath = "calibration\dated_LatCalib\LatCalib_20250603.mat"
+
 %%
 Data = load(DataPath).Data; 
 load(LatCalibFilePath); 
@@ -20,7 +24,7 @@ mean_upper = mean(upper_signal, 3);
 grid = SiteGrid("SiteFormat", "Hex", "HexRadius", 20);
 counter = SiteCounter("Andor19331", Andor19331, [], grid);
 
-[upper_box, upper_x, upper_y] = prepareBox(upper_signal(:,:,1), counter.Lattice.R, 125);
+[upper_box, upper_x, upper_y] = prepareBox(upper_signal(:,:,1), counter.Lattice.R, 100);
 counter.Lattice.calibrateR(upper_box, upper_x, upper_y)
 
 transformed_template = DMD.transformSignal(Andor19331, upper_x, upper_y, template);

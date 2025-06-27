@@ -81,6 +81,8 @@ classdef Projector < BaseRunner
                 options.live_camera = "Andor19330"
                 options.live_label = "Image"
                 options.black_tweezer_radius = 6
+                options.tweezer_shift = [0, 0]
+                options.begin_buffer = 0
             end
             switch options.mode
                 case "SolidColor"
@@ -88,10 +90,11 @@ classdef Projector < BaseRunner
                 case "DynamicPreloaded"
                     success = obj.displayPatternMemory(options.pattern_index, "pattern_delay",options.pattern_delay);
                     if ~success && ~isempty(live)
-                        % Flag the bad projection
+                        % Flag the bad projection such that the data is not
+                        % saved
                         live.BadFrameDetected = true;
                     end
-                case "DynamicBlackTweezers"
+                case "BlackTweezersDynamic"
                     if isfield(live.Temporary, options.live_camera) && ...
                        isfield(live.Temporary.(options.live_camera), options.live_label) && ...
                        isfield(live.Temporary.(options.live_camera).(options.live_label), "SiteStat")
@@ -99,21 +102,26 @@ classdef Projector < BaseRunner
                         sites = stat.SiteInfo.Sites(stat.LatOccup, :);
                         coord = live.LatCalib.DMD.convert2Real(sites);
                         obj.MexHandle("generateBlackTweezerPattern", coord, ...
-                            options.black_tweezer_radius, [0,0], 1, 0, true) % [-0.717,-0.776]
-                        obj.MexHandle("displayDynamicMemoryAll", 0, false, true)
+                            options.black_tweezer_radius, options.tweezer_shift, options.begin_buffer, 40, true)
+                        obj.MexHandle("displayDynamicMemoryAll", options.pattern_delay, false, true)
                         obj.MexHandle("clearDynamicMemory")
                     else
                         live.BadFrameDetected = true;
-                    end                    
+                    end
+                case "BlackTweezersStatic"
+                    if isfield(live.Temporary, options.live_camera) && ...
+                       isfield(live.Temporary.(options.live_camera), options.live_label) && ...
+                       isfield(live.Temporary.(options.live_camera).(options.live_label), "SiteStat")
+                        stat = live.Temporary.(options.live_camera).(options.live_label).SiteStat;
+                        sites = stat.SiteInfo.Sites(stat.LatOccup, :);
+                        obj.MexHandle("generateBlackTweezerPatternStatic", live.LatCalib.DMD.V, live.LatCalib.DMD.R, ...
+                            sites, options.black_tweezer_radius)
+                        obj.MexHandle("displayDynamicMemoryAll", options.pattern_delay, false, true)
+                        obj.MexHandle("clearDynamicMemory")
+                    else
+                        live.BadFrameDetected = true;
+                    end
             end
-        end
-
-        function projectBlackTweezerPattern(obj, ...
-                coord, radius, shift, ...
-                num_buffers, num_moving_frames, delay)
-            obj.MexHandle("generateBlackTweezerPattern", coord, radius, shift, num_buffers, num_moving_frames, true)
-            obj.MexHandle("displayDynamicMemoryAll", delay, false, true)
-            obj.MexHandle("clearDynamicMemory")
         end
         
         % Project a static pattern (external BMP) on projector
@@ -320,7 +328,7 @@ classdef Projector < BaseRunner
         end
 
         function val = get.NumLoadedPatternsInMemory(obj)
-            val = obj.MexHandle("getNumLoadedPatterns");
+            val = obj.MexHandle("getPatternMemorySize");
         end
     end
 
